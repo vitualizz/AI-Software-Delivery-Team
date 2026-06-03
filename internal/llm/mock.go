@@ -14,9 +14,15 @@ import (
 //	p := NewMockProvider(WithScriptedResponses("hello world", "second response"))
 //	resp, _ := p.Complete(ctx, req)
 //	// resp.Content == "hello world"
+//
+// For multi-line content (e.g. YAML responses), use WithRawResponses so that
+// whitespace is preserved exactly. Complete returns the raw string; Stream still
+// word-splits for streaming tests.
 type MockProvider struct {
 	mu       sync.Mutex
-	scripts  []string // queued scripted responses
+	scripts  []string // queued scripted responses (word-split via Stream)
+	raw      []string // queued raw responses (returned verbatim by Complete)
+	rawIndex int      // next raw entry to deliver
 	index    int      // next script to deliver
 	Calls    [][]Message
 }
@@ -30,6 +36,17 @@ type MockOption func(*MockProvider)
 func WithScriptedResponses(responses ...string) MockOption {
 	return func(p *MockProvider) {
 		p.scripts = append(p.scripts, responses...)
+	}
+}
+
+// WithRawResponses enqueues raw verbatim responses for Complete.
+// Unlike WithScriptedResponses, whitespace (including newlines) is preserved.
+// Use this when the response must be valid multi-line text such as YAML.
+// Each Complete call consumes one entry; the last entry is repeated when exhausted.
+// Stream still uses the scripts queue (word-split).
+func WithRawResponses(responses ...string) MockOption {
+	return func(p *MockProvider) {
+		p.raw = append(p.raw, responses...)
 	}
 }
 
@@ -80,8 +97,35 @@ func (p *MockProvider) Stream(_ context.Context, req Request) (<-chan Chunk, err
 	return ch, nil
 }
 
-// Complete aggregates all chunks from Stream into a single Response.
+// nextRaw returns the next raw verbatim response, repeating the last one
+// when all raw entries are consumed. Returns ("", false) when no raw queue exists.
+func (p *MockProvider) nextRaw() (string, bool) {
+	if len(p.raw) == 0 {
+		return "", false
+	}
+	if p.rawIndex >= len(p.raw) {
+		return p.raw[len(p.raw)-1], true
+	}
+	s := p.raw[p.rawIndex]
+	p.rawIndex++
+	return s, true
+}
+
+// Complete returns the next scripted response. When raw responses are enqueued
+// (via WithRawResponses), the raw queue takes precedence and whitespace is
+// preserved exactly. Otherwise it falls back to aggregating Stream chunks.
+// Calls are recorded exactly once per Complete invocation.
 func (p *MockProvider) Complete(ctx context.Context, req Request) (Response, error) {
+	p.mu.Lock()
+	raw, hasRaw := p.nextRaw()
+	if hasRaw {
+		p.Calls = append(p.Calls, req.Messages)
+		p.mu.Unlock()
+		return Response{Content: raw}, nil
+	}
+	p.mu.Unlock()
+
+	// Stream records the call itself.
 	ch, err := p.Stream(ctx, req)
 	if err != nil {
 		return Response{}, err
