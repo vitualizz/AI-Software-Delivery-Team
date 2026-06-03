@@ -1,0 +1,14 @@
+linters:
+  enable:
+    - gofumpt
+    - revive
+    - errcheck
+
+linters-settings:
+  revive:
+    rules:
+      - name: exported
+      - name: var-naming
+
+run:
+  timeout: 5m
