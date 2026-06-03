@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+
+	"github.com/vitualizz/ai-software-delivery-team/skill"
 )
 
 // SkillRegistry is the port for resolving prompt fragments by name.
@@ -67,4 +69,11 @@ func (r *EmbeddedRegistry) Version(name string) (string, error) {
 		return frag.Version, nil
 	}
 	return "", fmt.Errorf("registry version %q: fragment not found", name)
+}
+
+// DefaultEmbeddedRegistry returns an EmbeddedRegistry backed by the production
+// go:embed FS (skill/prompts/ embedded via the skill package). This is the
+// registry used at runtime. Tests use NewEmbeddedRegistry with a custom fs.FS.
+func DefaultEmbeddedRegistry() *EmbeddedRegistry {
+	return NewEmbeddedRegistry(skill.PromptSubFS())
 }
