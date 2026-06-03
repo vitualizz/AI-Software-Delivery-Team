@@ -1,0 +1,75 @@
+# JSON Schema (draft-07) for the ImplementationPlan payload.
+# Written by the Developer Agent under .asdt/artifacts/{change}/implementation-plan.yaml
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/implementation-plan.schema.yaml"
+title: ImplementationPlan
+description: >
+  Payload produced by the Developer Agent from a RequirementsSpec + platform context.
+  Carried inside an ArtifactEnvelope.
+type: object
+
+required:
+  - steps
+  - complexity_estimate
+
+properties:
+  approach:
+    type: string
+    description: >
+      High-level implementation strategy narrative. Optional summary of the plan.
+
+  steps:
+    type: array
+    description: >
+      Ordered implementation steps. Each step MUST reference the story_id it satisfies.
+    items:
+      type: object
+      required:
+        - story_id
+        - files_to_create
+        - files_to_modify
+        - rationale
+        - code_snippets
+      properties:
+        story_id:
+          type: string
+          description: The user story ID from requirements-spec that this step satisfies.
+        files_to_create:
+          type: array
+          description: List of new files to create as part of this step.
+          items:
+            type: string
+        files_to_modify:
+          type: array
+          description: List of existing files to modify as part of this step.
+          items:
+            type: string
+        rationale:
+          type: string
+          description: >
+            Explanation of why this implementation approach was chosen for this story.
+        code_snippets:
+          type: array
+          description: >
+            Inline code snippets (not diffs-on-disk) that illustrate the implementation.
+          items:
+            type: object
+            required:
+              - file
+              - content
+            properties:
+              file:
+                type: string
+                description: Relative path of the file this snippet applies to.
+              content:
+                type: string
+                description: The code content for this snippet.
+
+  complexity_estimate:
+    type: string
+    description: >
+      Overall complexity estimate for the entire plan.
+    enum:
+      - low
+      - medium
+      - high

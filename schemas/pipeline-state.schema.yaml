@@ -1,0 +1,69 @@
+# JSON Schema (draft-07) for the PipelineState.
+# Written to .asdt/artifacts/{change}/pipeline-state.yaml
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/pipeline-state.schema.yaml"
+title: PipelineState
+description: >
+  Tracks the active pipeline state and full transition history for a change.
+  Valid states: requirements, plan, implement, review.
+  Valid transitions: requirements->plan, plan->implement, implement->review.
+type: object
+
+required:
+  - schema_version
+  - change_id
+  - current_state
+  - transitions
+
+properties:
+  schema_version:
+    type: string
+    description: Version of this pipeline-state schema.
+    example: "1"
+
+  change_id:
+    type: string
+    description: The change identifier this pipeline state belongs to.
+    minLength: 1
+
+  current_state:
+    type: string
+    description: The active pipeline phase.
+    enum:
+      - requirements
+      - plan
+      - implement
+      - review
+
+  transitions:
+    type: array
+    description: >
+      Append-only history of all state transitions. Each entry records the
+      from/to phases and the timestamp of the transition.
+    items:
+      type: object
+      required:
+        - from
+        - to
+        - timestamp
+      properties:
+        from:
+          type: string
+          description: The source phase.
+          enum:
+            - requirements
+            - plan
+            - implement
+            - review
+        to:
+          type: string
+          description: The target phase.
+          enum:
+            - requirements
+            - plan
+            - implement
+            - review
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of when this transition occurred.

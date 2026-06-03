@@ -1,0 +1,63 @@
+# JSON Schema (draft-07) for the ArtifactEnvelope header.
+# Every artifact YAML written by any ASDT agent MUST conform to this schema.
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/envelope.schema.yaml"
+title: ArtifactEnvelope
+description: >
+  Uniform header written at the root of every artifact YAML file.
+  The payload field carries the agent-specific typed content.
+type: object
+
+required:
+  - schema_version
+  - agent
+  - change_id
+  - created_at
+  - prompt_version
+  - input_refs
+  - payload
+
+properties:
+  schema_version:
+    type: string
+    description: >
+      Version of this envelope schema. Consumers MUST fail loudly on mismatch.
+    example: "1"
+
+  agent:
+    type: string
+    description: >
+      Name of the role that produced this artifact (e.g. requirements, developer, knowledge).
+    minLength: 1
+
+  change_id:
+    type: string
+    description: >
+      Unique identifier for the change this artifact belongs to.
+      Used to group all artifacts for a single delivery unit.
+    minLength: 1
+
+  created_at:
+    type: string
+    format: date-time
+    description: >
+      ISO 8601 timestamp of when this artifact was written.
+
+  prompt_version:
+    type: string
+    description: >
+      SHA-256 truncated hash of the composed-prompt manifest used to produce this artifact.
+      Enables drift detection and reproducibility.
+
+  input_refs:
+    type: array
+    description: >
+      Ordered list of relative paths to artifacts that were read as input.
+      Provides a complete traceability chain back to the original idea.
+    items:
+      type: string
+
+  payload:
+    type: object
+    description: >
+      Agent-specific typed payload. See the corresponding payload schema for field definitions.
