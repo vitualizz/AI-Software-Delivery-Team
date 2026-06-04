@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
+	"github.com/vitualizz/ai-software-delivery-team/internal/config"
 )
 
 const (
@@ -22,10 +23,19 @@ type PipelineRunner interface {
 
 	// Advance moves the pipeline from its current state to `to`.
 	// Returns an error if the transition is illegal.
+	// Deprecated: use AdvanceStep for new specialist-model code.
 	Advance(ctx context.Context, change string, to Phase) (State, error)
 
 	// CanTransition returns true when transitioning from → to is a legal edge.
 	CanTransition(from, to Phase) bool
+
+	// AdvanceStep records completion of a workflow step for one specialist.
+	// It appends to steps_completed (never overwrites), sets current_step,
+	// and creates the specialist state if absent. Creates the state file on
+	// first use with schema_version "2".
+	// root is accepted for interface uniformity but the FSMachine ignores it
+	// because the store is already bound to the project root.
+	AdvanceStep(ctx context.Context, root config.Root, change, specialistID, stepID string) error
 }
 
 // FSMachine is the filesystem-backed implementation of PipelineRunner.
@@ -112,3 +122,44 @@ func (m *FSMachine) Advance(ctx context.Context, change string, to Phase) (State
 
 // ErrIllegalTransition is returned when an advance attempt violates the FSM edges.
 var ErrIllegalTransition = errors.New("illegal pipeline transition")
+
+// ArtifactTypeV2 is the artifact type key for the specialist-scoped pipeline state.
+const ArtifactTypeV2 = "pipeline-state-v2"
+
+// AdvanceStep records a specialist step completion in PipelineStateV2.
+// It reads the current v2 state (or creates it), appends the step, and writes back.
+func (m *FSMachine) AdvanceStep(_ context.Context, _ config.Root, change, specialistID, stepID string) error {
+	ctx := context.Background()
+
+	var sv2 PipelineStateV2
+	if m.store.Exists(change, ArtifactTypeV2) {
+		if err := m.store.Read(ctx, change, ArtifactTypeV2, &sv2); err != nil {
+			return fmt.Errorf("pipeline advance-step read %s: %w", change, err)
+		}
+	}
+
+	// Bootstrap on first use.
+	if sv2.SchemaVersion == "" {
+		sv2 = PipelineStateV2{
+			SchemaVersion: SchemaVersionV2,
+			ChangeID:      change,
+			Specialists:   make(map[string]SpecialistState),
+		}
+	}
+	if sv2.Specialists == nil {
+		sv2.Specialists = make(map[string]SpecialistState)
+	}
+
+	sp := sv2.Specialists[specialistID]
+	sp.StepsCompleted = append(sp.StepsCompleted, StepRecord{
+		ID:        stepID,
+		Timestamp: time.Now().UTC(),
+	})
+	sp.CurrentStep = stepID
+	sv2.Specialists[specialistID] = sp
+
+	if err := m.store.Write(ctx, change, ArtifactTypeV2, sv2); err != nil {
+		return fmt.Errorf("pipeline advance-step write %s: %w", change, err)
+	}
+	return nil
+}
