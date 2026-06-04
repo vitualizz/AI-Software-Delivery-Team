@@ -1,10 +1,42 @@
-schema_version: "1"
+schema_version: "2"
 change_id: add-user-auth
-current_state: plan
-transitions:
-  - from: ""
-    to: requirements
-    timestamp: "2026-06-04T10:00:00Z"
-  - from: requirements
-    to: plan
-    timestamp: "2026-06-04T10:05:32Z"
+specialists:
+  ux-ui:
+    current_step: ux-handoff
+    steps_completed:
+      - id: platform-analysis
+        timestamp: "2026-06-04T10:00:00Z"
+      - id: feature-brief
+        timestamp: "2026-06-04T10:01:15Z"
+      - id: information-architecture
+        timestamp: "2026-06-04T10:02:30Z"
+      - id: user-flows
+        timestamp: "2026-06-04T10:03:45Z"
+      - id: component-mapping
+        timestamp: "2026-06-04T10:04:20Z"
+      - id: responsive-strategy
+        timestamp: "2026-06-04T10:05:00Z"
+      - id: ux-handoff
+        timestamp: "2026-06-04T10:05:32Z"
+    artifacts_written:
+      - ux-brief
+      - component-spec
+  developer:
+    current_step: self-review
+    steps_completed:
+      - id: artifact-loading
+        timestamp: "2026-06-04T10:10:00Z"
+      - id: platform-context
+        timestamp: "2026-06-04T10:10:30Z"
+      - id: complexity-estimate
+        timestamp: "2026-06-04T10:11:00Z"
+      - id: implementation-planning
+        timestamp: "2026-06-04T10:12:00Z"
+      - id: code-generation
+        timestamp: "2026-06-04T10:14:00Z"
+      - id: test-generation
+        timestamp: "2026-06-04T10:15:30Z"
+      - id: self-review
+        timestamp: "2026-06-04T10:16:00Z"
+    artifacts_written:
+      - implementation-plan
