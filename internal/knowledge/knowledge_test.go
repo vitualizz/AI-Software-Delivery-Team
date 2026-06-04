@@ -206,3 +206,134 @@ func TestFSReader_ReadMissingFile_ReturnsError(t *testing.T) {
 		t.Error("expected error reading non-existent platform.yaml, got nil")
 	}
 }
+
+// TestDetector_NoProbes verifies that a Detector with no probes returns an
+// empty (non-nil) DetectedStack rather than nil.
+func TestDetector_NoProbes(t *testing.T) {
+	det := knowledge.NewDetector(nil)
+	dir := t.TempDir()
+
+	p, err := det.Detect(context.Background(), dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if p.DetectedStack == nil {
+		t.Error("DetectedStack must not be nil for zero-probe detector")
+	}
+	if len(p.DetectedStack) != 0 {
+		t.Errorf("expected empty DetectedStack, got %v", p.DetectedStack)
+	}
+}
+
+// TestGoProbe_DetectsWithoutGoSum verifies that GoProbe detects a Go project
+// when go.mod is present but go.sum is absent (only go.mod is required).
+func TestGoProbe_DetectsWithoutGoSum(t *testing.T) {
+	dir := t.TempDir()
+	// Write only go.mod — no go.sum.
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n\ngo 1.21\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+
+	probe := knowledge.GoProbe()
+	found, err := probe.Detect(dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if !found {
+		t.Error("GoProbe: expected true when go.mod exists but go.sum is absent")
+	}
+}
+
+// TestNodeProbe_DoesNotDetectSubdirectory verifies that NodeProbe only checks
+// the project root, not subdirectories.
+func TestNodeProbe_DoesNotDetectSubdirectory(t *testing.T) {
+	dir := t.TempDir()
+	sub := filepath.Join(dir, "packages", "app")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	// package.json is only in a subdirectory, not the root.
+	if err := os.WriteFile(filepath.Join(sub, "package.json"), []byte(`{"name":"sub"}`), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+
+	probe := knowledge.NodeProbe()
+	found, err := probe.Detect(dir)
+	if err != nil {
+		t.Fatalf("Detect: %v", err)
+	}
+	if found {
+		t.Error("NodeProbe: should not detect package.json in a subdirectory (root-only detection)")
+	}
+}
+
+// TestFSReader_Write_CreatesKnowledgeDirectory verifies that Write creates the
+// .asdt/knowledge/ directory if it does not yet exist.
+func TestFSReader_Write_CreatesKnowledgeDirectory(t *testing.T) {
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(asdt, 0o755); err != nil {
+		t.Fatalf("mkdir .asdt: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	// knowledge/ subdirectory does NOT exist yet.
+	reader := knowledge.NewFSReader()
+	p := knowledge.Platform{
+		SchemaVersion: "1",
+		DetectedStack: []string{"go"},
+	}
+	// Should succeed even though .asdt/knowledge/ does not exist.
+	if err := reader.Write(root, p); err != nil {
+		t.Fatalf("Write with missing knowledge dir: %v", err)
+	}
+
+	// Verify the file was actually created.
+	if _, err := reader.Read(root); err != nil {
+		t.Fatalf("Read after Write: %v", err)
+	}
+}
+
+// TestFSReader_RoundTrip_PreservesScannedAt verifies that the ScannedAt
+// timestamp and all nested fields are preserved exactly through Write+Read.
+func TestFSReader_RoundTrip_PreservesScannedAt(t *testing.T) {
+	root := makeRoot(t)
+	reader := knowledge.NewFSReader()
+
+	ts := time.Date(2026, 1, 15, 9, 30, 0, 0, time.UTC)
+	original := knowledge.Platform{
+		SchemaVersion: "1",
+		ScannedAt:     ts,
+		DetectedStack: []string{"go", "node"},
+		Conventions: knowledge.Conventions{
+			Naming:        map[string]string{"vars": "camelCase"},
+			FileStructure: "hexagonal",
+		},
+		DesignFingerprint: knowledge.DesignFingerprint{
+			ComponentLibrary: "shadcn",
+			CSSApproach:      "tailwind",
+			LayoutPatterns:   []string{"grid"},
+		},
+	}
+
+	if err := reader.Write(root, original); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	restored, err := reader.Read(root)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+
+	if !restored.ScannedAt.Equal(ts) {
+		t.Errorf("ScannedAt: got %v, want %v", restored.ScannedAt, ts)
+	}
+	if restored.Conventions.Naming["vars"] != "camelCase" {
+		t.Errorf("Conventions.Naming[vars]: got %q, want %q", restored.Conventions.Naming["vars"], "camelCase")
+	}
+	if restored.DesignFingerprint.CSSApproach != "tailwind" {
+		t.Errorf("DesignFingerprint.CSSApproach: got %q, want %q", restored.DesignFingerprint.CSSApproach, "tailwind")
+	}
+}
