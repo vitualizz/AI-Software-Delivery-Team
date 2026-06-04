@@ -74,13 +74,13 @@ func TestDescriptorTable(t *testing.T) {
 func TestDeveloperDescriptor_ExactSteps(t *testing.T) {
 	d := specialists.DeveloperDescriptor()
 	want := []string{
-		"artifact-loading",
-		"platform-context",
-		"complexity-estimate",
-		"implementation-planning",
-		"code-generation",
-		"test-generation",
-		"self-review",
+		"explore",
+		"spec",
+		"design",
+		"tasks",
+		"implement",
+		"test",
+		"review",
 	}
 	if len(d.Workflow) != len(want) {
 		t.Fatalf("Developer: expected %d workflow steps, got %d", len(want), len(d.Workflow))
@@ -92,11 +92,73 @@ func TestDeveloperDescriptor_ExactSteps(t *testing.T) {
 	}
 }
 
+// TestDeveloperDescriptor_InputRefs verifies per-step InputRefs and OutputArtifact values
+// for the Developer descriptor's critical steps.
+func TestDeveloperDescriptor_InputRefs(t *testing.T) {
+	d := specialists.DeveloperDescriptor()
+
+	// Step index 2 = "design" — must read ONLY developer/dev-spec.
+	designStep := d.Workflow[2]
+	if designStep.ID != "design" {
+		t.Fatalf("expected Workflow[2] to be 'design', got %q", designStep.ID)
+	}
+	if len(designStep.InputRefs) != 1 || designStep.InputRefs[0] != "developer/dev-spec" {
+		t.Errorf("design step InputRefs = %v, want [developer/dev-spec]", designStep.InputRefs)
+	}
+	if designStep.OutputArtifact != "developer/dev-design" {
+		t.Errorf("design step OutputArtifact = %q, want %q", designStep.OutputArtifact, "developer/dev-design")
+	}
+
+	// All non-last steps must have non-empty OutputArtifact.
+	for i, step := range d.Workflow {
+		if i < len(d.Workflow)-1 && step.OutputArtifact == "" {
+			t.Errorf("non-last step %q (index %d) has empty OutputArtifact", step.ID, i)
+		}
+	}
+
+	// Last step (review) must have non-empty OutputArtifact (implementation-plan is final).
+	lastStep := d.Workflow[len(d.Workflow)-1]
+	if lastStep.OutputArtifact == "" {
+		t.Errorf("last step %q OutputArtifact must not be empty for developer (uses per-step write)", lastStep.ID)
+	}
+}
+
 // TestSecurityDescriptor_NoRequiredPredecessor verifies the Security invariant explicitly.
 func TestSecurityDescriptor_NoRequiredPredecessor(t *testing.T) {
 	d := specialists.SecurityDescriptor()
 	if len(d.Artifacts.Reads) != 0 {
 		t.Errorf("SecurityDescriptor.Artifacts.Reads must be empty, got %v", d.Artifacts.Reads)
+	}
+}
+
+// TestSecurityDescriptor_FirstStepIsPlatformAnalysis verifies the Security pipeline starts
+// with a platform-analysis step.
+func TestSecurityDescriptor_FirstStepIsPlatformAnalysis(t *testing.T) {
+	d := specialists.SecurityDescriptor()
+	if len(d.Workflow) == 0 {
+		t.Fatal("SecurityDescriptor has no workflow steps")
+	}
+	if d.Workflow[0].ID != "platform-analysis" {
+		t.Errorf("SecurityDescriptor first step = %q, want %q", d.Workflow[0].ID, "platform-analysis")
+	}
+}
+
+// TestDescriptorTable_AllStepsHaveNonEmptyID verifies that every step across all
+// descriptors has a non-empty ID (extends the table test with an explicit coverage note).
+func TestDescriptorTable_InputRefsPresent(t *testing.T) {
+	for _, tc := range allDescriptors() {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			for i, step := range tc.descriptor.Workflow {
+				if step.ID == "" {
+					t.Errorf("step[%d] has empty ID", i)
+				}
+				// InputRefs field must be non-nil (may be empty slice for first steps).
+				if step.InputRefs == nil {
+					t.Errorf("step[%d] %q: InputRefs must not be nil (use []string{} for empty)", i, step.ID)
+				}
+			}
+		})
 	}
 }
 

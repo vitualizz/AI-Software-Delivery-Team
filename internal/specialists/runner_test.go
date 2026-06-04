@@ -117,15 +117,19 @@ func (p *mockPipeline) stepsFor(specialistID string) []string {
 
 func buildMinimalRegistry() prompt.SkillRegistry {
 	fsys := fstest.MapFS{
-		"developer/SKILL.md":                   {Data: []byte("Developer role content.")},
-		"security/SKILL.md":                    {Data: []byte("Security role content.")},
-		"developer/skills/artifact-loading.md": {Data: []byte("artifact loading skill")},
-		"developer/skills/code-generation.md":  {Data: []byte("code generation skill")},
-		"developer/skills/test-generation.md":  {Data: []byte("test generation skill")},
-		"security/skills/threat-modeling.md":   {Data: []byte("threat modeling skill")},
-		"security/skills/owasp-review.md":      {Data: []byte("owasp skill")},
-		"_shared/skills/platform-context.md":   {Data: []byte("platform context skill")},
-		"_shared/skills/artifact-envelope.md":  {Data: []byte("artifact envelope skill")},
+		"developer/SKILL.md":                    {Data: []byte("Developer role content.")},
+		"security/SKILL.md":                     {Data: []byte("Security role content.")},
+		"developer/skills/platform-analysis.md": {Data: []byte("platform analysis skill")},
+		"developer/skills/artifact-loading.md":  {Data: []byte("artifact loading skill")},
+		"developer/skills/scope-definition.md":  {Data: []byte("scope definition skill")},
+		"developer/skills/code-generation.md":   {Data: []byte("code generation skill")},
+		"developer/skills/test-generation.md":   {Data: []byte("test generation skill")},
+		"developer/skills/review.md":            {Data: []byte("review skill")},
+		"developer/skills/report.md":            {Data: []byte("report skill")},
+		"security/skills/threat-modeling.md":    {Data: []byte("threat modeling skill")},
+		"security/skills/owasp-review.md":       {Data: []byte("owasp skill")},
+		"_shared/skills/platform-context.md":    {Data: []byte("platform context skill")},
+		"_shared/skills/artifact-envelope.md":   {Data: []byte("artifact envelope skill")},
 	}
 	return prompt.NewEmbeddedRegistry(fsys)
 }
@@ -264,9 +268,9 @@ func TestRunner_ProviderError_StepWrapped(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-	// Error must contain the step ID of step 2 ("platform-context").
-	if !strings.Contains(err.Error(), "platform-context") {
-		t.Errorf("error %q should mention step ID 'platform-context'", err.Error())
+	// Error must contain the step ID of step 2 ("spec").
+	if !strings.Contains(err.Error(), "spec") {
+		t.Errorf("error %q should mention step ID 'spec'", err.Error())
 	}
 }
 

@@ -44,6 +44,15 @@ type WorkflowStep struct {
 	// SkillRefs lists specialist-scoped skill IDs activated at this step.
 	// Resolved via registry.ScopedSkill(descriptor.ID, skillRef).
 	SkillRefs []string
+
+	// InputRefs lists artifact types this step reads. Empty = fall back to
+	// descriptor.Artifacts.Reads (backward compat).
+	InputRefs []string
+
+	// OutputArtifact is the artifact type written immediately when this step
+	// completes. Empty = no mid-run write (until the last step, which falls
+	// back to descriptor.Artifacts.Writes via writeArtifacts).
+	OutputArtifact string
 }
 
 // ArtifactContract declares the artifact types a specialist consumes and produces.
@@ -79,7 +88,8 @@ func (d SpecialistDescriptor) Validate() error {
 }
 
 // DeveloperDescriptor returns the full descriptor for the Developer specialist.
-// It matches the 7-step workflow defined in skill/developer/SKILL.md exactly.
+// It matches the 7-step context-isolated pipeline defined in skill/developer/SKILL.md.
+// Each step declares exactly which artifacts it reads (InputRefs) and writes (OutputArtifact).
 func DeveloperDescriptor() SpecialistDescriptor {
 	return SpecialistDescriptor{
 		ID:          "developer",
@@ -88,39 +98,53 @@ func DeveloperDescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope"},
 		Workflow: []WorkflowStep{
 			{
-				ID:          "artifact-loading",
-				Description: "Load any upstream artifacts in .asdt/artifacts/{change}/ (spec, design, ux). Missing = note in open_items, continue.",
-				SkillRefs:   []string{"artifact-loading"},
+				ID:             "explore",
+				Description:    "Survey request + platform context; identify scope, unknowns, and relevant patterns.",
+				SkillRefs:      []string{"platform-analysis", "artifact-loading"},
+				InputRefs:      []string{},
+				OutputArtifact: "developer/dev-exploration",
 			},
 			{
-				ID:          "platform-context",
-				Description: "Load platform.yaml via the platform-context shared skill. Inject detected stack, naming conventions, and design fingerprint into working context.",
-				SkillRefs:   []string{},
+				ID:             "spec",
+				Description:    "Define what to build: stories and requirements derived from exploration.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{"developer/dev-exploration"},
+				OutputArtifact: "developer/dev-spec",
 			},
 			{
-				ID:          "complexity-estimate",
-				Description: "Estimate implementation complexity from available context. Output: S | M | L | XL with rationale.",
-				SkillRefs:   []string{},
+				ID:             "design",
+				Description:    "Define how: components, file targets, and interfaces — no code yet.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{"developer/dev-spec"},
+				OutputArtifact: "developer/dev-design",
 			},
 			{
-				ID:          "implementation-planning",
-				Description: "Produce ordered implementation steps, one per upstream story/requirement where present.",
-				SkillRefs:   []string{"code-generation"},
+				ID:             "tasks",
+				Description:    "Ordered, atomic implementation steps mapped to spec and design.",
+				SkillRefs:      []string{"scope-definition"},
+				InputRefs:      []string{"developer/dev-spec", "developer/dev-design"},
+				OutputArtifact: "developer/dev-tasks",
 			},
 			{
-				ID:          "code-generation",
-				Description: "Generate code snippets and file create/modify lists for each implementation step.",
-				SkillRefs:   []string{"code-generation"},
+				ID:             "implement",
+				Description:    "Generate code snippets and create/modify file lists per task.",
+				SkillRefs:      []string{"code-generation"},
+				InputRefs:      []string{"developer/dev-tasks", "developer/dev-design"},
+				OutputArtifact: "developer/dev-implementation",
 			},
 			{
-				ID:          "test-generation",
-				Description: "Generate test cases covering each implementation step.",
-				SkillRefs:   []string{"test-generation"},
+				ID:             "test",
+				Description:    "Generate test cases covering each implementation unit.",
+				SkillRefs:      []string{"test-generation"},
+				InputRefs:      []string{"developer/dev-tasks", "developer/dev-implementation"},
+				OutputArtifact: "developer/dev-tests",
 			},
 			{
-				ID:          "self-review",
-				Description: "Verify traceability: every read story appears in a step; unmatched go to open_items.",
-				SkillRefs:   []string{},
+				ID:             "review",
+				Description:    "Self-review coverage and conventions; assemble final implementation-plan.",
+				SkillRefs:      []string{"review", "report"},
+				InputRefs:      []string{"developer/dev-implementation", "developer/dev-tests"},
+				OutputArtifact: "implementation-plan",
 			},
 		},
 		Artifacts: ArtifactContract{
@@ -131,7 +155,8 @@ func DeveloperDescriptor() SpecialistDescriptor {
 }
 
 // UXUIDescriptor returns the descriptor for the UX/UI Specialist.
-// Matches the 7-step workflow in skill/ux-ui/SKILL.md.
+// Matches the 7-step context-isolated pipeline in skill/ux-ui/SKILL.md.
+// Last step uses OutputArtifact="" so writeArtifacts writes all Artifacts.Writes (ux-brief + component-spec).
 func UXUIDescriptor() SpecialistDescriptor {
 	return SpecialistDescriptor{
 		ID:          "ux-ui",
@@ -140,39 +165,54 @@ func UXUIDescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope"},
 		Workflow: []WorkflowStep{
 			{
-				ID:          "platform-analysis",
-				Description: "Establish/refresh platform context. Scan for existing UI patterns.",
-				SkillRefs:   []string{},
+				ID:             "platform-analysis",
+				Description:    "Establish/refresh platform context. Scan for existing UI patterns.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{},
+				OutputArtifact: "platform-summary",
 			},
 			{
-				ID:          "feature-brief",
-				Description: "Capture the UX intent: core user problem, primary actor, success criteria.",
-				SkillRefs:   []string{},
+				ID:             "feature-brief",
+				Description:    "Capture the UX intent: core user problem, primary actor, success criteria.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{"platform-summary"},
+				OutputArtifact: "ux-ui/feature-brief",
 			},
 			{
-				ID:          "information-architecture",
-				Description: "Define screen/content hierarchy, navigation path, and data relationships.",
-				SkillRefs:   []string{"information-architecture"},
+				ID:             "information-architecture",
+				Description:    "Define screen/content hierarchy, navigation path, and data relationships.",
+				SkillRefs:      []string{"information-architecture"},
+				InputRefs:      []string{"ux-ui/feature-brief", "platform-summary"},
+				OutputArtifact: "ux-ui/ia",
 			},
 			{
-				ID:          "user-flows",
-				Description: "Map primary happy-path and 2–3 edge-case flows with IDs (UF-001, UF-002, …).",
-				SkillRefs:   []string{"information-architecture"},
+				ID:             "user-flows",
+				Description:    "Map primary happy-path and 2–3 edge-case flows with IDs (UF-001, UF-002, …).",
+				SkillRefs:      []string{"information-architecture"},
+				InputRefs:      []string{"ux-ui/ia"},
+				OutputArtifact: "ux-ui/flows",
 			},
 			{
-				ID:          "component-mapping",
-				Description: "Map flows to reusable components: reused, extended, or new.",
-				SkillRefs:   []string{},
+				ID:             "component-mapping",
+				Description:    "Map flows to reusable components: reused, extended, or new.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{"ux-ui/flows", "platform-summary"},
+				OutputArtifact: "ux-ui/components",
 			},
 			{
-				ID:          "responsive-strategy",
-				Description: "Define breakpoints and adaptive behavior using responsive-design and accessibility guidelines.",
-				SkillRefs:   []string{"responsive-design", "accessibility"},
+				ID:             "responsive-strategy",
+				Description:    "Define breakpoints and adaptive behavior using responsive-design and accessibility guidelines.",
+				SkillRefs:      []string{"responsive-design", "accessibility"},
+				InputRefs:      []string{"ux-ui/components"},
+				OutputArtifact: "ux-ui/responsive",
 			},
 			{
 				ID:          "ux-handoff",
 				Description: "Summarize decisions, open questions, and handoff notes for Developer and Architect.",
 				SkillRefs:   []string{"accessibility"},
+				InputRefs:   []string{"ux-ui/feature-brief", "ux-ui/ia", "ux-ui/flows", "ux-ui/components", "ux-ui/responsive"},
+				// OutputArtifact="" → last-step fallback writes ux-brief + component-spec via Artifacts.Writes.
+				OutputArtifact: "",
 			},
 		},
 		Artifacts: ArtifactContract{
@@ -183,7 +223,8 @@ func UXUIDescriptor() SpecialistDescriptor {
 }
 
 // ArchitectDescriptor returns the descriptor for the Software Architect specialist.
-// Matches the 7-step workflow in skill/architect/SKILL.md.
+// Matches the 7-step context-isolated pipeline in skill/architect/SKILL.md.
+// Last step uses OutputArtifact="" so writeArtifacts writes all three finals.
 func ArchitectDescriptor() SpecialistDescriptor {
 	return SpecialistDescriptor{
 		ID:          "architect",
@@ -192,39 +233,54 @@ func ArchitectDescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope", "scope-definition"},
 		Workflow: []WorkflowStep{
 			{
-				ID:          "platform-analysis",
-				Description: "Establish platform context. Extract language, framework, persistence, service boundaries, and architectural constraints.",
-				SkillRefs:   []string{"architecture-review"},
+				ID:             "platform-analysis",
+				Description:    "Establish platform context. Extract language, framework, persistence, service boundaries, and architectural constraints.",
+				SkillRefs:      []string{"architecture-review"},
+				InputRefs:      []string{},
+				OutputArtifact: "architect/constraints",
 			},
 			{
-				ID:          "load-constraints",
-				Description: "Read upstream artifacts and pin the change boundary using scope-definition.",
-				SkillRefs:   []string{},
+				ID:             "load-constraints",
+				Description:    "Read upstream artifacts and pin the change boundary using scope-definition.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{"architect/constraints"},
+				OutputArtifact: "architect/approaches",
 			},
 			{
-				ID:          "evaluate-approaches",
-				Description: "Compare 2–3 candidate technical approaches with tradeoffs.",
-				SkillRefs:   []string{"architecture-review"},
+				ID:             "evaluate-approaches",
+				Description:    "Compare 2–3 candidate technical approaches with tradeoffs.",
+				SkillRefs:      []string{"architecture-review"},
+				InputRefs:      []string{"architect/constraints"},
+				OutputArtifact: "architect/approaches",
 			},
 			{
-				ID:          "decision-record",
-				Description: "Record the chosen approach as an Architecture Decision Record.",
-				SkillRefs:   []string{"architecture-review"},
+				ID:             "decision-record",
+				Description:    "Record the chosen approach as an Architecture Decision Record.",
+				SkillRefs:      []string{"architecture-review"},
+				InputRefs:      []string{"architect/approaches"},
+				OutputArtifact: "architect/adr",
 			},
 			{
-				ID:          "system-design",
-				Description: "Produce data model, API surface, service boundaries, and sequence diagrams.",
-				SkillRefs:   []string{"api-design"},
+				ID:             "system-design",
+				Description:    "Produce data model, API surface, service boundaries, and sequence diagrams.",
+				SkillRefs:      []string{"api-design"},
+				InputRefs:      []string{"architect/adr"},
+				OutputArtifact: "architect/system-design",
 			},
 			{
-				ID:          "risk-analysis",
-				Description: "Identify top 3–5 risks with likelihood, impact, and concrete mitigation.",
-				SkillRefs:   []string{"scalability-analysis"},
+				ID:             "risk-analysis",
+				Description:    "Identify top 3–5 risks with likelihood, impact, and concrete mitigation.",
+				SkillRefs:      []string{"scalability-analysis"},
+				InputRefs:      []string{"architect/system-design"},
+				OutputArtifact: "architect/risks",
 			},
 			{
 				ID:          "technical-handoff",
 				Description: "Summarize constraints, decisions, suggested implementation order, and open questions.",
 				SkillRefs:   []string{},
+				InputRefs:   []string{"architect/adr", "architect/system-design", "architect/risks"},
+				// OutputArtifact="" → last-step fallback writes architectural-decision + system-design + risk-register.
+				OutputArtifact: "",
 			},
 		},
 		Artifacts: ArtifactContract{
@@ -235,7 +291,8 @@ func ArchitectDescriptor() SpecialistDescriptor {
 }
 
 // QADescriptor returns the descriptor for the QA Engineer specialist.
-// Matches the 6-step workflow in skill/qa/SKILL.md (note: SKILL.md has 6 steps, not 7).
+// Matches the 6-step context-isolated pipeline in skill/qa/SKILL.md.
+// Last step uses OutputArtifact="" so writeArtifacts writes test-plan + quality-report.
 func QADescriptor() SpecialistDescriptor {
 	return SpecialistDescriptor{
 		ID:          "qa",
@@ -244,34 +301,47 @@ func QADescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope"},
 		Workflow: []WorkflowStep{
 			{
-				ID:          "load-requirements",
-				Description: "Read spec/AC artifacts: requirements-spec, ux-brief, architectural-decision, system-design.",
-				SkillRefs:   []string{},
+				ID:             "load-requirements",
+				Description:    "Read spec/AC artifacts: requirements-spec, ux-brief, architectural-decision, system-design.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{},
+				OutputArtifact: "qa/ac-list",
 			},
 			{
-				ID:          "ac-validation",
-				Description: "Validate acceptance criteria completeness, testability, clarity, and measurability.",
-				SkillRefs:   []string{"acceptance-criteria"},
+				ID:             "ac-validation",
+				Description:    "Validate acceptance criteria completeness, testability, clarity, and measurability.",
+				SkillRefs:      []string{"acceptance-criteria"},
+				InputRefs:      []string{"qa/ac-list"},
+				OutputArtifact: "qa/ac-gaps",
 			},
 			{
-				ID:          "edge-case-analysis",
-				Description: "Enumerate boundary values, error paths, concurrent scenarios, and data edge cases.",
-				SkillRefs:   []string{"edge-case-analysis"},
+				ID:             "edge-case-analysis",
+				Description:    "Enumerate boundary values, error paths, concurrent scenarios, and data edge cases.",
+				SkillRefs:      []string{"edge-case-analysis"},
+				InputRefs:      []string{"qa/ac-list"},
+				OutputArtifact: "qa/edge-cases",
 			},
 			{
-				ID:          "test-strategy",
-				Description: "Define unit/integration/E2E strategy, coverage targets, and test data approach.",
-				SkillRefs:   []string{"test-strategy"},
+				ID:             "test-strategy",
+				Description:    "Define unit/integration/E2E strategy, coverage targets, and test data approach.",
+				SkillRefs:      []string{"test-strategy"},
+				InputRefs:      []string{"qa/edge-cases"},
+				OutputArtifact: "qa/test-strategy",
 			},
 			{
-				ID:          "test-cases",
-				Description: "Author concrete test cases in Given/When/Then format covering happy path and edge cases.",
-				SkillRefs:   []string{"test-strategy"},
+				ID:             "test-case-generation",
+				Description:    "Author concrete test cases in Given/When/Then format covering happy path and edge cases.",
+				SkillRefs:      []string{"test-strategy"},
+				InputRefs:      []string{"qa/test-strategy", "qa/edge-cases"},
+				OutputArtifact: "qa/test-cases",
 			},
 			{
-				ID:          "quality-handoff",
+				ID:          "quality-report",
 				Description: "Summarize AC gaps, missing test infrastructure, and open questions for Developer.",
 				SkillRefs:   []string{},
+				InputRefs:   []string{"qa/test-cases", "qa/ac-gaps"},
+				// OutputArtifact="" → last-step fallback writes test-plan + quality-report.
+				OutputArtifact: "",
 			},
 		},
 		Artifacts: ArtifactContract{
@@ -283,6 +353,8 @@ func QADescriptor() SpecialistDescriptor {
 
 // SecurityDescriptor returns the descriptor for the Security Engineer specialist.
 // Key invariant: Reads is empty — no required predecessor. Matches skill/security/SKILL.md.
+// First step is platform-analysis. Last step uses OutputArtifact="" so writeArtifacts
+// writes all three finals: threat-model + security-findings + hardening-checklist.
 func SecurityDescriptor() SpecialistDescriptor {
 	return SpecialistDescriptor{
 		ID:          "security",
@@ -291,29 +363,40 @@ func SecurityDescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope"},
 		Workflow: []WorkflowStep{
 			{
-				ID:          "threat-modeling",
-				Description: "STRIDE-style threat model from any available context.",
-				SkillRefs:   []string{"threat-modeling"},
+				ID:             "platform-analysis",
+				Description:    "Establish platform context for security assessment. Extract stack, trust boundaries, and entry points.",
+				SkillRefs:      []string{},
+				InputRefs:      []string{},
+				OutputArtifact: "platform-summary",
 			},
 			{
-				ID:          "attack-surface-review",
-				Description: "Enumerate all entry points and map trust boundaries.",
-				SkillRefs:   []string{"threat-modeling"},
+				ID:             "threat-modeling",
+				Description:    "STRIDE-style threat model from available platform context.",
+				SkillRefs:      []string{"threat-modeling"},
+				InputRefs:      []string{"platform-summary"},
+				OutputArtifact: "security/stride-threats",
 			},
 			{
-				ID:          "owasp-analysis",
-				Description: "Review the feature against the OWASP Top 10 2021 categories relevant to the stack.",
-				SkillRefs:   []string{"owasp-review"},
+				ID:             "attack-surface",
+				Description:    "Enumerate all entry points and map trust boundaries.",
+				SkillRefs:      []string{"threat-modeling"},
+				InputRefs:      []string{"security/stride-threats"},
+				OutputArtifact: "security/attack-surface",
 			},
 			{
-				ID:          "security-findings",
-				Description: "Record findings with severity, CWE reference, and actionable recommendation.",
-				SkillRefs:   []string{"owasp-review"},
+				ID:             "owasp-analysis",
+				Description:    "Review the feature against the OWASP Top 10 2021 categories relevant to the stack.",
+				SkillRefs:      []string{"owasp-review"},
+				InputRefs:      []string{"security/attack-surface"},
+				OutputArtifact: "security/owasp-findings",
 			},
 			{
 				ID:          "hardening-checklist",
 				Description: "Produce an ordered hardening action list for the Developer specialist.",
 				SkillRefs:   []string{},
+				InputRefs:   []string{"security/stride-threats", "security/owasp-findings"},
+				// OutputArtifact="" → last-step fallback writes threat-model + security-findings + hardening-checklist.
+				OutputArtifact: "",
 			},
 		},
 		Artifacts: ArtifactContract{
