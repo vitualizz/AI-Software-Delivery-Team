@@ -14,6 +14,7 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/developer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/knowledge"
 	"github.com/vitualizz/ai-software-delivery-team/internal/llm"
+	"github.com/vitualizz/ai-software-delivery-team/internal/memory"
 	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
 	"github.com/vitualizz/ai-software-delivery-team/internal/prompt"
 	"github.com/vitualizz/ai-software-delivery-team/internal/requirements"
@@ -111,6 +112,17 @@ func resolveChange(args []string, cfg config.Config) string {
 		return cfg.ActiveChange
 	}
 	return "default"
+}
+
+// buildMemoryProvider returns the configured memory.Provider.
+// Defaults to NullProvider when config is absent or provider is unset.
+func buildMemoryProvider(cfg config.Config) memory.Provider {
+	switch cfg.Memory.Provider {
+	case "engram":
+		return memory.NewEngramProvider(cfg.Memory.Endpoint, cfg.Memory.Project)
+	default:
+		return memory.NullProvider{}
+	}
 }
 
 // buildProvider returns a real LLM provider when ANTHROPIC_API_KEY is set,

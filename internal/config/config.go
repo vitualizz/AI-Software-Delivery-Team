@@ -8,6 +8,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// MemoryConfig holds settings for the cross-session memory provider.
+type MemoryConfig struct {
+	// Provider selects the backend: "null" (default, no-op) or "engram".
+	Provider string `yaml:"provider,omitempty"`
+
+	// Endpoint is the optional URL or socket path for the memory backend.
+	// Used by EngramProvider when set.
+	Endpoint string `yaml:"endpoint,omitempty"`
+
+	// Project is the project identifier sent to the memory backend.
+	Project string `yaml:"project,omitempty"`
+}
+
 // Config holds the persisted settings for an ASDT project.
 // It is serialized to/from {root}/config.yaml.
 type Config struct {
@@ -17,6 +30,10 @@ type Config struct {
 
 	// Defaults holds project-level default settings.
 	Defaults map[string]string `yaml:"defaults,omitempty"`
+
+	// Memory configures the optional cross-session memory provider.
+	// When absent or provider is empty, NullProvider is used.
+	Memory MemoryConfig `yaml:"memory,omitempty"`
 }
 
 // configPath returns the absolute path to config.yaml within the given root.
