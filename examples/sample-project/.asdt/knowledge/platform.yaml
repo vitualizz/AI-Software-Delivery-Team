@@ -1,0 +1,34 @@
+schema_version: "1"
+agent: knowledge
+change_id: ""
+created_at: "2026-06-04T10:00:00Z"
+prompt_version: "a1b2c3d4"
+input_refs: []
+payload:
+  detected_stack:
+    - go
+    - postgresql
+  conventions:
+    naming:
+      files: snake_case
+      variables: camelCase
+      types: PascalCase
+    api_style: REST
+    test_pattern: table_driven
+    error_handling: explicit_return
+  structure:
+    - path: cmd/
+      purpose: binary entry points
+    - path: internal/
+      purpose: private application packages
+    - path: internal/handler/
+      purpose: HTTP handlers (one file per resource)
+    - path: internal/model/
+      purpose: domain types and database models
+    - path: internal/store/
+      purpose: database access layer
+    - path: migrations/
+      purpose: SQL migration files
+  component_library: null
+  framework: net/http
+  scanned_at: "2026-06-04T10:00:00Z"

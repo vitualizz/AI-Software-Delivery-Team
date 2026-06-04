@@ -1,0 +1,10 @@
+schema_version: "1"
+change_id: add-user-auth
+current_state: plan
+transitions:
+  - from: ""
+    to: requirements
+    timestamp: "2026-06-04T10:00:00Z"
+  - from: requirements
+    to: plan
+    timestamp: "2026-06-04T10:05:32Z"
