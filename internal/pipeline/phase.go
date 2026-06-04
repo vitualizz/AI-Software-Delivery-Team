@@ -1,9 +1,11 @@
 // Package pipeline implements the sequential FSM for ASDT change delivery.
-// Valid transitions: requirements → plan → implement → review.
-// Any other transition is rejected with a descriptive error.
+// Valid transitions are enforced by the specialist model (PipelineStateV2 / AdvanceStep).
+// The Phase type and constants are kept for backward compatibility with v1 state files.
 package pipeline
 
 // Phase represents a pipeline stage as a string enum.
+// Kept for backward compatibility with v1 pipeline-state.yaml files.
+// New code should use the specialist model (PipelineStateV2 / AdvanceStep).
 type Phase string
 
 const (
@@ -19,11 +21,3 @@ const (
 	// PhaseReview is the terminal phase before merging.
 	PhaseReview Phase = "review"
 )
-
-// validEdges defines the only legal phase transitions.
-// requirements → plan → implement → review.
-var validEdges = map[Phase]Phase{
-	PhaseRequirements: PhasePlan,
-	PhasePlan:         PhaseImplement,
-	PhaseImplement:    PhaseReview,
-}

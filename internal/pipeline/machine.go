@@ -2,7 +2,6 @@ package pipeline
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -20,14 +19,6 @@ type PipelineRunner interface {
 	// Current returns the current pipeline State for the given change.
 	// If no state file exists, it returns a zero State without error.
 	Current(ctx context.Context, change string) (State, error)
-
-	// Advance moves the pipeline from its current state to `to`.
-	// Returns an error if the transition is illegal.
-	// Deprecated: use AdvanceStep for new specialist-model code.
-	Advance(ctx context.Context, change string, to Phase) (State, error)
-
-	// CanTransition returns true when transitioning from → to is a legal edge.
-	CanTransition(from, to Phase) bool
 
 	// AdvanceStep records completion of a workflow step for one specialist.
 	// It appends to steps_completed (never overwrites), sets current_step,
@@ -49,12 +40,6 @@ func NewFSMachine(store artifact.Store) *FSMachine {
 	return &FSMachine{store: store}
 }
 
-// CanTransition returns true when from → to is a legal pipeline edge.
-func (m *FSMachine) CanTransition(from, to Phase) bool {
-	expected, ok := validEdges[from]
-	return ok && expected == to
-}
-
 // Current reads the pipeline-state.yaml for the given change.
 // If the file does not exist, it returns a zero-value State.
 func (m *FSMachine) Current(ctx context.Context, change string) (State, error) {
@@ -68,60 +53,9 @@ func (m *FSMachine) Current(ctx context.Context, change string) (State, error) {
 	return s, nil
 }
 
-// Advance reads the current state, validates the transition, appends it to
-// the history, sets the new current state, and writes the file back via Store.
-// It creates the pipeline-state.yaml when it does not yet exist (initial state).
-func (m *FSMachine) Advance(ctx context.Context, change string, to Phase) (State, error) {
-	current, err := m.Current(ctx, change)
-	if err != nil {
-		return State{}, err
-	}
-
-	// Handle initial state creation.
-	if current.ChangeID == "" {
-		// No file yet — bootstrapping. Only PhaseRequirements is valid as first state.
-		if to != PhaseRequirements {
-			return State{}, fmt.Errorf(
-				"pipeline advance: cannot start at %q; initial state must be %q",
-				to, PhaseRequirements,
-			)
-		}
-		s := State{
-			SchemaVersion: schemaVersion,
-			ChangeID:      change,
-			CurrentState:  PhaseRequirements,
-			Transitions:   []Transition{},
-		}
-		if err := m.store.Write(ctx, change, artifactType, s); err != nil {
-			return State{}, fmt.Errorf("pipeline advance write initial: %w", err)
-		}
-		return s, nil
-	}
-
-	from := current.CurrentState
-	if !m.CanTransition(from, to) {
-		expected, _ := validEdges[from]
-		return State{}, fmt.Errorf(
-			"%w: cannot advance from %q to %q (expected next: %q)",
-			ErrIllegalTransition, from, to, expected,
-		)
-	}
-
-	current.CurrentState = to
-	current.Transitions = append(current.Transitions, Transition{
-		From:      from,
-		To:        to,
-		Timestamp: time.Now().UTC(),
-	})
-
-	if err := m.store.Write(ctx, change, artifactType, current); err != nil {
-		return State{}, fmt.Errorf("pipeline advance write: %w", err)
-	}
-	return current, nil
-}
-
 // ErrIllegalTransition is returned when an advance attempt violates the FSM edges.
-var ErrIllegalTransition = errors.New("illegal pipeline transition")
+// Kept for backward compatibility; no longer used internally.
+var ErrIllegalTransition = fmt.Errorf("illegal pipeline transition")
 
 // ArtifactTypeV2 is the artifact type key for the specialist-scoped pipeline state.
 const ArtifactTypeV2 = "pipeline-state-v2"
