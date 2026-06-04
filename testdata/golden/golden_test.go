@@ -9,10 +9,28 @@ import (
 	"testing"
 
 	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
-	"github.com/vitualizz/ai-software-delivery-team/internal/developer"
-	"github.com/vitualizz/ai-software-delivery-team/internal/requirements"
 	"gopkg.in/yaml.v3"
 )
+
+// --- Local types replacing the deleted requirements/developer packages. ---
+// These minimal structs satisfy the golden fixture validation only.
+
+// requirementsSpec mirrors the payload of a requirements-spec artifact.
+type requirementsSpec struct {
+	UserStories []struct {
+		ID     string `yaml:"id"`
+		As     string `yaml:"as"`
+		Want   string `yaml:"want"`
+		SoThat string `yaml:"so_that"`
+	} `yaml:"user_stories"`
+}
+
+// implementationPlan mirrors the payload of an implementation-plan artifact.
+type implementationPlan struct {
+	Steps []struct {
+		StoryID string `yaml:"story_id"`
+	} `yaml:"steps"`
+}
 
 // fixtureDir returns the absolute path to the testdata/golden directory.
 // It is resolved relative to this test file's location so it works regardless
@@ -40,7 +58,7 @@ func readFixture(t *testing.T, name string) []byte {
 func TestValidRequirementsSpec(t *testing.T) {
 	data := readFixture(t, "valid-requirements-spec.yaml")
 
-	var env artifact.Envelope[requirements.RequirementsSpec]
+	var env artifact.Envelope[requirementsSpec]
 	if err := yaml.Unmarshal(data, &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -77,7 +95,7 @@ func TestValidRequirementsSpec(t *testing.T) {
 func TestValidImplementationPlan(t *testing.T) {
 	data := readFixture(t, "valid-implementation-plan.yaml")
 
-	var env artifact.Envelope[developer.ImplementationPlan]
+	var env artifact.Envelope[implementationPlan]
 	if err := yaml.Unmarshal(data, &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -110,7 +128,7 @@ func TestValidImplementationPlan(t *testing.T) {
 func TestInvalidMissingAgent(t *testing.T) {
 	data := readFixture(t, "invalid-missing-agent.yaml")
 
-	var env artifact.Envelope[requirements.RequirementsSpec]
+	var env artifact.Envelope[requirementsSpec]
 	if err := yaml.Unmarshal(data, &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -129,7 +147,7 @@ func TestInvalidMissingAgent(t *testing.T) {
 func TestInvalidMissingStoryID(t *testing.T) {
 	data := readFixture(t, "invalid-missing-story-id.yaml")
 
-	var env artifact.Envelope[requirements.RequirementsSpec]
+	var env artifact.Envelope[requirementsSpec]
 	if err := yaml.Unmarshal(data, &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
