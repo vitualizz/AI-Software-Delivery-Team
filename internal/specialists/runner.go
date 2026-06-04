@@ -73,7 +73,7 @@ func (r *Runner) Run(ctx context.Context, root config.Root, change string) error
 func (r *Runner) runStep(ctx context.Context, root config.Root, change string, step WorkflowStep) error {
 	sharedFragments := r.loadSharedSkills()
 	stepFragments := r.loadStepSkills(step)
-	artifactCtx, openItems := r.loadInputArtifacts(ctx, root, change)
+	artifactCtx, openItems := r.loadStepInputs(ctx, root, change, step)
 	platformCtx := r.loadPlatformContext(root)
 
 	roleFragment, err := r.deps.Registry.Role(r.descriptor.ID)
@@ -94,7 +94,11 @@ func (r *Runner) runStep(ctx context.Context, root config.Root, change string, s
 
 	payload := r.parseYAMLResponse(response.Content, openItems)
 
-	if r.isLastStep(step) {
+	if step.OutputArtifact != "" {
+		if err := r.writeStepArtifact(ctx, root, change, step.OutputArtifact, payload, roleFragment, allSkills); err != nil {
+			return err
+		}
+	} else if r.isLastStep(step) {
 		if err := r.writeArtifacts(ctx, root, change, payload, roleFragment, allSkills, manifest); err != nil {
 			return err
 		}
@@ -138,9 +142,38 @@ func (r *Runner) loadStepSkills(step WorkflowStep) []prompt.Fragment {
 	return frags
 }
 
+// loadStepInputs loads only the artifact types declared in step.InputRefs.
+// When InputRefs is empty, falls back to descriptor.Artifacts.Reads (backward compat).
+// Missing inputs produce open_items notes but do not return an error.
+func (r *Runner) loadStepInputs(ctx context.Context, root config.Root, change string, step WorkflowStep) (string, []string) {
+	refs := step.InputRefs
+	if len(refs) == 0 {
+		refs = r.descriptor.Artifacts.Reads
+	}
+	var parts []string
+	var missing []string
+	for _, artifactType := range refs {
+		if !r.deps.Store.Exists(change, artifactType) {
+			missing = append(missing, fmt.Sprintf("%s.yaml absent — proceeding without it", artifactType))
+			continue
+		}
+		var raw map[string]any
+		if err := r.deps.Store.Read(ctx, change, artifactType, &raw); err != nil {
+			missing = append(missing, fmt.Sprintf("%s.yaml unreadable: %v", artifactType, err))
+			continue
+		}
+		data, _ := yaml.Marshal(raw)
+		parts = append(parts, fmt.Sprintf("## Artifact: %s\n\n```yaml\n%s```", artifactType, string(data)))
+	}
+	_ = root // accepted for interface symmetry; currently unused
+	return strings.Join(parts, "\n\n"), missing
+}
+
 // loadInputArtifacts pre-loads all soft-required artifact types declared in
 // ArtifactContract.Reads. Missing inputs produce open_items notes but do not
 // return an error.
+//
+// Deprecated: use loadStepInputs instead. Kept for backward compatibility.
 func (r *Runner) loadInputArtifacts(ctx context.Context, root config.Root, change string) (context string, missing []string) {
 	var parts []string
 	for _, artifactType := range r.descriptor.Artifacts.Reads {
@@ -238,6 +271,35 @@ func (r *Runner) writeArtifacts(
 		}
 	}
 	_ = manifest // manifest is available for callers that need the full version map
+	return nil
+}
+
+// writeStepArtifact writes a single Envelope[map[string]any] for the given artifactType.
+// It is called for every step whose OutputArtifact field is non-empty, enabling
+// per-step artifact writes (context isolation). The artifact IS the handoff to the
+// next step — not conversation history.
+func (r *Runner) writeStepArtifact(
+	ctx context.Context,
+	root config.Root,
+	change, artifactType string,
+	payload map[string]any,
+	role prompt.Fragment,
+	skills []prompt.Fragment,
+) error {
+	env := artifact.Envelope[map[string]any]{
+		EnvelopeHeader: artifact.EnvelopeHeader{
+			SchemaVersion: artifact.CurrentSchemaVersion,
+			Agent:         r.descriptor.ID,
+			ChangeID:      change,
+			CreatedAt:     time.Now().UTC(),
+			PromptVersion: r.computePromptVersion(role, skills),
+			InputRefs:     r.buildInputRefs(root, change),
+		},
+		Payload: payload,
+	}
+	if err := r.deps.Store.Write(ctx, change, artifactType, env); err != nil {
+		return fmt.Errorf("write artifact %s: %w", artifactType, err)
+	}
 	return nil
 }
 
