@@ -1,39 +1,56 @@
 # ASDT — AI Software Delivery Team
 
-Artifact-first AI delivery pipeline. Requirements → Plan → Code, not just Code.
+*Specialist-first AI delivery. Decisions preserved, not just code generated.*
 
 ---
 
-## The problem
+## The philosophy
 
-Most AI coding tools take you from Idea → Prompt → Code. The reasoning that
-produced that code evaporates when the chat ends. When requirements change, or a
-reviewer asks "why was this designed this way?", there is no record. ASDT inserts
-the steps that a real delivery team would take — and makes each step a durable,
-human-readable artifact you can read, review, and replay. The conversation is
-ephemeral; the artifacts are not.
+Most AI tools collapse your entire team into a single chat. A PM, architect,
+developer, QA engineer, and security analyst don't do the same job — and neither
+should your AI. ASDT models a real software delivery organization: each
+specialist owns its own discipline, its own workflow, and its own artifacts.
+Agents communicate through files, not conversations. The result is a durable,
+reviewable, replayable record of every decision made.
 
 ---
 
 ## Three invariants
 
-- **One entry point**: `/asdt <subcommand>` — one command, one dispatch table,
-  no per-agent skills to install or manage.
 - **One boundary**: everything lives under `.asdt/` — your project root stays
   clean. Uninstall with `rm -rf .asdt/`.
-- **One behavior**: the same prompts, the same schemas, the same artifact output
-  in Claude Code, OpenCode, and the standalone TUI.
+- **One behavior**: same specialists in Claude Code, OpenCode, and the TUI.
+- **No required order**: any specialist can run first — they're independent
+  professionals.
+
+---
+
+## The specialists
+
+| Command | Role | Produces |
+|---------|------|----------|
+| `/asdt:ux-ui` | UX/UI Specialist | `ux-brief.yaml`, `component-spec.yaml` |
+| `/asdt:architect` | Architect | `architectural-decision.yaml`, `system-design.yaml` |
+| `/asdt:developer` | Developer | `implementation-plan.yaml` |
+| `/asdt:qa` | QA Engineer | `test-plan.yaml`, `test-cases.yaml` |
+| `/asdt:security` | Security Specialist | `threat-model.yaml`, `security-findings.yaml` |
+| `/asdt "request"` | Meta-orchestrator | Suggests which specialists to run |
 
 ---
 
 ## Quick start
 
 ```bash
-# inside any project
-/asdt knowledge              # scan project → .asdt/knowledge/platform.yaml
-/asdt requirements "add user authentication with email and password"
-/asdt develop                # reads requirements → .asdt/artifacts/{change}/implementation-plan.yaml
-/asdt status                 # show pipeline state and transition history
+# Ask the meta-orchestrator to suggest a plan
+/asdt "add AI Reports Dashboard"
+
+# Then run each suggested specialist
+/asdt:ux-ui       # Platform Analysis → IA → User Flows → Component Spec
+/asdt:architect   # Constraints → ADR → System Design → Risk Analysis
+/asdt:developer   # Loads all prior artifacts → Implementation Plan + Code
+
+# Or run Security at any point — no predecessor required
+/asdt:security    # Threat Modeling → OWASP Analysis → Hardening Checklist
 ```
 
 ---
@@ -42,12 +59,18 @@ ephemeral; the artifacts are not.
 
 ```
 .asdt/
+├── config.yaml
 ├── knowledge/
-│   └── platform.yaml                   # detected stack, conventions, design fingerprint
-└── artifacts/add-user-auth/
-    ├── requirements-spec.yaml           # user stories, acceptance criteria, scope, NFRs
-    ├── implementation-plan.yaml         # step-by-step plan with file names and code snippets
-    └── pipeline-state.yaml             # current state + full transition history with timestamps
+│   └── platform.yaml              # tech stack, conventions, design fingerprint
+└── artifacts/add-ai-reports/
+    ├── ux-brief.yaml              # user flows, IA, component mapping
+    ├── component-spec.yaml        # reused/new components
+    ├── architectural-decision.yaml # ADR with alternatives considered
+    ├── system-design.yaml         # data model, API surface, risks
+    ├── implementation-plan.yaml   # step-by-step plan + code snippets
+    ├── test-plan.yaml             # test strategy + test cases
+    ├── security-findings.yaml     # threats, OWASP findings, hardening checklist
+    └── pipeline-state.yaml        # per-specialist step history
 ```
 
 Every file is a plain YAML artifact you can open in any editor, commit to git,
@@ -55,49 +78,62 @@ diff in a PR, and replay in a future session.
 
 ---
 
+## Platform awareness
+
+ASDT is designed for *existing systems*, not greenfield projects. Every
+specialist loads `platform.yaml` before doing any work — it contains your tech
+stack, naming conventions, existing components, and design patterns. The goal
+isn't generating software. The goal is extending your software consistently, in
+a way that feels like it belongs there.
+
+---
+
 ## Architecture
 
-ASDT ships as two independent artifacts that share one boundary (`.asdt/`):
-
-1. **`skill/`** — the canonical, runtime-agnostic `/asdt` router. Pure prompt +
-   file I/O. Runs identically in Claude Code and OpenCode. No Go dependency.
-2. **Go binary** — an optional TUI that reads `.asdt/` for visualization. Built
-   with hexagonal architecture (ports and adapters); depends on the skill's
-   artifact schemas but owns none of the agent logic.
-
-The shared contract is `Envelope[T]` — a typed YAML structure with a uniform
-header (`schema_version`, `agent`, `change_id`, `created_at`, `prompt_version`,
-`input_refs[]`) and a typed payload. Agents communicate only through these
-files; there is no direct agent-to-agent messaging.
-
 ```
-ai-software-delivery-team/
-├── skill/                      # primary deliverable — runtime-agnostic /asdt package
-│   ├── SKILL.md                # the /asdt router: dispatch table + invariants
-│   └── prompts/
-│       ├── roles/              # agent role prompts (requirements, developer, knowledge)
-│       └── skills/             # reusable capability fragments (DRY prompt logic)
-├── schemas/                    # canonical YAML schemas (single source of truth)
-├── cmd/asdt/                   # TUI binary entry — composition root only, no logic
-├── internal/
-│   ├── artifact/               # Envelope[T], Store interface, FSStore adapter
-│   ├── knowledge/              # platform.yaml detector and reader
-│   ├── pipeline/               # sequential FSM, state machine, transition rules
-│   ├── prompt/                 # layered composition engine, override resolver
-│   ├── llm/                    # Provider interface, Anthropic/OpenAI/Mock adapters
-│   ├── tui/                    # Bubbletea root model and panel components
-│   └── config/                 # .asdt/ walk-up discovery, config.yaml R/W
-├── testdata/                   # fixtures and golden files for Go tests
-├── examples/                   # end-user-facing example runs
-└── docs/
-    ├── contributing.md         # how to add an agent or skill fragment
-    ├── adr/                    # ADR-001..005 as individual files
-    └── runtime-compat.md       # Claude Code vs OpenCode invocation mapping
+skill/                  ← THE PRODUCT: runtime-agnostic specialist SKILL.md files
+├── SKILL.md            ← /asdt meta-orchestrator
+├── _shared/skills/     ← platform-context, artifact-envelope, scope-definition
+├── developer/          ← /asdt:developer (7-step workflow)
+├── ux-ui/              ← /asdt:ux-ui (7-step workflow)
+├── architect/          ← /asdt:architect (7-step workflow)
+├── qa/                 ← /asdt:qa (6-step workflow)
+└── security/           ← /asdt:security (5-step, no required predecessor)
+
+internal/               ← Go packages for the optional TUI binary
+├── specialists/        ← SpecialistDescriptor + generic Runner (the core abstraction)
+├── artifact/           ← Envelope[T], FSStore
+├── memory/             ← MemoryProvider interface, NullProvider, EngramProvider stub
+├── pipeline/           ← PipelineStateV2, AdvanceStep
+├── prompt/             ← layered composition, ScopedSkill registry
+├── knowledge/          ← platform.yaml detector
+├── llm/                ← Provider interface + Anthropic/OpenAI/Mock
+└── tui/                ← Bubbletea TUI (optional)
+
+schemas/                ← YAML schemas for all artifact types
+docs/adr/               ← Architecture Decision Records (ADR-001 through ADR-007)
 ```
 
 ---
 
-## Install TUI (optional)
+## Adding a specialist
+
+```
+# 1. Write the skill file
+skill/my-specialist/SKILL.md
+
+# 2. Add a descriptor (one struct literal in Go)
+func MySpecialistDescriptor() SpecialistDescriptor { ... }
+
+# 3. Register it
+descriptors["my-specialist"] = specialists.MySpecialistDescriptor()
+```
+
+Zero new Go packages. The specialist system is data-driven.
+
+---
+
+## Install the TUI (optional)
 
 The Go TUI is optional. ASDT works without it through any AI coding assistant.
 
@@ -109,9 +145,8 @@ go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt@latest
 
 ## Use in Claude Code
 
-Copy `skill/` into your project's `.claude/skills/` directory, or install it
-globally in `~/.claude/skills/`. The `/asdt` command becomes available
-immediately in any Claude Code session.
+Install `skill/` as a skill package. Each `/asdt:{specialist}` SKILL.md is
+independently invocable.
 
 ```bash
 cp -r skill/ ~/.claude/skills/asdt
@@ -119,27 +154,34 @@ cp -r skill/ ~/.claude/skills/asdt
 
 ## Use in OpenCode
 
-Map `/asdt` to `skill/SKILL.md` in your OpenCode configuration:
+Map `/asdt` and each specialist to the corresponding SKILL.md in your OpenCode
+configuration:
 
 ```toml
 [commands.asdt]
 path = ".claude/skills/asdt/SKILL.md"
+
+[commands."asdt:developer"]
+path = ".claude/skills/asdt/developer/SKILL.md"
 ```
 
 ---
 
-## Runtimes
+## Memory
 
-Works in Claude Code, OpenCode, and as a standalone Go TUI. The behavior is
-identical across all three — same prompts, same schemas, same artifact output.
+By default, no memory is used (`NullProvider`). Configure Engram by adding to
+`.asdt/config.yaml`:
+
+```yaml
+memory:
+  provider: engram
+```
 
 ---
 
 ## Contributing
 
-See [docs/contributing.md](docs/contributing.md). You do not need to know Go to
-contribute — prompt improvements and new agent definitions are first-class
-contributions.
+See [docs/contributing.md](docs/contributing.md).
 
 ---
 
