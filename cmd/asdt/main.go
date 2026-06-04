@@ -7,18 +7,26 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
 	"github.com/vitualizz/ai-software-delivery-team/internal/config"
-	"github.com/vitualizz/ai-software-delivery-team/internal/developer"
-	"github.com/vitualizz/ai-software-delivery-team/internal/knowledge"
 	"github.com/vitualizz/ai-software-delivery-team/internal/llm"
 	"github.com/vitualizz/ai-software-delivery-team/internal/memory"
 	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
 	"github.com/vitualizz/ai-software-delivery-team/internal/prompt"
-	"github.com/vitualizz/ai-software-delivery-team/internal/requirements"
+	"github.com/vitualizz/ai-software-delivery-team/internal/specialists"
 )
+
+// deprecated maps removed task-verb commands to guidance messages.
+// These commands existed in the MVP pipeline model and have been superseded
+// by the specialist model.
+var deprecated = map[string]string{
+	"requirements": "use /asdt:architect (for system requirements) or /asdt:ux-ui (for product requirements)",
+	"develop":      "use /asdt:developer",
+	"knowledge":    "platform context is now loaded automatically by each specialist's Platform Analysis step",
+}
 
 func main() {
 	if err := run(context.Background(), os.Args[1:]); err != nil {
@@ -39,6 +47,12 @@ func run(ctx context.Context, args []string) error {
 		return printHelp()
 	}
 
+	// Deprecated commands: print guidance and exit 0.
+	if msg, dep := deprecated[subcmd]; dep {
+		fmt.Printf("warning: `asdt %s` is deprecated: %s\n", subcmd, msg)
+		return nil
+	}
+
 	// All other commands require a project root.
 	root, err := config.Discover(".")
 	if err != nil {
@@ -52,66 +66,56 @@ func run(ctx context.Context, args []string) error {
 
 	// Build shared dependencies.
 	store := artifact.NewFSStore(root.Path())
-	reg := prompt.DefaultEmbeddedRegistry()
 	runner := pipeline.NewFSMachine(store)
-	knowledgeReader := knowledge.NewFSReader()
 
-	switch subcmd {
-	case "knowledge":
-		return runKnowledge(ctx, root, knowledgeReader)
-
-	case "requirements":
-		if len(rest) == 0 {
-			return fmt.Errorf("usage: asdt requirements <idea>")
-		}
-		idea := strings.Join(rest, " ")
-		change := resolveChange(rest, cfg)
-		provider := buildProvider()
-		agent := requirements.New(reg, provider, store, runner, knowledgeReader)
-		return agent.Run(ctx, root, change, idea)
-
-	case "develop":
-		change := resolveChange(rest, cfg)
-		provider := buildProvider()
-		agent := developer.New(reg, provider, store, runner, knowledgeReader)
-		return agent.Run(ctx, root, change)
-
-	case "status":
+	// status command.
+	if subcmd == "status" {
 		return printStatus(root, cfg, store, runner, ctx)
-
-	default:
-		return fmt.Errorf("unknown subcommand: %q. Valid: knowledge, requirements, develop, status, help", subcmd)
 	}
+
+	// Build the specialist descriptor registry (data-driven dispatch table).
+	descriptors := map[string]specialists.SpecialistDescriptor{
+		"developer": specialists.DeveloperDescriptor(),
+		"ux-ui":     specialists.UXUIDescriptor(),
+		"architect": specialists.ArchitectDescriptor(),
+		"qa":        specialists.QADescriptor(),
+		"security":  specialists.SecurityDescriptor(),
+	}
+
+	d, ok := descriptors[subcmd]
+	if !ok {
+		return fmt.Errorf("unknown specialist %q. Valid: %s", subcmd, validSpecialists(descriptors))
+	}
+
+	deps := specialists.RunnerDeps{
+		Registry: buildRegistry(root),
+		Composer: prompt.Compose,
+		Provider: buildProvider(),
+		Store:    store,
+		Pipeline: runner,
+		Memory:   buildMemoryProvider(cfg),
+	}
+	change := resolveChange(rest, cfg)
+	return specialists.New(d, deps).Run(ctx, root, change)
 }
 
-// runKnowledge scans the project root and writes platform.yaml.
-func runKnowledge(ctx context.Context, root config.Root, reader knowledge.Reader) error {
-	det := knowledge.DefaultDetector()
-	// The project root is one level up from the .asdt/ directory.
-	projectRoot := strings.TrimSuffix(root.Path(), "/.asdt")
-	p, err := det.Detect(ctx, projectRoot)
-	if err != nil {
-		return fmt.Errorf("knowledge detect: %w", err)
-	}
-	if err := reader.Write(root, p); err != nil {
-		return fmt.Errorf("knowledge write: %w", err)
-	}
-	fmt.Printf("knowledge: detected stack %v\n", p.DetectedStack)
-	return nil
+// buildRegistry returns an OverrideResolver that checks .asdt/prompts/ for local
+// overrides before falling back to the production embedded FS.
+func buildRegistry(root config.Root) prompt.SkillRegistry {
+	localDir := strings.TrimSuffix(root.Path(), "/.asdt") + "/.asdt/prompts"
+	globalDir := prompt.DefaultGlobalDir()
+	embedded := prompt.DefaultEmbeddedRegistry()
+	return prompt.NewOverrideResolver(localDir, globalDir, embedded)
 }
 
-// resolveChange parses --change <name> from args, falls back to cfg.ActiveChange,
-// then falls back to "default".
-func resolveChange(args []string, cfg config.Config) string {
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "--change" {
-			return args[i+1]
-		}
+// validSpecialists returns a sorted comma-separated list of specialist IDs.
+func validSpecialists(m map[string]specialists.SpecialistDescriptor) string {
+	ids := make([]string, 0, len(m))
+	for id := range m {
+		ids = append(ids, id)
 	}
-	if cfg.ActiveChange != "" {
-		return cfg.ActiveChange
-	}
-	return "default"
+	sort.Strings(ids)
+	return strings.Join(ids, ", ")
 }
 
 // buildMemoryProvider returns the configured memory.Provider.
@@ -136,27 +140,49 @@ func buildProvider() llm.Provider {
 	))
 }
 
+// resolveChange parses --change <name> from args, falls back to cfg.ActiveChange,
+// then falls back to "default".
+func resolveChange(args []string, cfg config.Config) string {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == "--change" {
+			return args[i+1]
+		}
+	}
+	if cfg.ActiveChange != "" {
+		return cfg.ActiveChange
+	}
+	return "default"
+}
+
 // printHelp prints CLI usage to stdout and returns nil.
 func printHelp() error {
 	fmt.Print(`asdt — AI Software Delivery Team
 
 Usage:
-  asdt <subcommand> [args]
+  asdt <specialist> [args]
 
-Subcommands:
-  knowledge               Scan project and write .asdt/knowledge/platform.yaml
-  requirements <idea>     Generate requirements-spec from a free-text idea
-  develop                 Generate implementation-plan from requirements-spec
+Specialists:
+  developer               Generate implementation plan
+  ux-ui                   Generate UX/UI spec and component spec
+  architect               Generate architecture decision and system design
+  qa                      Generate test plan and quality report
+  security                Generate threat model and security findings
+
+Other commands:
   status                  Show current pipeline state
   help                    Print this help message
 
 Flags:
   --change <name>         Use a named change (default: active_change from config, then "default")
 
+Deprecated commands (use the specialist equivalents above):
+  requirements            Replaced by: use /asdt:architect or /asdt:ux-ui
+  develop                 Replaced by: /asdt:developer
+  knowledge               Platform context is now auto-loaded by each specialist
+
 Examples:
-  asdt knowledge
-  asdt requirements "add user password reset for users who forgot credentials"
-  asdt develop
+  asdt developer --change add-auth
+  asdt security
   asdt status
 `)
 	return nil
@@ -173,7 +199,7 @@ func printStatus(root config.Root, cfg config.Config, store artifact.Store, runn
 		return fmt.Errorf("status: read pipeline: %w", err)
 	}
 	if state.ChangeID == "" {
-		fmt.Printf("No pipeline state found for change %q. Run `asdt requirements` to start.\n", change)
+		fmt.Printf("No pipeline state found for change %q. Run a specialist to start.\n", change)
 		return nil
 	}
 	fmt.Printf("Change:       %s\n", state.ChangeID)
@@ -183,5 +209,6 @@ func printStatus(root config.Root, cfg config.Config, store artifact.Store, runn
 		fmt.Printf("  %s → %s  (%s)\n", t.From, t.To, t.Timestamp.Format("2006-01-02 15:04:05"))
 	}
 	_ = root // root used for discovery context
+	_ = store
 	return nil
 }
