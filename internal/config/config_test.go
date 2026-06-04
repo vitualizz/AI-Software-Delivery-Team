@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/vitualizz/ai-software-delivery-team/internal/config"
@@ -128,5 +129,63 @@ func TestLoad_MissingFile(t *testing.T) {
 	}
 	if cfg.ActiveChange != "" {
 		t.Errorf("expected empty Config, got ActiveChange=%q", cfg.ActiveChange)
+	}
+}
+
+// TestLoadSave_ZeroValues verifies that a Config with zero-value fields
+// round-trips correctly through Save+Load without data loss.
+func TestLoadSave_ZeroValues(t *testing.T) {
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(asdt, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	// Zero-value Config: no active change, nil defaults.
+	original := config.Config{}
+	if err := config.Save(root, original); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	restored, err := config.Load(root)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if restored.ActiveChange != "" {
+		t.Errorf("ActiveChange: got %q, want empty", restored.ActiveChange)
+	}
+	if len(restored.Defaults) != 0 {
+		t.Errorf("Defaults: got %v, want empty", restored.Defaults)
+	}
+}
+
+// TestDiscover_StopsAtFilesystemRoot verifies that Discover returns ErrNotFound
+// when walking from a temp directory that has no .asdt/ anywhere in its ancestry.
+// This exercises the "reached root" stop condition.
+func TestDiscover_StopsAtFilesystemRoot(t *testing.T) {
+	// t.TempDir() is always under /tmp or equivalent — no .asdt/ will exist there.
+	startDir := t.TempDir()
+	_, err := config.Discover(startDir)
+	if !errors.Is(err, config.ErrNotFound) {
+		t.Errorf("expected ErrNotFound when no .asdt/ exists; got: %v", err)
+	}
+}
+
+// TestDiscover_NotFound_ErrorMessageIsHelpful verifies that the ErrNotFound error
+// contains guidance for the user.
+func TestDiscover_NotFound_ErrorMessageIsHelpful(t *testing.T) {
+	startDir := t.TempDir()
+	_, err := config.Discover(startDir)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	msg := err.Error()
+	if !strings.Contains(msg, ".asdt") {
+		t.Errorf("error message should mention .asdt: %q", msg)
 	}
 }

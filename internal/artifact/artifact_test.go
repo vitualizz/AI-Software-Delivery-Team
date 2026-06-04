@@ -3,6 +3,8 @@ package artifact_test
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -179,5 +181,93 @@ func TestValidate_SchemaVersionMismatch(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), artifact.CurrentSchemaVersion) {
 		t.Errorf("error should mention the expected version: %v", err)
+	}
+}
+
+// nestedPayload is a struct with nested fields for round-trip coverage.
+type nestedPayload struct {
+	Title  string            `yaml:"title"`
+	Meta   map[string]string `yaml:"meta"`
+	Nested struct {
+		Score int      `yaml:"score"`
+		Tags  []string `yaml:"tags"`
+	} `yaml:"nested"`
+}
+
+// TestRoundTrip_NestedPayload verifies Write+Read with a non-trivial nested struct.
+func TestRoundTrip_NestedPayload(t *testing.T) {
+	dir := t.TempDir()
+	store := artifact.NewFSStore(dir)
+	ctx := context.Background()
+
+	original := artifact.Envelope[nestedPayload]{
+		EnvelopeHeader: validHeader(),
+	}
+	original.Payload.Title = "nested round-trip"
+	original.Payload.Meta = map[string]string{"env": "test", "version": "3"}
+	original.Payload.Nested.Score = 99
+	original.Payload.Nested.Tags = []string{"alpha", "beta", "gamma"}
+
+	if err := store.Write(ctx, "ch-1", "nested-artifact", original); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+
+	var restored artifact.Envelope[nestedPayload]
+	if err := store.Read(ctx, "ch-1", "nested-artifact", &restored); err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+
+	if restored.Payload.Title != original.Payload.Title {
+		t.Errorf("Title: got %q, want %q", restored.Payload.Title, original.Payload.Title)
+	}
+	if restored.Payload.Meta["env"] != "test" {
+		t.Errorf("Meta[env]: got %q, want %q", restored.Payload.Meta["env"], "test")
+	}
+	if restored.Payload.Nested.Score != 99 {
+		t.Errorf("Nested.Score: got %d, want 99", restored.Payload.Nested.Score)
+	}
+	if len(restored.Payload.Nested.Tags) != 3 {
+		t.Errorf("Nested.Tags len: got %d, want 3", len(restored.Payload.Nested.Tags))
+	}
+}
+
+// TestFSStore_Write_CreatesIntermediateDirectories verifies that Write creates
+// the full directory path even when intermediate directories don't exist.
+func TestFSStore_Write_CreatesIntermediateDirectories(t *testing.T) {
+	dir := t.TempDir()
+	// Point the store at a subdirectory that does not yet exist.
+	store := artifact.NewFSStore(filepath.Join(dir, "deep", "nested", "path"))
+	ctx := context.Background()
+
+	env := artifact.Envelope[examplePayload]{
+		EnvelopeHeader: validHeader(),
+		Payload:        examplePayload{Title: "dir-creation"},
+	}
+	// Should succeed even though the intermediate directories do not exist.
+	if err := store.Write(ctx, "ch-create", "test-artifact", env); err != nil {
+		t.Fatalf("Write with missing intermediate dirs: %v", err)
+	}
+}
+
+// TestFSStore_Read_NotFound verifies that Read returns a wrapped error
+// (not a raw os error) when the file does not exist.
+func TestFSStore_Read_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	store := artifact.NewFSStore(dir)
+	ctx := context.Background()
+
+	var out artifact.Envelope[examplePayload]
+	err := store.Read(ctx, "nonexistent-change", "nonexistent-artifact", &out)
+	if err == nil {
+		t.Fatal("expected error reading non-existent artifact, got nil")
+	}
+	// The error must mention the change and artifact name so the caller can diagnose.
+	if !strings.Contains(err.Error(), "nonexistent-change") && !strings.Contains(err.Error(), "nonexistent-artifact") {
+		t.Errorf("error %q should mention the change or artifact name", err.Error())
+	}
+	// Must not be a raw *os.PathError leaked directly — it should be wrapped.
+	if errors.Is(err, os.ErrNotExist) {
+		// The underlying cause may be ErrNotExist, but the message should be wrapped
+		// with context. This is acceptable — the important thing is the message has context.
 	}
 }

@@ -138,3 +138,98 @@ func TestMockProvider_CompleteAggregatesStream(t *testing.T) {
 		t.Errorf("stream assembled %q, Complete returned %q", fromStream, resp.Content)
 	}
 }
+
+// TestMockProvider_WithRawResponses_PreservesWhitespace verifies that
+// WithRawResponses returns multi-line content verbatim (newlines preserved).
+func TestMockProvider_WithRawResponses_PreservesWhitespace(t *testing.T) {
+	ctx := context.Background()
+	raw := "line one\nline two\n  indented line\n"
+	p := llm.NewMockProvider(llm.WithRawResponses(raw))
+
+	resp, err := p.Complete(ctx, llm.Request{Messages: []llm.Message{{Role: "user", Content: "go"}}})
+	if err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	if resp.Content != raw {
+		t.Errorf("raw response: got %q, want %q", resp.Content, raw)
+	}
+}
+
+// TestMockProvider_WithRawResponses_CallOrder verifies that multiple raw
+// responses are delivered in the order they were registered.
+func TestMockProvider_WithRawResponses_CallOrder(t *testing.T) {
+	ctx := context.Background()
+	p := llm.NewMockProvider(llm.WithRawResponses("first\nresponse", "second\nresponse"))
+
+	req := llm.Request{Messages: []llm.Message{{Role: "user", Content: "x"}}}
+
+	r1, err := p.Complete(ctx, req)
+	if err != nil {
+		t.Fatalf("Complete 1: %v", err)
+	}
+	if r1.Content != "first\nresponse" {
+		t.Errorf("r1: got %q, want %q", r1.Content, "first\nresponse")
+	}
+
+	r2, err := p.Complete(ctx, req)
+	if err != nil {
+		t.Fatalf("Complete 2: %v", err)
+	}
+	if r2.Content != "second\nresponse" {
+		t.Errorf("r2: got %q, want %q", r2.Content, "second\nresponse")
+	}
+
+	// Exhausted — repeats the last entry.
+	r3, err := p.Complete(ctx, req)
+	if err != nil {
+		t.Fatalf("Complete 3: %v", err)
+	}
+	if r3.Content != "second\nresponse" {
+		t.Errorf("r3 (repeat last): got %q, want %q", r3.Content, "second\nresponse")
+	}
+}
+
+// TestMockProvider_Stream_AllChunksBeforeDone verifies that Stream sends all
+// content chunks before the terminal Done=true chunk, and that Done arrives
+// exactly once at the end.
+func TestMockProvider_Stream_AllChunksBeforeDone(t *testing.T) {
+	ctx := context.Background()
+	p := llm.NewMockProvider(llm.WithScriptedResponses("alpha beta gamma"))
+
+	ch, err := p.Stream(ctx, llm.Request{Messages: []llm.Message{{Role: "user", Content: "x"}}})
+	if err != nil {
+		t.Fatalf("Stream: %v", err)
+	}
+
+	var contentChunks []string
+	doneReceived := false
+	for c := range ch {
+		if c.Done {
+			doneReceived = true
+			if len(contentChunks) == 0 {
+				t.Error("Done arrived before any content chunks")
+			}
+		} else {
+			if doneReceived {
+				t.Error("received content chunk after Done=true")
+			}
+			contentChunks = append(contentChunks, c.Content)
+		}
+	}
+
+	if !doneReceived {
+		t.Error("stream closed without a Done chunk")
+	}
+	joined := strings.Join(contentChunks, "")
+	if !strings.Contains(joined, "alpha") || !strings.Contains(joined, "gamma") {
+		t.Errorf("stream content %q missing expected words", joined)
+	}
+}
+
+// TestMockProvider_Name verifies that the Name method returns a non-empty string.
+func TestMockProvider_NameNonEmpty(t *testing.T) {
+	p := llm.NewMockProvider()
+	if p.Name() == "" {
+		t.Error("Name() should return a non-empty string")
+	}
+}
