@@ -1,6 +1,6 @@
-// Package skill exposes the embedded prompt filesystem for the /asdt skill.
-// The go:embed directive is valid here because prompts/ is a direct subdirectory
-// of skill/, which is where this file lives.
+// Package skill exposes the embedded prompt filesystem for the /asdt skill tree.
+// The unified FS contains specialist SKILL.md files, specialist-scoped skills,
+// shared skills, and the legacy prompts/ subtree for backward compatibility.
 package skill
 
 import (
@@ -8,14 +8,23 @@ import (
 	"io/fs"
 )
 
-//go:embed prompts
-var promptFS embed.FS
+//go:embed SKILL.md _shared developer ux-ui architect qa security prompts
+var skillFS embed.FS
+
+// FS returns the full embedded skill tree rooted at skill/.
+// Paths: "developer/SKILL.md", "_shared/skills/platform-context.md", etc.
+// This is the production FS injected into prompt.EmbeddedRegistry.
+func FS() fs.FS {
+	return skillFS
+}
 
 // PromptSubFS returns an fs.FS rooted at skill/prompts/.
 // Callers use paths like "roles/requirements/role.md" directly.
-// This is the production FS injected into prompt.EmbeddedRegistry.
+// Kept for backward compatibility during migration to the specialist layout.
+// Will be removed in Phase 4 after internal/requirements/ and internal/developer/
+// are deleted.
 func PromptSubFS() fs.FS {
-	sub, err := fs.Sub(promptFS, "prompts")
+	sub, err := fs.Sub(skillFS, "prompts")
 	if err != nil {
 		// This can only panic if the embed directive is misconfigured — a build-time error.
 		panic("skill: failed to sub-FS at prompts: " + err.Error())

@@ -44,6 +44,7 @@ func (r *OverrideResolver) Role(name string) (Fragment, error) {
 }
 
 // Skill resolves the skill fragment with override precedence.
+// Checks local then global override directories before falling back to the packaged registry.
 func (r *OverrideResolver) Skill(name string) (Fragment, error) {
 	relPath := filepath.Join("skills", name+".md")
 
@@ -54,6 +55,21 @@ func (r *OverrideResolver) Skill(name string) (Fragment, error) {
 		return f, nil
 	}
 	return r.fallback.Skill(name)
+}
+
+// ScopedSkill resolves a skill for a specific specialist with override precedence.
+// Override path: {specialistID}/skills/{skillName}.md in local then global dirs.
+// Falls back to the packaged registry's ScopedSkill.
+func (r *OverrideResolver) ScopedSkill(specialistID, skillName string) (Fragment, error) {
+	relPath := filepath.Join(specialistID, "skills", skillName+".md")
+
+	if f, err := readOverride(r.localDir, relPath, skillName, SourceLocal); err == nil {
+		return f, nil
+	}
+	if f, err := readOverride(r.globalDir, relPath, skillName, SourceGlobal); err == nil {
+		return f, nil
+	}
+	return r.fallback.ScopedSkill(specialistID, skillName)
 }
 
 // Version returns the version of the resolved fragment (whichever source wins).

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"strings"
 
 	"github.com/vitualizz/ai-software-delivery-team/skill"
 )
@@ -12,13 +13,19 @@ import (
 // Implementations may read from an embedded FS, an override directory,
 // or a combination via OverrideResolver.
 type SkillRegistry interface {
-	// Role returns the role fragment for the given agent name.
-	// e.g. Role("requirements") returns the PM/BA persona prompt.
+	// Role returns the role fragment for the given specialist or agent name.
+	// For specialists: resolves skill/{id}/SKILL.md (body only, frontmatter stripped).
+	// For legacy agents: resolves roles/{name}/role.md.
 	Role(name string) (Fragment, error)
 
-	// Skill returns a capability fragment by name.
-	// e.g. Skill("user-story-writing") returns the skill fragment.
+	// Skill returns a shared capability fragment by name.
+	// Resolves from _shared/skills/{name}.md (specialist layout) or
+	// skills/{name}.md (legacy layout).
 	Skill(name string) (Fragment, error)
+
+	// ScopedSkill resolves a skill within an explicit specialist scope.
+	// Tries {specialistID}/skills/{skillName}.md first, then falls back to Skill(skillName).
+	ScopedSkill(specialistID, skillName string) (Fragment, error)
 
 	// Version returns the version hash for a named fragment.
 	// Returns an empty string if the fragment does not exist.
@@ -26,7 +33,15 @@ type SkillRegistry interface {
 }
 
 // EmbeddedRegistry implements SkillRegistry by reading from an fs.FS.
-// The FS is expected to contain:
+// It supports two layouts:
+//
+// Specialist layout (new):
+//
+//	{id}/SKILL.md          — role fragments (frontmatter stripped)
+//	{id}/skills/{name}.md  — scoped specialist skills
+//	_shared/skills/{name}.md — shared skills
+//
+// Legacy layout (backward compat):
 //
 //	roles/{name}/role.md
 //	skills/{name}.md
@@ -39,28 +54,61 @@ func NewEmbeddedRegistry(fsys fs.FS) *EmbeddedRegistry {
 	return &EmbeddedRegistry{fsys: fsys}
 }
 
-// Role reads roles/{name}/role.md from the backing FS.
+// Role resolves the role fragment. Resolution order:
+//  1. {name}/SKILL.md  (specialist layout — body only, frontmatter stripped)
+//  2. roles/{name}/role.md  (legacy layout — full content)
 func (r *EmbeddedRegistry) Role(name string) (Fragment, error) {
-	p := path.Join("roles", name, "role.md")
-	content, err := fs.ReadFile(r.fsys, p)
+	// Try specialist layout first.
+	specialist := path.Join(name, "SKILL.md")
+	if content, err := fs.ReadFile(r.fsys, specialist); err == nil {
+		return NewFragment(name, stripFrontmatter(string(content)), SourcePackaged), nil
+	}
+
+	// Fall back to legacy layout.
+	legacy := path.Join("roles", name, "role.md")
+	content, err := fs.ReadFile(r.fsys, legacy)
 	if err != nil {
-		return Fragment{}, fmt.Errorf("registry role %q: %w", name, err)
+		return Fragment{}, fmt.Errorf("registry role %q: not found in specialist or legacy layout: %w", name, err)
 	}
 	return NewFragment(name, string(content), SourcePackaged), nil
 }
 
-// Skill reads skills/{name}.md from the backing FS.
+// Skill resolves a shared skill by name. Resolution order:
+//  1. _shared/skills/{name}.md  (specialist layout)
+//  2. skills/{name}.md          (legacy layout)
 func (r *EmbeddedRegistry) Skill(name string) (Fragment, error) {
-	p := path.Join("skills", name+".md")
-	content, err := fs.ReadFile(r.fsys, p)
+	// Try specialist _shared layout first.
+	shared := path.Join("_shared", "skills", name+".md")
+	if content, err := fs.ReadFile(r.fsys, shared); err == nil {
+		return NewFragment(name, string(content), SourcePackaged), nil
+	}
+
+	// Fall back to legacy layout.
+	legacy := path.Join("skills", name+".md")
+	content, err := fs.ReadFile(r.fsys, legacy)
 	if err != nil {
-		return Fragment{}, fmt.Errorf("registry skill %q: %w", name, err)
+		return Fragment{}, fmt.Errorf("registry skill %q: not found in shared or legacy layout: %w", name, err)
 	}
 	return NewFragment(name, string(content), SourcePackaged), nil
+}
+
+// ScopedSkill resolves a skill scoped to a specific specialist. Resolution order:
+//  1. {specialistID}/skills/{skillName}.md  (specialist-specific)
+//  2. Skill(skillName)                      (shared fallback)
+func (r *EmbeddedRegistry) ScopedSkill(specialistID, skillName string) (Fragment, error) {
+	p := path.Join(specialistID, "skills", skillName+".md")
+	if content, err := fs.ReadFile(r.fsys, p); err == nil {
+		return NewFragment(skillName, string(content), SourcePackaged), nil
+	}
+	frag, err := r.Skill(skillName)
+	if err != nil {
+		return Fragment{}, fmt.Errorf("registry scoped skill %q/%q: %w", specialistID, skillName, err)
+	}
+	return frag, nil
 }
 
 // Version returns the version of a named fragment.
-// It tries Role first, then Skill. Returns an empty string on failure.
+// It tries Role first, then Skill. Returns an error if not found.
 func (r *EmbeddedRegistry) Version(name string) (string, error) {
 	if frag, err := r.Role(name); err == nil {
 		return frag.Version, nil
@@ -71,9 +119,27 @@ func (r *EmbeddedRegistry) Version(name string) (string, error) {
 	return "", fmt.Errorf("registry version %q: fragment not found", name)
 }
 
-// DefaultEmbeddedRegistry returns an EmbeddedRegistry backed by the production
-// go:embed FS (skill/prompts/ embedded via the skill package). This is the
-// registry used at runtime. Tests use NewEmbeddedRegistry with a custom fs.FS.
+// stripFrontmatter removes a YAML frontmatter block (--- ... ---) from the
+// beginning of a Markdown string. Returns the body unchanged if no frontmatter.
+func stripFrontmatter(content string) string {
+	content = strings.TrimSpace(content)
+	if !strings.HasPrefix(content, "---") {
+		return content
+	}
+	// Skip the opening "---" line.
+	rest := content[3:]
+	// Find the closing "---".
+	end := strings.Index(rest, "---")
+	if end == -1 {
+		return content // no closing delimiter — return as-is
+	}
+	body := rest[end+3:]
+	return strings.TrimSpace(body)
+}
+
+// DefaultEmbeddedRegistry returns an EmbeddedRegistry backed by the full
+// skill/ embedded FS (skill.FS()). This is the registry used at runtime.
+// Tests use NewEmbeddedRegistry with a custom fs.FS.
 func DefaultEmbeddedRegistry() *EmbeddedRegistry {
-	return NewEmbeddedRegistry(skill.PromptSubFS())
+	return NewEmbeddedRegistry(skill.FS())
 }

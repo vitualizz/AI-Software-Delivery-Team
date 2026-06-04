@@ -387,6 +387,72 @@ func TestFragmentVersion_DifferentContent(t *testing.T) {
 	}
 }
 
+// TestNewRegistry_ScopedSkillDeveloper verifies that ScopedSkill("developer", "code-generation")
+// resolves from the developer/skills/ tree in the production embedded FS.
+func TestNewRegistry_ScopedSkillDeveloper(t *testing.T) {
+	reg := prompt.DefaultEmbeddedRegistry()
+	frag, err := reg.ScopedSkill("developer", "code-generation")
+	if err != nil {
+		t.Fatalf("ScopedSkill(developer, code-generation): %v", err)
+	}
+	if frag.Content == "" {
+		t.Error("ScopedSkill(developer, code-generation): content is empty")
+	}
+}
+
+// TestNewRegistry_ScopedSkillSecurity verifies that ScopedSkill("security", "threat-modeling")
+// resolves from the security/skills/ tree.
+func TestNewRegistry_ScopedSkillSecurity(t *testing.T) {
+	reg := prompt.DefaultEmbeddedRegistry()
+	frag, err := reg.ScopedSkill("security", "threat-modeling")
+	if err != nil {
+		t.Fatalf("ScopedSkill(security, threat-modeling): %v", err)
+	}
+	if frag.Content == "" {
+		t.Error("ScopedSkill(security, threat-modeling): content is empty")
+	}
+}
+
+// TestNewRegistry_SharedSkillPlatformContext verifies Skill("platform-context")
+// resolves from _shared/skills/ in the production embedded FS.
+func TestNewRegistry_SharedSkillPlatformContext(t *testing.T) {
+	reg := prompt.DefaultEmbeddedRegistry()
+	frag, err := reg.Skill("platform-context")
+	if err != nil {
+		t.Fatalf("Skill(platform-context): %v", err)
+	}
+	if frag.Content == "" {
+		t.Error("Skill(platform-context): content is empty")
+	}
+}
+
+// TestNewRegistry_RoleDeveloperSpecialist verifies that Role("developer") resolves
+// skill/developer/SKILL.md (with frontmatter stripped) from the production FS.
+func TestNewRegistry_RoleDeveloperSpecialist(t *testing.T) {
+	reg := prompt.DefaultEmbeddedRegistry()
+	frag, err := reg.Role("developer")
+	if err != nil {
+		t.Fatalf("Role(developer) via specialist layout: %v", err)
+	}
+	if frag.Content == "" {
+		t.Error("Role(developer): content is empty")
+	}
+	// Frontmatter must be stripped — the body must not start with "---".
+	if strings.HasPrefix(strings.TrimSpace(frag.Content), "---") {
+		t.Error("Role(developer): frontmatter was not stripped from SKILL.md")
+	}
+}
+
+// TestNewRegistry_ScopedSkillUnknownReturnsError verifies that ScopedSkill
+// with an unknown specialist and skill name returns an error.
+func TestNewRegistry_ScopedSkillUnknownReturnsError(t *testing.T) {
+	reg := prompt.DefaultEmbeddedRegistry()
+	_, err := reg.ScopedSkill("unknown-specialist", "nonexistent-skill")
+	if err == nil {
+		t.Error("ScopedSkill(unknown, anything): expected error, got nil")
+	}
+}
+
 // indexOf returns the position of substr in s, or -1.
 func indexOf(s, substr string) int {
 	idx := -1
