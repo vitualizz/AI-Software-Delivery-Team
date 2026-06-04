@@ -1,0 +1,18 @@
+schema_version: "1"
+agent: requirements
+change_id: test-change
+created_at: "2026-06-04T10:00:00Z"
+prompt_version: "abc12345"
+input_refs: []
+payload:
+  user_stories:
+    - id: ""
+      as: registered user
+      want: reset my password
+      so_that: I can regain access
+  acceptance_criteria: {}
+  scope:
+    in: []
+    out: []
+  nfrs: []
+  open_questions: []

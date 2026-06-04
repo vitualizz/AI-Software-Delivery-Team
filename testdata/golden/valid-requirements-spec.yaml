@@ -1,0 +1,26 @@
+schema_version: "1"
+agent: requirements
+change_id: test-change
+created_at: "2026-06-04T10:00:00Z"
+prompt_version: "abc12345"
+input_refs: []
+payload:
+  user_stories:
+    - id: US-001
+      as: registered user
+      want: reset my password via email
+      so_that: I can regain access if I forget my credentials
+  acceptance_criteria:
+    US-001:
+      - A reset link is sent to the registered email
+      - The link expires after 24 hours
+  scope:
+    in:
+      - password reset flow
+      - email notification
+    out:
+      - OAuth login
+      - 2FA setup
+  nfrs:
+    - Reset link must be single-use
+  open_questions: []
