@@ -2,9 +2,15 @@ package tui
 
 import "github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
 
-// PipelineLoadedMsg is sent when pipeline-state.yaml is successfully read.
+// PipelineLoadedMsg is sent when pipeline-state.yaml (v1) is successfully read.
+// Kept for backward compatibility.
 type PipelineLoadedMsg struct {
 	State pipeline.State
+}
+
+// SpecialistsLoadedMsg is sent when pipeline-state.yaml (v2) is successfully read.
+type SpecialistsLoadedMsg struct {
+	State *pipeline.PipelineStateV2
 }
 
 // ArtifactListMsg is sent when the artifact directory listing completes.

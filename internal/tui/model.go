@@ -12,26 +12,26 @@ import (
 // Model is the root Bubbletea model. It holds layout state and delegates
 // message processing to its child panels. It never contains agent logic.
 type Model struct {
-	deps      Dependencies
-	pipeline  panels.PipelinePanel
-	artifacts panels.ArtifactPanel
-	width     int
-	height    int
-	err       error
-	ready     bool
-	focused   int // 0 = pipeline, 1 = artifacts
+	deps        Dependencies
+	specialists panels.SpecialistsPanel
+	artifacts   panels.ArtifactPanel
+	width       int
+	height      int
+	err         error
+	ready       bool
+	focused     int // 0 = specialists, 1 = artifacts
 }
 
 // New constructs a root Model with the given dependencies.
 func New(deps Dependencies) Model {
 	return Model{
-		deps:      deps,
-		pipeline:  panels.NewPipelinePanel(),
-		artifacts: panels.NewArtifactPanel(),
+		deps:        deps,
+		specialists: panels.NewSpecialistsPanel(),
+		artifacts:   panels.NewArtifactPanel(),
 	}
 }
 
-// Init returns the initial batch of commands: load pipeline, load artifacts, start tick.
+// Init returns the initial batch of commands: load specialists state, load artifacts, start tick.
 func (m Model) Init() tea.Cmd {
 	change := m.deps.Change
 	if change == "" {
@@ -41,7 +41,7 @@ func (m Model) Init() tea.Cmd {
 		change = "default"
 	}
 	return tea.Batch(
-		LoadPipelineCmd(m.deps.PipelineStore, change),
+		LoadSpecialistsCmd(m.deps.PipelineStore, change),
 		LoadArtifactsCmd(m.deps.ConfigRoot, change),
 		TickCmd(),
 	)
@@ -64,19 +64,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ready = true
-		pipelineWidth := msg.Width * 30 / 100
-		artifactWidth := msg.Width - pipelineWidth
+		specialistsWidth := msg.Width * 30 / 100
+		artifactWidth := msg.Width - specialistsWidth
 		panelHeight := msg.Height - 2 // reserve 2 lines for status bar
 
-		var pipeCmd, artCmd tea.Cmd
-		m.pipeline, pipeCmd = m.pipeline.UpdateSize(pipelineWidth, panelHeight)
+		var specCmd, artCmd tea.Cmd
+		m.specialists, specCmd = m.specialists.UpdateSize(specialistsWidth, panelHeight)
 		m.artifacts, artCmd = m.artifacts.UpdateSize(artifactWidth, panelHeight)
-		return m, tea.Batch(pipeCmd, artCmd)
+		return m, tea.Batch(specCmd, artCmd)
 
-	case PipelineLoadedMsg:
-		var cmd tea.Cmd
-		m.pipeline, cmd = m.pipeline.SetState(msg.State)
-		return m, cmd
+	case SpecialistsLoadedMsg:
+		m.specialists.SetState(msg.State)
+		return m, nil
 
 	case ArtifactListMsg:
 		var cmd tea.Cmd
@@ -101,7 +100,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			change = "default"
 		}
 		return m, tea.Batch(
-			LoadPipelineCmd(m.deps.PipelineStore, change),
+			LoadSpecialistsCmd(m.deps.PipelineStore, change),
 			LoadArtifactsCmd(m.deps.ConfigRoot, change),
 			TickCmd(),
 		)
@@ -110,7 +109,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// Delegate to focused panel.
 	var cmd tea.Cmd
 	if m.focused == 0 {
-		m.pipeline, cmd = m.pipeline.Update(msg)
+		m.specialists, cmd = m.specialists.Update(msg)
 	} else {
 		m.artifacts, cmd = m.artifacts.Update(msg)
 	}
@@ -131,21 +130,21 @@ func (m Model) View() string {
 		return "Initializing..."
 	}
 
-	pipelineWidth := m.width * 30 / 100
-	artifactWidth := m.width - pipelineWidth
+	specialistsWidth := m.width * 30 / 100
+	artifactWidth := m.width - specialistsWidth
 
-	pipelineStyle := lipgloss.NewStyle().Width(pipelineWidth)
+	specialistsStyle := lipgloss.NewStyle().Width(specialistsWidth)
 	artifactStyle := lipgloss.NewStyle().Width(artifactWidth)
 
 	if m.focused == 0 {
-		pipelineStyle = pipelineStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("6"))
+		specialistsStyle = specialistsStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("6"))
 		artifactStyle = artifactStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("8"))
 	} else {
-		pipelineStyle = pipelineStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("8"))
+		specialistsStyle = specialistsStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("8"))
 		artifactStyle = artifactStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("6"))
 	}
 
-	left := pipelineStyle.Render(m.pipeline.View())
+	left := specialistsStyle.Render(m.specialists.View())
 	right := artifactStyle.Render(m.artifacts.View())
 
 	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
@@ -154,12 +153,12 @@ func (m Model) View() string {
 	if change == "" {
 		change = "default"
 	}
-	pipelineState := m.pipeline.CurrentState()
+	selectedSpec := m.specialists.SelectedSpecialist()
 	statusBar := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("15")).
 		Background(lipgloss.Color("237")).
 		Width(m.width).
-		Render(fmt.Sprintf(" change: %s  state: %s  [tab] switch panel  [q] quit", change, pipelineState))
+		Render(fmt.Sprintf(" change: %s  specialist: %s  [tab] switch panel  [q] quit", change, selectedSpec))
 
 	return lipgloss.JoinVertical(lipgloss.Left, body, statusBar)
 }

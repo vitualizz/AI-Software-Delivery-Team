@@ -16,6 +16,7 @@ import (
 
 // LoadPipelineCmd reads pipeline-state.yaml via the given Store and returns
 // a PipelineLoadedMsg on success or an ErrorMsg on failure.
+// Kept for backward compatibility with v1 pipeline state.
 // It is a proper tea.Cmd — it does not block the Update loop.
 func LoadPipelineCmd(store artifact.Store, change string) tea.Cmd {
 	return func() tea.Msg {
@@ -27,6 +28,29 @@ func LoadPipelineCmd(store artifact.Store, change string) tea.Cmd {
 			return ErrorMsg{Err: err}
 		}
 		return PipelineLoadedMsg{State: state}
+	}
+}
+
+// LoadSpecialistsCmd reads pipeline-state.yaml as a PipelineStateV2 document
+// and returns a SpecialistsLoadedMsg on success. If the file is absent or cannot
+// be decoded as v2, it returns SpecialistsLoadedMsg with a nil State so the panel
+// renders the "No specialists have run yet" placeholder gracefully.
+// It is a proper tea.Cmd — it does not block the Update loop.
+func LoadSpecialistsCmd(store artifact.Store, change string) tea.Cmd {
+	return func() tea.Msg {
+		if store == nil {
+			return SpecialistsLoadedMsg{State: nil}
+		}
+		var state pipeline.PipelineStateV2
+		if err := store.Read(context.Background(), change, "pipeline-state", &state); err != nil {
+			// Missing or unreadable — return nil state so panel shows placeholder.
+			return SpecialistsLoadedMsg{State: nil}
+		}
+		if state.SchemaVersion != pipeline.SchemaVersionV2 {
+			// Wrong schema version — not a v2 document.
+			return SpecialistsLoadedMsg{State: nil}
+		}
+		return SpecialistsLoadedMsg{State: &state}
 	}
 }
 
