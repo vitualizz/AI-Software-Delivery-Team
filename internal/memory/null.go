@@ -59,6 +59,9 @@ func (p *NullProvider) Save(_ context.Context, entry Entry) error {
 		entry.SavedAt = time.Now().UTC()
 	}
 
+	relID := filepath.Join("runs", p.runID, filename)
+	entry.ID = relID
+
 	data, err := yaml.Marshal(entry)
 	if err != nil {
 		return fmt.Errorf("memory: marshal entry: %w", err)

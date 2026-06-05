@@ -148,7 +148,7 @@ func DeveloperDescriptor() SpecialistDescriptor {
 			{
 				ID:             "review",
 				Description:    "Self-review coverage and conventions; assemble final implementation-plan.",
-				SkillRefs:      []string{"review", "report", "decision-preservation"},
+				SkillRefs:      []string{"review", "report", "knowledge-recall", "decision-preservation"},
 				InputRefs:      []string{"developer/dev-implementation", "developer/dev-tests"},
 				OutputArtifact: "implementation-plan",
 			},
@@ -346,7 +346,7 @@ func QADescriptor() SpecialistDescriptor {
 			{
 				ID:          "quality-report",
 				Description: "Summarize AC gaps, missing test infrastructure, and open questions for Developer.",
-				SkillRefs:   []string{"decision-preservation"},
+				SkillRefs:   []string{"knowledge-recall", "decision-preservation"},
 				InputRefs:   []string{"qa/test-cases", "qa/ac-gaps"},
 				// OutputArtifact="" → last-step fallback writes test-plan + quality-report.
 				OutputArtifact: "",
@@ -402,7 +402,7 @@ func SecurityDescriptor() SpecialistDescriptor {
 			{
 				ID:          "hardening-checklist",
 				Description: "Produce an ordered hardening action list for the Developer specialist.",
-				SkillRefs:   []string{"decision-preservation"},
+				SkillRefs:   []string{"knowledge-recall", "decision-preservation"},
 				InputRefs:   []string{"security/stride-threats", "security/owasp-findings"},
 				// OutputArtifact="" → last-step fallback writes threat-model + security-findings + hardening-checklist.
 				OutputArtifact: "",

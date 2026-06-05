@@ -1,0 +1,44 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/qa-edge-cases.schema.yaml"
+title: QAEdgeCases
+description: >
+  Intermediate artifact produced by the QA specialist's edge-case-analysis step.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/qa/edge-cases.yaml.
+type: object
+
+required:
+  - edge_cases
+
+properties:
+  edge_cases:
+    type: array
+    description: Edge cases and boundary conditions identified for the change under review.
+    items:
+      type: object
+      required:
+        - id
+        - scenario
+        - risk
+      properties:
+        id:
+          type: string
+          description: Stable identifier for this edge case (e.g. "EC-001").
+        scenario:
+          type: string
+          description: Description of the edge case — what unusual input or state triggers it.
+        risk:
+          type: string
+          enum: [high, medium, low]
+          description: Risk level if this edge case is not handled.
+        acceptance_criteria_gap:
+          type: boolean
+          description: True if the existing ACs do not cover this edge case.
+        notes:
+          type: string
+          description: Additional context, related issues, or suggested test approach.
+
+  summary:
+    type: string
+    description: >
+      One-sentence summary of the most critical edge case cluster (used by
+      decision-preservation skill and runner memory.Save).
