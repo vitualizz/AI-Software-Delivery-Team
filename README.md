@@ -1,56 +1,105 @@
 # ASDT — AI Software Delivery Team
 
-*Specialist-first AI delivery. Decisions preserved, not just code generated.*
+**A Software Delivery Knowledge System** — not an AI coding tool.
+
+ASDT models the *knowledge* your software organization accumulates when it
+delivers software well: architecture decisions, UX rationale, security posture,
+test coverage strategies. Code is one output. Accumulated, searchable knowledge
+is the primary asset.
 
 ---
 
-## The philosophy
+## Why ASDT exists
 
-Most AI tools collapse your entire team into a single chat. A PM, architect,
-developer, QA engineer, and security analyst don't do the same job — and neither
-should your AI. ASDT models a real software delivery organization: each
-specialist owns its own discipline, its own workflow, and its own artifacts.
-Agents communicate through files, not conversations. The result is a durable,
-reviewable, replayable record of every decision made.
+Software organizations scale through accumulated knowledge, not through code.
+Every architecture decision made, every threat modeled, every UX tradeoff
+evaluated — these are the assets that let future changes happen faster and safer.
+Traditional AI coding tools generate code and forget everything. ASDT generates
+code *and* builds an organizational knowledge base that survives beyond any single
+change.
 
 ---
 
-## Three invariants
+## How ASDT differs from AI coding tools
 
-- **One boundary**: everything lives under `.asdt/` — your project root stays
-  clean. Uninstall with `rm -rf .asdt/`.
-- **One behavior**: same specialists in Claude Code, OpenCode, and the TUI.
-- **No required order**: any specialist can run first — they're independent
-  professionals.
+| AI Coding Tool | ASDT |
+|----------------|------|
+| Chat history is the memory | Persistent knowledge records survive across changes |
+| One AI doing everything | Domain specialists with isolated expertise |
+| Context bloat over time | Each step gets only the context it needs |
+| Code generation as the goal | Knowledge accumulation as the goal; code as one output |
+| No traceability | Every artifact references its inputs and prompt version |
 
 ---
 
 ## The specialists
 
-| Command | Role | Produces |
-|---------|------|----------|
-| `/asdt:ux-ui` | UX/UI Specialist | `ux-brief.yaml`, `component-spec.yaml` |
-| `/asdt:architect` | Architect | `architectural-decision.yaml`, `system-design.yaml` |
-| `/asdt:developer` | Developer | `implementation-plan.yaml` |
-| `/asdt:qa` | QA Engineer | `test-plan.yaml`, `test-cases.yaml` |
-| `/asdt:security` | Security Specialist | `threat-model.yaml`, `security-findings.yaml` |
-| `/asdt "request"` | Meta-orchestrator | Suggests which specialists to run |
+Each specialist is a **domain expert** with its own workflow, its own skills, and
+its own artifacts. They communicate through files, not conversations.
+
+| Command | Specialist | Produces |
+|---------|-----------|----------|
+| `asdt ux-ui` | UX/UI Designer | `ux-brief.yaml`, `component-spec.yaml` |
+| `asdt architect` | Software Architect | `architectural-decision.yaml`, `system-design.yaml`, `risk-register.yaml` |
+| `asdt developer` | Developer | `implementation-plan.yaml` |
+| `asdt qa` | QA Engineer | `test-plan.yaml`, `quality-report.yaml` |
+| `asdt security` | Security Engineer | `threat-model.yaml`, `security-findings.yaml`, `hardening-checklist.yaml` |
+
+**Why specialists exist**: Domain experts with isolated context produce better
+decisions than a generalist with everything crammed into one conversation. An
+architect thinking about tradeoffs should not also be worrying about OWASP
+vulnerabilities. Isolation makes each specialist trustworthy in its domain.
+
+---
+
+## The skills
+
+Skills are **context modules** loaded at specific workflow steps. Each skill
+carries only the instructions a step needs — no more.
+
+**Why skills exist**: Context isolation. Every token in a prompt influences the
+output. A developer step writing code should not carry the UX specialist's
+information architecture thinking — that would dilute it. Skills enforce that each
+step operates with exactly the context it needs and nothing it does not.
+
+---
+
+## The artifacts
+
+Artifacts are YAML files written to `.asdt/artifacts/{change}/`. Each artifact is
+the **primary communication medium** between specialists: an architect produces
+`architectural-decision.yaml`, a developer reads it. No conversation, no ambiguity.
+
+**Why artifacts exist**: Specialists do not share conversations. They share
+documents. Artifacts are structured, versioned, traceable documents — every one
+carries a prompt version hash and references its inputs. You can `git diff` them,
+review them in a PR, and replay them months later.
+
+---
+
+## The memory layer
+
+Memory is the **organizational knowledge accumulation** layer. After each
+specialist run, ASDT records what was decided, why, and where. Future runs query
+this layer to avoid contradicting prior decisions.
+
+**Why memory exists**: Knowledge that disappears when a session ends is not
+organizational knowledge — it is a transcript. The memory layer (backed by Engram
+or the local `.asdt/runs/` filesystem) turns specialist output into durable
+institutional memory that accumulates across changes.
 
 ---
 
 ## Quick start
 
 ```bash
-# Ask the meta-orchestrator to suggest a plan
-/asdt "add AI Reports Dashboard"
+# Initialize the project — scans your stack, writes platform-summary.yaml
+asdt init
 
-# Then run each suggested specialist
-/asdt:ux-ui       # Platform Analysis → IA → User Flows → Component Spec
-/asdt:architect   # Constraints → ADR → System Design → Risk Analysis
-/asdt:developer   # Loads all prior artifacts → Implementation Plan + Code
-
-# Or run Security at any point — no predecessor required
-/asdt:security    # Threat Modeling → OWASP Analysis → Hardening Checklist
+# Run a specialist for a change
+asdt architect --change add-auth
+asdt developer --change add-auth
+asdt security  --change add-auth
 ```
 
 ---
@@ -59,70 +108,82 @@ reviewable, replayable record of every decision made.
 
 ```
 .asdt/
-├── config.yaml
+├── config.yaml                         # memory provider, active change
 ├── knowledge/
-│   └── platform.yaml              # tech stack, conventions, design fingerprint
-└── artifacts/add-ai-reports/
-    ├── ux-brief.yaml              # user flows, IA, component mapping
-    ├── component-spec.yaml        # reused/new components
-    ├── architectural-decision.yaml # ADR with alternatives considered
-    ├── system-design.yaml         # data model, API surface, risks
-    ├── implementation-plan.yaml   # step-by-step plan + code snippets
-    ├── test-plan.yaml             # test strategy + test cases
-    ├── security-findings.yaml     # threats, OWASP findings, hardening checklist
-    └── pipeline-state.yaml        # per-specialist step history
+│   ├── platform.yaml                   # detected stack, conventions
+│   └── platform-summary.yaml          # deterministic summary (zero LLM tokens)
+├── runs/                               # knowledge timeline (NullProvider default)
+│   └── 20260605-120000/
+│       └── architect-add-auth.yaml    # entry: what was decided and why
+└── artifacts/add-auth/
+    ├── architectural-decision.yaml    # ADR with alternatives considered
+    ├── system-design.yaml             # data model, API surface, risks
+    ├── risk-register.yaml             # top 3-5 risks + mitigations
+    ├── implementation-plan.yaml       # ordered tasks + code snippets
+    ├── test-plan.yaml                 # test strategy + test cases
+    ├── security-findings.yaml         # OWASP findings + remediations
+    ├── hardening-checklist.yaml       # ordered hardening actions
+    └── pipeline-state.yaml            # per-specialist step history
 ```
 
-Every file is a plain YAML artifact you can open in any editor, commit to git,
-diff in a PR, and replay in a future session.
-
----
-
-## Platform awareness
-
-ASDT is designed for *existing systems*, not greenfield projects. Every
-specialist loads `platform.yaml` before doing any work — it contains your tech
-stack, naming conventions, existing components, and design patterns. The goal
-isn't generating software. The goal is extending your software consistently, in
-a way that feels like it belongs there.
+Every file is plain YAML: open it in any editor, commit it to git, diff it in a
+PR, and replay it in a future session.
 
 ---
 
 ## Architecture
 
 ```
-skill/                  ← THE PRODUCT: runtime-agnostic specialist SKILL.md files
-├── SKILL.md            ← /asdt meta-orchestrator
-├── _shared/skills/     ← platform-context, artifact-envelope, scope-definition
-├── developer/          ← /asdt:developer (7-step workflow)
-├── ux-ui/              ← /asdt:ux-ui (7-step workflow)
-├── architect/          ← /asdt:architect (7-step workflow)
-├── qa/                 ← /asdt:qa (6-step workflow)
-└── security/           ← /asdt:security (5-step, no required predecessor)
+skill/                    # THE PRODUCT: runtime-agnostic SKILL.md files
+├── SKILL.md              # /asdt meta-orchestrator
+├── _shared/skills/       # shared skills loaded per-step
+│   ├── knowledge-recall.md       # query org memory before decisions
+│   ├── decision-preservation.md  # record decisions to org memory
+│   ├── platform-context.md
+│   └── artifact-envelope.md
+├── developer/            # 7-step workflow
+├── ux-ui/                # 7-step workflow
+├── architect/            # 7-step workflow
+├── qa/                   # 6-step workflow
+└── security/             # 5-step workflow (no required predecessor)
 
-internal/               ← Go packages for the optional TUI binary
-├── specialists/        ← SpecialistDescriptor + generic Runner (the core abstraction)
-├── artifact/           ← Envelope[T], FSStore
-├── memory/             ← MemoryProvider interface, NullProvider, EngramProvider stub
-├── pipeline/           ← PipelineStateV2, AdvanceStep
-├── prompt/             ← layered composition, ScopedSkill registry
-├── knowledge/          ← platform.yaml detector
-├── llm/                ← Provider interface + Anthropic/OpenAI/Mock
-└── tui/                ← Bubbletea TUI (optional)
+internal/                 # Go packages for the optional binary
+├── specialists/          # SpecialistDescriptor + generic Runner
+├── memory/               # Provider port: NullProvider (FS) + EngramProvider (MCP)
+├── artifact/             # Envelope[T], FSStore
+├── pipeline/             # PipelineStateV2, AdvanceStep
+├── prompt/               # layered composition, ScopedSkill registry
+├── knowledge/            # platform.yaml detector
+├── llm/                  # Provider interface + Mock
+└── tui/                  # Bubbletea TUI (optional)
 
-schemas/                ← YAML schemas for all artifact types
-docs/adr/               ← Architecture Decision Records (ADR-001 through ADR-007)
+schemas/                  # YAML schemas for all artifact types
+docs/adr/                 # Architecture Decision Records (ADR-001 through ADR-010)
+```
+
+---
+
+## Memory configuration
+
+By default, runs are stored in `.asdt/runs/` (NullProvider — no external
+dependencies). To use Engram for cross-session semantic search, add to
+`.asdt/config.yaml`:
+
+```yaml
+memory:
+  provider: engram
+  project: your-project-name
 ```
 
 ---
 
 ## Adding a specialist
 
-```
+```bash
 # 1. Write the skill file
 skill/my-specialist/SKILL.md
 
-# 2. Add a descriptor (one struct literal in Go)
+# 2. Add a descriptor (one struct literal)
 func MySpecialistDescriptor() SpecialistDescriptor { ... }
 
 # 3. Register it
@@ -133,9 +194,10 @@ Zero new Go packages. The specialist system is data-driven.
 
 ---
 
-## Install the TUI (optional)
+## Install the binary (optional)
 
-The Go TUI is optional. ASDT works without it through any AI coding assistant.
+ASDT works without the binary through any AI coding assistant. The binary is the
+TUI frontend for the same specialist system.
 
 ```bash
 go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt@latest
@@ -145,37 +207,13 @@ go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt@latest
 
 ## Use in Claude Code
 
-Install `skill/` as a skill package. Each `/asdt:{specialist}` SKILL.md is
-independently invocable.
+Install `skill/` as a skill package:
 
 ```bash
 cp -r skill/ ~/.claude/skills/asdt
 ```
 
-## Use in OpenCode
-
-Map `/asdt` and each specialist to the corresponding SKILL.md in your OpenCode
-configuration:
-
-```toml
-[commands.asdt]
-path = ".claude/skills/asdt/SKILL.md"
-
-[commands."asdt:developer"]
-path = ".claude/skills/asdt/developer/SKILL.md"
-```
-
----
-
-## Memory
-
-By default, no memory is used (`NullProvider`). Configure Engram by adding to
-`.asdt/config.yaml`:
-
-```yaml
-memory:
-  provider: engram
-```
+Then invoke each specialist with `/asdt:developer`, `/asdt:architect`, etc.
 
 ---
 
