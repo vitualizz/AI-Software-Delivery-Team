@@ -156,20 +156,8 @@ func TestFragmentVersionIsStable(t *testing.T) {
 	}
 }
 
-// TestDefaultEmbeddedRegistry_RoleRequirements verifies that the production
-// go:embed registry resolves the requirements role without error.
-func TestDefaultEmbeddedRegistry_RoleRequirements(t *testing.T) {
-	reg := prompt.NewEmbeddedRegistry(skill.PromptSubFS())
-	frag, err := reg.Role("requirements")
-	if err != nil {
-		t.Fatalf("Role(requirements): %v", err)
-	}
-	if frag.Content == "" {
-		t.Error("Role(requirements): content is empty")
-	}
-}
-
-// TestDefaultEmbeddedRegistry_RoleDeveloper verifies the developer role resolves.
+// TestDefaultEmbeddedRegistry_RoleDeveloper verifies the developer role resolves
+// from the production embedded FS.
 func TestDefaultEmbeddedRegistry_RoleDeveloper(t *testing.T) {
 	reg := prompt.NewEmbeddedRegistry(skill.PromptSubFS())
 	frag, err := reg.Role("developer")
@@ -181,42 +169,18 @@ func TestDefaultEmbeddedRegistry_RoleDeveloper(t *testing.T) {
 	}
 }
 
-// TestDefaultEmbeddedRegistry_RoleKnowledge verifies the knowledge role resolves.
-func TestDefaultEmbeddedRegistry_RoleKnowledge(t *testing.T) {
-	reg := prompt.NewEmbeddedRegistry(skill.PromptSubFS())
-	frag, err := reg.Role("knowledge")
-	if err != nil {
-		t.Fatalf("Role(knowledge): %v", err)
-	}
-	if frag.Content == "" {
-		t.Error("Role(knowledge): content is empty")
-	}
-}
-
-// TestDefaultEmbeddedRegistry_SkillUserStoryWriting verifies the skill fragment resolves.
-func TestDefaultEmbeddedRegistry_SkillUserStoryWriting(t *testing.T) {
-	reg := prompt.NewEmbeddedRegistry(skill.PromptSubFS())
-	frag, err := reg.Skill("user-story-writing")
-	if err != nil {
-		t.Fatalf("Skill(user-story-writing): %v", err)
-	}
-	if frag.Content == "" {
-		t.Error("Skill(user-story-writing): content is empty")
-	}
-}
-
 // TestDefaultEmbeddedRegistry_VersionStability verifies that Version returns
 // a stable 8-character hash for the same embedded content across two calls.
 func TestDefaultEmbeddedRegistry_VersionStability(t *testing.T) {
 	reg := prompt.NewEmbeddedRegistry(skill.PromptSubFS())
 
-	v1, err := reg.Version("requirements")
+	v1, err := reg.Version("developer")
 	if err != nil {
-		t.Fatalf("Version(requirements) first call: %v", err)
+		t.Fatalf("Version(developer) first call: %v", err)
 	}
-	v2, err := reg.Version("requirements")
+	v2, err := reg.Version("developer")
 	if err != nil {
-		t.Fatalf("Version(requirements) second call: %v", err)
+		t.Fatalf("Version(developer) second call: %v", err)
 	}
 	if v1 != v2 {
 		t.Errorf("Version is not stable: %q vs %q", v1, v2)
