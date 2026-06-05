@@ -252,13 +252,13 @@ func ArchitectDescriptor() SpecialistDescriptor {
 				Description:    "Read upstream artifacts and pin the change boundary using scope-definition.",
 				SkillRefs:      []string{},
 				InputRefs:      []string{"architect/constraints"},
-				OutputArtifact: "architect/approaches",
+				OutputArtifact: "architect/constraints-analysis",
 			},
 			{
 				ID:             "evaluate-approaches",
 				Description:    "Compare 2–3 candidate technical approaches with tradeoffs.",
 				SkillRefs:      []string{"architecture-review"},
-				InputRefs:      []string{"architect/constraints"},
+				InputRefs:      []string{"architect/constraints-analysis"},
 				OutputArtifact: "architect/approaches",
 			},
 			{
