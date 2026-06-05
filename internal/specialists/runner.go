@@ -37,8 +37,9 @@ type RunnerDeps struct {
 // Runner executes any SpecialistDescriptor using the provided dependencies.
 // It is the single generic execution engine; no per-specialist logic lives here.
 type Runner struct {
-	descriptor SpecialistDescriptor
-	deps       RunnerDeps
+	descriptor      SpecialistDescriptor
+	deps            RunnerDeps
+	lastRunSummary  string // captured from final step's payload["summary"] for knowledge record
 }
 
 // New constructs a Runner for the given descriptor.
@@ -61,16 +62,73 @@ func (r *Runner) Run(ctx context.Context, root config.Root, change string) error
 		return fmt.Errorf("specialist %s: invalid descriptor: %w", r.descriptor.ID, err)
 	}
 
+	// Load organizational context once before the first step.
+	orgCtx := r.loadOrganizationalContext(ctx, change, r.descriptor.ID)
+
 	for _, step := range r.descriptor.Workflow {
-		if err := r.runStep(ctx, root, change, step); err != nil {
+		if err := r.runStep(ctx, root, change, step, orgCtx); err != nil {
 			return fmt.Errorf("step %s: %w", step.ID, err)
 		}
 	}
+
+	// Persist a knowledge record after the final step (best-effort).
+	r.saveKnowledgeRecord(ctx, change, r.descriptor.ID, r.lastRunSummary)
+
 	return nil
 }
 
-// runStep executes a single workflow step.
-func (r *Runner) runStep(ctx context.Context, root config.Root, change string, step WorkflowStep) error {
+// loadOrganizationalContext queries memory for prior decisions relevant to this
+// change and specialist role. Returns a formatted "## Organizational Context" block
+// capped at ~400 tokens, or "" when memory returns nothing or errors.
+func (r *Runner) loadOrganizationalContext(ctx context.Context, change, role string) string {
+	query := fmt.Sprintf("%s %s", role, change)
+	entries, err := r.deps.Memory.Search(ctx, query)
+	if err != nil || len(entries) == 0 {
+		return ""
+	}
+	limit := 3
+	if len(entries) < limit {
+		limit = len(entries)
+	}
+	return formatOrgContext(entries[:limit])
+}
+
+// saveKnowledgeRecord persists a structured entry summarising this specialist run.
+// Errors are swallowed — memory is best-effort and must not abort the run.
+func (r *Runner) saveKnowledgeRecord(ctx context.Context, change, role, summary string) {
+	if summary == "" {
+		summary = fmt.Sprintf("%s completed for %s", role, change)
+	}
+	_ = r.deps.Memory.Save(ctx, memory.Entry{
+		Title:    fmt.Sprintf("%s: %s", role, change),
+		Type:     memory.EntryTypeArchitecture,
+		TopicKey: fmt.Sprintf("runs/%s/%s", role, change),
+		Content: memory.EntryContent{
+			What:  summary,
+			Why:   change,
+			Where: ".asdt/artifacts/" + change,
+		},
+	})
+}
+
+// formatOrgContext renders a list of memory entries as an ## Organizational Context block.
+// Each entry produces one line: - [{Type}] {Title}: {Content.What truncated to ~80 chars}
+func formatOrgContext(entries []memory.Entry) string {
+	var sb strings.Builder
+	sb.WriteString("## Organizational Context\n")
+	for _, e := range entries {
+		what := e.Content.What
+		if len(what) > 80 {
+			what = what[:80] + "..."
+		}
+		sb.WriteString(fmt.Sprintf("- [%s] %s: %s\n", e.Type, e.Title, what))
+	}
+	return sb.String()
+}
+
+// runStep executes a single workflow step. orgCtx is the organizational context
+// string produced by loadOrganizationalContext; it is injected only on the first step.
+func (r *Runner) runStep(ctx context.Context, root config.Root, change string, step WorkflowStep, orgCtx string) error {
 	// SkipIfInitialized gate: when the flag is set and platform-summary.yaml exists,
 	// emit the summary as the step's output artifact without invoking the LLM.
 	if step.SkipIfInitialized && step.OutputArtifact != "" {
@@ -107,6 +165,12 @@ func (r *Runner) runStep(ctx context.Context, root config.Root, change string, s
 	composed, manifest := r.deps.Composer(roleFragment, allSkills, artifactCtx, platformCtx)
 	composed += fmt.Sprintf("\n\n## Current Step: %s\n%s\n\nProduce YAML output for this step only.", step.ID, step.Description)
 
+	// Inject organizational context into the first step only (budget: ~400 tokens).
+	isFirst := len(r.descriptor.Workflow) > 0 && r.descriptor.Workflow[0].ID == step.ID
+	if isFirst && orgCtx != "" {
+		composed += "\n\n" + orgCtx
+	}
+
 	response, err := r.deps.Provider.Complete(ctx, llm.Request{
 		Messages: []llm.Message{{Role: "user", Content: composed}},
 	})
@@ -115,6 +179,13 @@ func (r *Runner) runStep(ctx context.Context, root config.Root, change string, s
 	}
 
 	payload := r.parseYAMLResponse(response.Content, openItems)
+
+	// Capture summary from the final step for the knowledge record.
+	if r.isLastStep(step) {
+		if summary, ok := payload["summary"].(string); ok && summary != "" {
+			r.lastRunSummary = summary
+		}
+	}
 
 	if step.OutputArtifact != "" {
 		if err := r.writeStepArtifact(ctx, root, change, step.OutputArtifact, payload, roleFragment, allSkills); err != nil {
