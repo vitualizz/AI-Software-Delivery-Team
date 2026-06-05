@@ -9,6 +9,7 @@ import (
 
 	"github.com/vitualizz/ai-software-delivery-team/internal/config"
 	"github.com/vitualizz/ai-software-delivery-team/internal/knowledge"
+	"gopkg.in/yaml.v3"
 )
 
 // moduleRoot returns the absolute path to the repository root
@@ -294,6 +295,146 @@ func TestFSReader_Write_CreatesKnowledgeDirectory(t *testing.T) {
 	// Verify the file was actually created.
 	if _, err := reader.Read(root); err != nil {
 		t.Fatalf("Read after Write: %v", err)
+	}
+}
+
+// --- PlatformSummary / DeriveSummary tests ---
+
+// TestDeriveSummary_TableDriven tests all derivation paths including multi-stack
+// first-wins, unknown language, and correct DetectedAt propagation.
+func TestDeriveSummary_TableDriven(t *testing.T) {
+	ts := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		name            string
+		stack           []string
+		wantLanguage    string
+		wantPkgMgr      string
+		wantTestRunner  string
+	}{
+		{"go", []string{"go"}, "go", "go modules", "go test"},
+		{"node", []string{"node"}, "node", "npm", "jest"},
+		{"rust", []string{"rust"}, "rust", "cargo", "cargo test"},
+		{"python", []string{"python"}, "python", "pip", "pytest"},
+		{"ruby", []string{"ruby"}, "ruby", "bundler", "rspec"},
+		{"multi stack first wins", []string{"go", "node"}, "go", "go modules", "go test"},
+		{"empty stack unknown", []string{}, "unknown", "", ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := knowledge.Platform{
+				DetectedStack: tc.stack,
+				ScannedAt:     ts,
+			}
+			s := knowledge.DeriveSummary(p)
+
+			if s.PrimaryLanguage != tc.wantLanguage {
+				t.Errorf("PrimaryLanguage: got %q, want %q", s.PrimaryLanguage, tc.wantLanguage)
+			}
+			if s.PackageManager != tc.wantPkgMgr {
+				t.Errorf("PackageManager: got %q, want %q", s.PackageManager, tc.wantPkgMgr)
+			}
+			if s.TestRunner != tc.wantTestRunner {
+				t.Errorf("TestRunner: got %q, want %q", s.TestRunner, tc.wantTestRunner)
+			}
+			// Stack must equal input verbatim.
+			if len(s.Stack) != len(tc.stack) {
+				t.Errorf("Stack len: got %d, want %d", len(s.Stack), len(tc.stack))
+			}
+			for i, v := range tc.stack {
+				if s.Stack[i] != v {
+					t.Errorf("Stack[%d]: got %q, want %q", i, s.Stack[i], v)
+				}
+			}
+			// DetectedAt must be copied from p.ScannedAt (pure function).
+			if !s.DetectedAt.Equal(ts) {
+				t.Errorf("DetectedAt: got %v, want %v", s.DetectedAt, ts)
+			}
+		})
+	}
+}
+
+// TestWriteSummary_CreatesFileAtCorrectPath verifies WriteSummary writes to
+// {root}/knowledge/platform-summary.yaml, auto-creates the dir, and round-trips.
+func TestWriteSummary_CreatesFileAtCorrectPath(t *testing.T) {
+	root := makeRoot(t)
+	reader := knowledge.NewFSReader()
+
+	ts := time.Date(2026, 3, 15, 8, 0, 0, 0, time.UTC)
+	s := knowledge.PlatformSummary{
+		Stack:           []string{"go"},
+		PrimaryLanguage: "go",
+		PackageManager:  "go modules",
+		TestRunner:      "go test",
+		DetectedAt:      ts,
+	}
+
+	if err := reader.WriteSummary(root, s); err != nil {
+		t.Fatalf("WriteSummary: %v", err)
+	}
+
+	// Verify the file exists at the expected path.
+	expectedPath := filepath.Join(root.Path(), "knowledge", "platform-summary.yaml")
+	data, err := os.ReadFile(expectedPath)
+	if err != nil {
+		t.Fatalf("platform-summary.yaml not created at expected path: %v", err)
+	}
+
+	// Round-trip: unmarshal and compare.
+	var restored knowledge.PlatformSummary
+	if err := yaml.Unmarshal(data, &restored); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if restored.PrimaryLanguage != s.PrimaryLanguage {
+		t.Errorf("PrimaryLanguage: got %q, want %q", restored.PrimaryLanguage, s.PrimaryLanguage)
+	}
+	if restored.PackageManager != s.PackageManager {
+		t.Errorf("PackageManager: got %q, want %q", restored.PackageManager, s.PackageManager)
+	}
+	if restored.TestRunner != s.TestRunner {
+		t.Errorf("TestRunner: got %q, want %q", restored.TestRunner, s.TestRunner)
+	}
+	if !restored.DetectedAt.Equal(ts) {
+		t.Errorf("DetectedAt: got %v, want %v", restored.DetectedAt, ts)
+	}
+	if len(restored.Stack) != 1 || restored.Stack[0] != "go" {
+		t.Errorf("Stack: got %v, want [go]", restored.Stack)
+	}
+}
+
+// TestWriteSummary_AutoCreatesKnowledgeDir verifies that WriteSummary creates the
+// knowledge/ directory when it does not exist yet.
+func TestWriteSummary_AutoCreatesKnowledgeDir(t *testing.T) {
+	// Create a raw .asdt dir without a knowledge/ subdirectory.
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(asdt, 0o755); err != nil {
+		t.Fatalf("mkdir .asdt: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	reader := knowledge.NewFSReader()
+	s := knowledge.PlatformSummary{
+		Stack:           []string{"node"},
+		PrimaryLanguage: "node",
+		PackageManager:  "npm",
+		TestRunner:      "jest",
+		DetectedAt:      time.Now().UTC(),
+	}
+
+	// Should not error even though .asdt/knowledge/ doesn't exist.
+	if err := reader.WriteSummary(root, s); err != nil {
+		t.Fatalf("WriteSummary without pre-existing knowledge dir: %v", err)
+	}
+
+	// File must exist.
+	expectedPath := filepath.Join(root.Path(), "knowledge", "platform-summary.yaml")
+	if _, err := os.Stat(expectedPath); err != nil {
+		t.Fatalf("expected file at %s: %v", expectedPath, err)
 	}
 }
 
