@@ -1,0 +1,6 @@
+stack:
+    - go
+primary_language: go
+package_manager: go modules
+test_runner: go test
+detected_at: 2026-06-05T15:17:45.215834546Z
