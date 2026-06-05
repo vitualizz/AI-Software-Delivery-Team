@@ -46,7 +46,7 @@ type Runner struct {
 // If deps.Composer is nil, prompt.Compose is used.
 func New(d SpecialistDescriptor, deps RunnerDeps) *Runner {
 	if deps.Memory == nil {
-		deps.Memory = memory.NullProvider{}
+		deps.Memory = &memory.NullProvider{}
 	}
 	if deps.Composer == nil {
 		deps.Composer = prompt.Compose
@@ -129,9 +129,6 @@ func (r *Runner) runStep(ctx context.Context, root config.Root, change string, s
 	if err := r.deps.Pipeline.AdvanceStep(ctx, root, change, r.descriptor.ID, step.ID); err != nil {
 		return err
 	}
-
-	memKey := fmt.Sprintf("%s/%s/%s", change, r.descriptor.ID, step.ID)
-	_ = r.deps.Memory.Save(ctx, memKey, []byte(response.Content))
 
 	return nil
 }

@@ -143,9 +143,11 @@ func validSpecialists(m map[string]specialists.SpecialistDescriptor) string {
 func buildMemoryProvider(cfg config.Config) memory.Provider {
 	switch cfg.Memory.Provider {
 	case "engram":
-		return memory.NewEngramProvider(cfg.Memory.Endpoint, cfg.Memory.Project)
+		// EngramProvider requires a configured MCPCaller; defer to NullProvider
+		// until the MCP transport is wired in a future change.
+		return memory.NewNullProvider(cfg.Memory.Project)
 	default:
-		return memory.NullProvider{}
+		return memory.NewNullProvider("")
 	}
 }
 

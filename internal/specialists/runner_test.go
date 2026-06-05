@@ -159,7 +159,7 @@ func TestRunner_DeveloperDescriptor_HappyPath(t *testing.T) {
 		Registry: buildMinimalRegistry(),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -216,7 +216,7 @@ func TestRunner_SecurityDescriptor_NoPriorArtifacts(t *testing.T) {
 		Registry: buildMinimalRegistry(),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -260,7 +260,7 @@ func TestRunner_ProviderError_StepWrapped(t *testing.T) {
 		Registry: buildMinimalRegistry(),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -290,7 +290,7 @@ func TestRunner_NullMemory_DoesNotAffectRun(t *testing.T) {
 		Registry: buildMinimalRegistry(),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -327,7 +327,7 @@ func TestRunner_InputRefs_LoadsOnlyDeclaredArtifact(t *testing.T) {
 		Registry: buildMinimalRegistry(),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -368,7 +368,7 @@ func TestRunner_OutputArtifact_WritesAtCorrectPath(t *testing.T) {
 		Registry: buildMinimalRegistry(),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -426,7 +426,7 @@ func TestRunner_EmptyOutputArtifact_NonLastStep_NoWrite(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -464,7 +464,7 @@ func TestRunner_MissingInput_SoftDegradation(t *testing.T) {
 		Registry: buildMinimalRegistryWithSecurity(),
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 
@@ -572,7 +572,7 @@ func TestLoadPlatformContext_SummaryPresent(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: capturedReqs,
 		Store:    newMemStore(),
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: &mockPipeline{},
 	}
 	runner := specialists.New(d, deps)
@@ -624,7 +624,7 @@ func TestLoadPlatformContext_PlatformYAMLFallback(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: capturedReqs,
 		Store:    newMemStore(),
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: &mockPipeline{},
 	}
 	runner := specialists.New(d, deps)
@@ -674,7 +674,7 @@ func TestLoadPlatformContext_BothAbsent(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: capturedReqs,
 		Store:    newMemStore(),
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: &mockPipeline{},
 	}
 	runner := specialists.New(d, deps)
@@ -733,7 +733,7 @@ func TestRunStep_SkipIfInitialized_SummaryPresent(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: trackProvider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 	runner := specialists.New(d, deps)
@@ -803,7 +803,7 @@ func TestRunStep_SkipIfInitialized_SummaryAbsent(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: trackProvider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: pl,
 	}
 	runner := specialists.New(d, deps)
@@ -856,7 +856,7 @@ func TestRunStep_SkipIfInitialized_MalformedYAML_Fallthrough(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: trackProvider,
 		Store:    newMemStore(),
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: &mockPipeline{},
 	}
 	runner := specialists.New(d, deps)
@@ -909,7 +909,7 @@ func TestRunStep_SkipIfInitialized_FalseAlwaysExecutes(t *testing.T) {
 		Registry: prompt.NewEmbeddedRegistry(reg),
 		Provider: trackProvider,
 		Store:    newMemStore(),
-		Memory:   memory.NullProvider{},
+		Memory:   &memory.NullProvider{},
 		Pipeline: &mockPipeline{},
 	}
 	runner := specialists.New(d, deps)
