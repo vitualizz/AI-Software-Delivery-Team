@@ -1,0 +1,68 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/developer/dev-spec.schema.yaml"
+title: DeveloperSpec
+description: >
+  Intermediate artifact produced by the Developer specialist's spec step.
+  Defines what to build: user stories and requirements derived from exploration.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/developer/dev-spec.yaml.
+type: object
+
+required:
+  - stories
+  - scope
+
+properties:
+  stories:
+    type: array
+    description: User stories derived from the exploration step.
+    items:
+      type: object
+      required:
+        - id
+        - as
+        - want
+        - so_that
+      properties:
+        id:
+          type: string
+          description: Story identifier (e.g. US-001).
+        as:
+          type: string
+          description: The actor/role in the "As a..." clause.
+        want:
+          type: string
+          description: The capability in the "I want..." clause.
+        so_that:
+          type: string
+          description: The outcome in the "So that..." clause.
+        acceptance_criteria:
+          type: array
+          items:
+            type: string
+
+  scope:
+    type: object
+    description: Explicit in/out scope boundaries.
+    required:
+      - in
+      - out
+    properties:
+      in:
+        type: array
+        items:
+          type: string
+      out:
+        type: array
+        items:
+          type: string
+
+  nfrs:
+    type: array
+    description: Non-functional requirements (performance, security, accessibility).
+    items:
+      type: string
+
+  open_items:
+    type: array
+    items:
+      type: string

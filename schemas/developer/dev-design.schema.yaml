@@ -1,0 +1,67 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/developer/dev-design.schema.yaml"
+title: DeveloperDesign
+description: >
+  Intermediate artifact produced by the Developer specialist's design step.
+  Defines how to build: components, file targets, and interfaces — no code yet.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/developer/dev-design.yaml.
+type: object
+
+required:
+  - components
+  - file_targets
+
+properties:
+  components:
+    type: array
+    description: Logical components to build or modify, with their responsibilities.
+    items:
+      type: object
+      required:
+        - name
+        - responsibility
+      properties:
+        name:
+          type: string
+        responsibility:
+          type: string
+        interfaces:
+          type: array
+          description: Key method/function signatures this component exposes.
+          items:
+            type: string
+
+  file_targets:
+    type: array
+    description: Concrete files to create or modify.
+    items:
+      type: object
+      required:
+        - path
+        - action
+      properties:
+        path:
+          type: string
+          description: Relative file path from the project root.
+        action:
+          type: string
+          enum: [create, modify, delete]
+        reason:
+          type: string
+
+  patterns:
+    type: array
+    description: Design patterns applied in this design (e.g. repository, handler-service-store).
+    items:
+      type: string
+
+  dependencies:
+    type: array
+    description: External libraries or packages required.
+    items:
+      type: string
+
+  open_items:
+    type: array
+    items:
+      type: string
