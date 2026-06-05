@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
 	"github.com/vitualizz/ai-software-delivery-team/internal/config"
+	"github.com/vitualizz/ai-software-delivery-team/internal/knowledge"
 	"github.com/vitualizz/ai-software-delivery-team/internal/llm"
 	"github.com/vitualizz/ai-software-delivery-team/internal/memory"
 	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
@@ -51,6 +53,24 @@ func run(ctx context.Context, args []string) error {
 	if msg, dep := deprecated[subcmd]; dep {
 		fmt.Printf("warning: `asdt %s` is deprecated: %s\n", subcmd, msg)
 		return nil
+	}
+
+	// init command: deterministic project-level platform scan (zero LLM tokens).
+	// Handled before Discover so it works even without a pre-existing .asdt/ directory.
+	if subcmd == "init" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("init: get working directory: %w", err)
+		}
+		asdtDir := filepath.Join(cwd, ".asdt")
+		if err := os.MkdirAll(asdtDir, 0o755); err != nil {
+			return fmt.Errorf("init: create .asdt/: %w", err)
+		}
+		root, err := config.Discover(cwd)
+		if err != nil {
+			return fmt.Errorf("init: discover root: %w", err)
+		}
+		return runInit(ctx, root)
 	}
 
 	// All other commands require a project root.
@@ -154,6 +174,31 @@ func resolveChange(args []string, cfg config.Config) string {
 	return "default"
 }
 
+// runInit scans the project root, writes platform.yaml, derives a deterministic
+// PlatformSummary, and writes platform-summary.yaml. No LLM, no token cost.
+func runInit(ctx context.Context, root config.Root) error {
+	projectRoot := filepath.Dir(root.Path()) // .asdt/ parent == project root
+	detector := knowledge.DefaultDetector()
+	platform, err := detector.Detect(ctx, projectRoot)
+	if err != nil {
+		return fmt.Errorf("init: detect: %w", err)
+	}
+	reader := knowledge.NewFSReader()
+	if err := reader.Write(root, platform); err != nil {
+		return fmt.Errorf("init: write platform: %w", err)
+	}
+	summary := knowledge.DeriveSummary(platform)
+	if err := reader.WriteSummary(root, summary); err != nil {
+		return fmt.Errorf("init: write summary: %w", err)
+	}
+	fmt.Printf("Initialized .asdt/knowledge/\n")
+	fmt.Printf("  stack:            %s\n", strings.Join(summary.Stack, ", "))
+	fmt.Printf("  primary language: %s\n", summary.PrimaryLanguage)
+	fmt.Printf("  package manager:  %s\n", summary.PackageManager)
+	fmt.Printf("  test runner:      %s\n", summary.TestRunner)
+	return nil
+}
+
 // printHelp prints CLI usage to stdout and returns nil.
 func printHelp() error {
 	fmt.Print(`asdt — AI Software Delivery Team
@@ -169,6 +214,7 @@ Specialists:
   security                Generate threat model and security findings
 
 Other commands:
+  init                    Scan project and write platform-summary.yaml (deterministic, zero LLM tokens)
   status                  Show current pipeline state
   help                    Print this help message
 
