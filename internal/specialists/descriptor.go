@@ -53,6 +53,12 @@ type WorkflowStep struct {
 	// completes. Empty = no mid-run write (until the last step, which falls
 	// back to descriptor.Artifacts.Writes via writeArtifacts).
 	OutputArtifact string
+
+	// SkipIfInitialized, when true, causes the runner to skip the LLM call for
+	// this step if .asdt/knowledge/platform-summary.yaml exists, emitting the
+	// summary as the step's output artifact instead.
+	// Zero value (false) preserves prior behavior — the step always executes.
+	SkipIfInitialized bool
 }
 
 // ArtifactContract declares the artifact types a specialist consumes and produces.
@@ -165,11 +171,12 @@ func UXUIDescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope"},
 		Workflow: []WorkflowStep{
 			{
-				ID:             "platform-analysis",
-				Description:    "Establish/refresh platform context. Scan for existing UI patterns.",
-				SkillRefs:      []string{},
-				InputRefs:      []string{},
-				OutputArtifact: "platform-summary",
+				ID:                "platform-analysis",
+				Description:       "Establish/refresh platform context. Scan for existing UI patterns.",
+				SkillRefs:         []string{},
+				InputRefs:         []string{},
+				OutputArtifact:    "platform-summary",
+				SkipIfInitialized: true,
 			},
 			{
 				ID:             "feature-brief",
@@ -233,11 +240,12 @@ func ArchitectDescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope", "scope-definition"},
 		Workflow: []WorkflowStep{
 			{
-				ID:             "platform-analysis",
-				Description:    "Establish platform context. Extract language, framework, persistence, service boundaries, and architectural constraints.",
-				SkillRefs:      []string{"architecture-review"},
-				InputRefs:      []string{},
-				OutputArtifact: "architect/constraints",
+				ID:                "platform-analysis",
+				Description:       "Establish platform context. Extract language, framework, persistence, service boundaries, and architectural constraints.",
+				SkillRefs:         []string{"architecture-review"},
+				InputRefs:         []string{},
+				OutputArtifact:    "architect/constraints",
+				SkipIfInitialized: true,
 			},
 			{
 				ID:             "load-constraints",
@@ -363,11 +371,12 @@ func SecurityDescriptor() SpecialistDescriptor {
 		Skills:      []string{"platform-context", "artifact-envelope"},
 		Workflow: []WorkflowStep{
 			{
-				ID:             "platform-analysis",
-				Description:    "Establish platform context for security assessment. Extract stack, trust boundaries, and entry points.",
-				SkillRefs:      []string{},
-				InputRefs:      []string{},
-				OutputArtifact: "platform-summary",
+				ID:                "platform-analysis",
+				Description:       "Establish platform context for security assessment. Extract stack, trust boundaries, and entry points.",
+				SkillRefs:         []string{},
+				InputRefs:         []string{},
+				OutputArtifact:    "platform-summary",
+				SkipIfInitialized: true,
 			},
 			{
 				ID:             "threat-modeling",

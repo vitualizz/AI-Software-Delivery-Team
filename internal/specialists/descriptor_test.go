@@ -176,6 +176,73 @@ func TestDescriptorValidate_RejectsEmptyID(t *testing.T) {
 	}
 }
 
+// TestSkipIfInitialized_ZeroValue verifies that a WorkflowStep with no
+// SkipIfInitialized set defaults to false (backward compatible).
+func TestSkipIfInitialized_ZeroValue(t *testing.T) {
+	step := specialists.WorkflowStep{
+		ID:             "step-1",
+		Description:    "a step",
+		InputRefs:      []string{},
+		OutputArtifact: "some/artifact",
+	}
+	if step.SkipIfInitialized {
+		t.Error("SkipIfInitialized zero value must be false")
+	}
+}
+
+// TestSkipIfInitialized_FlaggedSteps verifies that exactly the three platform-analysis
+// steps in UX-UI, Security, and Architect descriptors have SkipIfInitialized: true,
+// and that Developer.explore and Architect.load-constraints do NOT.
+func TestSkipIfInitialized_FlaggedSteps(t *testing.T) {
+	findStep := func(d specialists.SpecialistDescriptor, stepID string) (specialists.WorkflowStep, bool) {
+		for _, s := range d.Workflow {
+			if s.ID == stepID {
+				return s, true
+			}
+		}
+		return specialists.WorkflowStep{}, false
+	}
+
+	// UX-UI platform-analysis must be flagged.
+	uxui := specialists.UXUIDescriptor()
+	if s, ok := findStep(uxui, "platform-analysis"); !ok {
+		t.Error("UXUIDescriptor: expected platform-analysis step")
+	} else if !s.SkipIfInitialized {
+		t.Error("UXUIDescriptor.platform-analysis: SkipIfInitialized must be true")
+	}
+
+	// Security platform-analysis must be flagged.
+	sec := specialists.SecurityDescriptor()
+	if s, ok := findStep(sec, "platform-analysis"); !ok {
+		t.Error("SecurityDescriptor: expected platform-analysis step")
+	} else if !s.SkipIfInitialized {
+		t.Error("SecurityDescriptor.platform-analysis: SkipIfInitialized must be true")
+	}
+
+	// Architect platform-analysis must be flagged.
+	arch := specialists.ArchitectDescriptor()
+	if s, ok := findStep(arch, "platform-analysis"); !ok {
+		t.Error("ArchitectDescriptor: expected platform-analysis step")
+	} else if !s.SkipIfInitialized {
+		t.Error("ArchitectDescriptor.platform-analysis: SkipIfInitialized must be true")
+	}
+
+	// Architect load-constraints must NOT be flagged (deliberate design decision).
+	if s, ok := findStep(arch, "load-constraints"); !ok {
+		t.Error("ArchitectDescriptor: expected load-constraints step")
+	} else if s.SkipIfInitialized {
+		t.Error("ArchitectDescriptor.load-constraints: SkipIfInitialized must be false")
+	}
+
+	// Developer explore must NOT be flagged.
+	dev := specialists.DeveloperDescriptor()
+	if s, ok := findStep(dev, "explore"); !ok {
+		t.Error("DeveloperDescriptor: expected explore step")
+	} else if s.SkipIfInitialized {
+		t.Error("DeveloperDescriptor.explore: SkipIfInitialized must be false")
+	}
+}
+
 // TestDescriptorValidate_RejectsDuplicateStepIDs verifies Validate catches duplicate step IDs.
 func TestDescriptorValidate_RejectsDuplicateStepIDs(t *testing.T) {
 	d := specialists.SpecialistDescriptor{
