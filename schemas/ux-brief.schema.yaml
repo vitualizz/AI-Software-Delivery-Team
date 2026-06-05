@@ -1,0 +1,70 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/ux-brief.schema.yaml"
+title: UXBrief
+description: >
+  Payload produced by the UX/UI specialist's ux-handoff step.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/ux-brief.yaml.
+type: object
+
+required:
+  - feature_summary
+  - primary_actor
+  - user_flows
+  - information_architecture
+
+properties:
+  feature_summary:
+    type: string
+    description: One-paragraph description of the feature and its core UX problem.
+
+  primary_actor:
+    type: string
+    description: The main user type who interacts with this feature.
+
+  success_criteria:
+    type: array
+    description: Measurable outcomes that define when the UX goal is achieved.
+    items:
+      type: string
+
+  user_flows:
+    type: array
+    description: Primary user flows with IDs (UF-001, UF-002, ...).
+    items:
+      type: object
+      required:
+        - id
+        - description
+        - steps
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        steps:
+          type: array
+          items:
+            type: string
+
+  information_architecture:
+    type: object
+    description: Screen hierarchy and navigation structure.
+    properties:
+      screens:
+        type: array
+        items:
+          type: string
+      navigation_path:
+        type: string
+
+  accessibility_notes:
+    type: array
+    description: Key accessibility requirements (WCAG, ARIA, keyboard nav).
+    items:
+      type: string
+
+  open_items:
+    type: array
+    description: Unresolved design questions for the Developer and Architect.
+    items:
+      type: string

@@ -1,0 +1,80 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/test-plan.schema.yaml"
+title: TestPlan
+description: >
+  Payload produced by the QA specialist's quality-report step.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/test-plan.yaml.
+type: object
+
+required:
+  - strategy
+  - coverage_targets
+  - test_cases
+
+properties:
+  strategy:
+    type: object
+    description: Overall test strategy for this change.
+    required:
+      - unit
+      - integration
+    properties:
+      unit:
+        type: string
+        description: Approach for unit tests.
+      integration:
+        type: string
+        description: Approach for integration tests.
+      e2e:
+        type: string
+        description: Approach for end-to-end tests (optional).
+
+  coverage_targets:
+    type: object
+    description: Minimum coverage percentages by layer.
+    properties:
+      unit:
+        type: integer
+        minimum: 0
+        maximum: 100
+      integration:
+        type: integer
+        minimum: 0
+        maximum: 100
+
+  test_cases:
+    type: array
+    description: Concrete test cases in Given/When/Then format.
+    items:
+      type: object
+      required:
+        - id
+        - given
+        - when
+        - then
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        given:
+          type: string
+        when:
+          type: string
+        then:
+          type: string
+        type:
+          type: string
+          enum: [unit, integration, e2e, acceptance]
+        story_id:
+          type: string
+
+  test_data_notes:
+    type: string
+    description: Notes on test data setup, fixtures, or factories needed.
+
+  open_items:
+    type: array
+    description: Unresolved test infrastructure or coverage gaps.
+    items:
+      type: string

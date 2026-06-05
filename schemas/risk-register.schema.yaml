@@ -1,0 +1,48 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/risk-register.schema.yaml"
+title: RiskRegister
+description: >
+  Payload produced by the Architect specialist's risk-analysis step.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/risk-register.yaml.
+type: object
+
+required:
+  - risks
+
+properties:
+  risks:
+    type: array
+    description: Top 3-5 risks with likelihood, impact, and mitigation.
+    items:
+      type: object
+      required:
+        - id
+        - description
+        - likelihood
+        - impact
+        - mitigation
+      properties:
+        id:
+          type: string
+          description: Risk identifier (e.g. R-001).
+        description:
+          type: string
+          description: What could go wrong.
+        likelihood:
+          type: string
+          enum: [Low, Medium, High]
+        impact:
+          type: string
+          enum: [Low, Medium, High]
+        mitigation:
+          type: string
+          description: Concrete action to reduce or eliminate the risk.
+        owner:
+          type: string
+          description: Who is responsible for monitoring/mitigating this risk.
+
+  open_items:
+    type: array
+    description: Risks that need further analysis before implementation.
+    items:
+      type: string

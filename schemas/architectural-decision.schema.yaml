@@ -1,0 +1,57 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/architectural-decision.schema.yaml"
+title: ArchitecturalDecision
+description: >
+  Payload produced by the Architect specialist's decision-record step.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/architectural-decision.yaml.
+type: object
+
+required:
+  - decision
+  - rationale
+  - alternatives_considered
+
+properties:
+  decision:
+    type: string
+    description: The chosen architectural decision, stated as one imperative sentence.
+
+  context:
+    type: string
+    description: The constraints and forces that led to this decision.
+
+  rationale:
+    type: string
+    description: Why the chosen approach wins over the alternatives.
+
+  alternatives_considered:
+    type: array
+    description: Approaches that were evaluated but not chosen.
+    items:
+      type: object
+      required:
+        - name
+        - reason_rejected
+      properties:
+        name:
+          type: string
+        reason_rejected:
+          type: string
+
+  consequences:
+    type: array
+    description: Expected outcomes — both positive and negative — of this decision.
+    items:
+      type: string
+
+  summary:
+    type: string
+    description: >
+      One-sentence summary for the organizational knowledge record (used by
+      decision-preservation skill and runner memory.Save).
+
+  open_items:
+    type: array
+    description: Unresolved questions that follow from this decision.
+    items:
+      type: string

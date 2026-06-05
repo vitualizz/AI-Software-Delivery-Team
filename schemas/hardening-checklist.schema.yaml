@@ -1,0 +1,48 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/hardening-checklist.schema.yaml"
+title: HardeningChecklist
+description: >
+  Payload produced by the Security specialist's hardening-checklist step.
+  Ordered action list for the Developer specialist to implement.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/hardening-checklist.yaml.
+type: object
+
+required:
+  - actions
+
+properties:
+  actions:
+    type: array
+    description: Ordered hardening actions, highest priority first.
+    items:
+      type: object
+      required:
+        - id
+        - action
+        - priority
+      properties:
+        id:
+          type: string
+          description: Action identifier (e.g. H-001).
+        action:
+          type: string
+          description: Concrete developer task (imperative sentence).
+        priority:
+          type: string
+          enum: [Critical, High, Medium, Low]
+        rationale:
+          type: string
+          description: Why this action is necessary (links back to a finding or threat).
+        finding_ref:
+          type: string
+          description: Optional reference to a security finding ID (e.g. F-001).
+
+  summary:
+    type: string
+    description: >
+      One-sentence hardening summary for the organizational knowledge record.
+
+  open_items:
+    type: array
+    items:
+      type: string

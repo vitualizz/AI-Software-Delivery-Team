@@ -1,0 +1,80 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/system-design.schema.yaml"
+title: SystemDesign
+description: >
+  Payload produced by the Architect specialist's system-design step.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/system-design.yaml.
+type: object
+
+required:
+  - data_model
+  - api_surface
+
+properties:
+  data_model:
+    type: object
+    description: Core entities and their relationships.
+    properties:
+      entities:
+        type: array
+        items:
+          type: object
+          required:
+            - name
+            - fields
+          properties:
+            name:
+              type: string
+            fields:
+              type: array
+              items:
+                type: string
+            relationships:
+              type: array
+              items:
+                type: string
+
+  api_surface:
+    type: array
+    description: API endpoints or service contracts this feature introduces or modifies.
+    items:
+      type: object
+      required:
+        - method
+        - path
+      properties:
+        method:
+          type: string
+          enum: [GET, POST, PUT, PATCH, DELETE, SUBSCRIBE, PUBLISH]
+        path:
+          type: string
+        description:
+          type: string
+        request_body:
+          type: string
+        response:
+          type: string
+        auth_required:
+          type: boolean
+
+  service_boundaries:
+    type: array
+    description: Services, modules, or packages involved and their responsibilities.
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+        responsibility:
+          type: string
+
+  sequence_notes:
+    type: string
+    description: >
+      Key sequence or interaction notes (informal prose or Mermaid-style description).
+
+  open_items:
+    type: array
+    description: Unresolved design decisions.
+    items:
+      type: string

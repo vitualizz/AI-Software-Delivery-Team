@@ -1,0 +1,71 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/threat-model.schema.yaml"
+title: ThreatModel
+description: >
+  Payload produced by the Security specialist's threat-modeling step.
+  Contains STRIDE-based threat analysis.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/threat-model.yaml.
+type: object
+
+required:
+  - threats
+  - trust_boundaries
+
+properties:
+  threats:
+    type: array
+    description: Identified threats using STRIDE categories.
+    items:
+      type: object
+      required:
+        - id
+        - category
+        - description
+        - severity
+      properties:
+        id:
+          type: string
+          description: Threat identifier (e.g. T-001).
+        category:
+          type: string
+          description: STRIDE category.
+          enum:
+            - Spoofing
+            - Tampering
+            - Repudiation
+            - InformationDisclosure
+            - DenialOfService
+            - ElevationOfPrivilege
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        attack_vector:
+          type: string
+        mitigation:
+          type: string
+
+  trust_boundaries:
+    type: array
+    description: Boundaries where data or control crosses trust levels.
+    items:
+      type: object
+      properties:
+        boundary:
+          type: string
+        data_crossing:
+          type: string
+        risk:
+          type: string
+
+  attack_surface:
+    type: array
+    description: Entry points exposed by this feature.
+    items:
+      type: string
+
+  open_items:
+    type: array
+    items:
+      type: string

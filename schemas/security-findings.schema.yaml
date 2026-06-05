@@ -1,0 +1,57 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/security-findings.schema.yaml"
+title: SecurityFindings
+description: >
+  Payload produced by the Security specialist's owasp-analysis step.
+  Contains OWASP Top 10 findings relevant to this feature.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/security-findings.yaml.
+type: object
+
+required:
+  - findings
+
+properties:
+  findings:
+    type: array
+    description: Security findings mapped to OWASP Top 10 2021 categories.
+    items:
+      type: object
+      required:
+        - id
+        - owasp_category
+        - description
+        - severity
+      properties:
+        id:
+          type: string
+          description: Finding identifier (e.g. F-001).
+        owasp_category:
+          type: string
+          description: OWASP Top 10 2021 category (e.g. A01:2021 – Broken Access Control).
+        description:
+          type: string
+          description: What the vulnerability is and where it manifests.
+        severity:
+          type: string
+          enum: [Low, Medium, High, Critical]
+        remediation:
+          type: string
+          description: Concrete remediation action for the Developer specialist.
+        cwe_id:
+          type: string
+          description: Optional CWE identifier (e.g. CWE-79).
+
+  summary:
+    type: string
+    description: >
+      One-sentence security posture summary for the organizational knowledge record.
+
+  overall_risk:
+    type: string
+    description: Overall risk rating for this feature before hardening.
+    enum: [Low, Medium, High, Critical]
+
+  open_items:
+    type: array
+    items:
+      type: string

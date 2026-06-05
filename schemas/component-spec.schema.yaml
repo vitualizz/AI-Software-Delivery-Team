@@ -1,0 +1,66 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/component-spec.schema.yaml"
+title: ComponentSpec
+description: >
+  Payload produced by the UX/UI specialist's ux-handoff step.
+  Documents reused, extended, and new UI components.
+  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/component-spec.yaml.
+type: object
+
+required:
+  - components
+
+properties:
+  components:
+    type: array
+    description: All UI components involved in this feature.
+    items:
+      type: object
+      required:
+        - name
+        - status
+      properties:
+        name:
+          type: string
+          description: Component name (e.g. LoginForm, UserAvatar).
+        status:
+          type: string
+          description: Whether this component is reused, extended, or new.
+          enum:
+            - reused
+            - extended
+            - new
+        location:
+          type: string
+          description: File path or package where the component lives/will live.
+        props:
+          type: array
+          description: Key props/inputs this component accepts.
+          items:
+            type: string
+        notes:
+          type: string
+          description: Design notes, constraints, or special behavior.
+
+  design_tokens:
+    type: array
+    description: Shared design tokens (colors, spacing, typography) this feature depends on.
+    items:
+      type: string
+
+  responsive_breakpoints:
+    type: array
+    description: Breakpoints and adaptive behavior rules.
+    items:
+      type: object
+      properties:
+        breakpoint:
+          type: string
+        behavior:
+          type: string
+
+  open_items:
+    type: array
+    description: Unresolved component questions.
+    items:
+      type: string
