@@ -3,6 +3,8 @@ package specialists_test
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -532,6 +534,393 @@ func buildMinimalRegistryWithSecurity() prompt.SkillRegistry {
 	return prompt.NewEmbeddedRegistry(fsys)
 }
 
+// --- Test: loadPlatformContext summary-first ---
+
+func TestLoadPlatformContext_SummaryPresent(t *testing.T) {
+	// Write a platform-summary.yaml; must return "Platform Context (summary)" header.
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(filepath.Join(asdt, "knowledge"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	summaryContent := "stack: [go]\nprimary_language: go\n"
+	if err := os.WriteFile(filepath.Join(asdt, "knowledge", "platform-summary.yaml"), []byte(summaryContent), 0o644); err != nil {
+		t.Fatalf("write summary: %v", err)
+	}
+
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	// We need an exported LoadPlatformContext, but the method is unexported.
+	// We test it indirectly: run a one-step descriptor and verify the LLM prompt
+	// contains "Platform Context (summary)" in the concatenated output.
+	capturedReqs := &requestCaptureProvider{}
+	d := specialists.SpecialistDescriptor{
+		ID:   "test-ctx",
+		Name: "TestCtx",
+		Workflow: []specialists.WorkflowStep{
+			{ID: "step-one", InputRefs: []string{}, OutputArtifact: "test-ctx/out"},
+		},
+		Artifacts: specialists.ArtifactContract{Writes: []string{"test-ctx/out"}},
+	}
+	reg := fstest.MapFS{
+		"test-ctx/SKILL.md": {Data: []byte("role content")},
+	}
+	deps := specialists.RunnerDeps{
+		Registry: prompt.NewEmbeddedRegistry(reg),
+		Provider: capturedReqs,
+		Store:    newMemStore(),
+		Memory:   memory.NullProvider{},
+		Pipeline: &mockPipeline{},
+	}
+	runner := specialists.New(d, deps)
+	if err := runner.Run(context.Background(), root, "ctx-change"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(capturedReqs.reqs) == 0 {
+		t.Fatal("no LLM requests captured")
+	}
+	prompt := capturedReqs.reqs[0].Messages[0].Content
+	if !strings.Contains(prompt, "Platform Context (summary)") {
+		t.Errorf("expected prompt to contain 'Platform Context (summary)', got:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "primary_language: go") {
+		t.Errorf("expected prompt to contain summary content, got:\n%s", prompt)
+	}
+}
+
+func TestLoadPlatformContext_PlatformYAMLFallback(t *testing.T) {
+	// Write only platform.yaml; must NOT contain "(summary)" label.
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(filepath.Join(asdt, "knowledge"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	platformContent := "schema_version: \"1\"\ndetected_stack: [node]\n"
+	if err := os.WriteFile(filepath.Join(asdt, "knowledge", "platform.yaml"), []byte(platformContent), 0o644); err != nil {
+		t.Fatalf("write platform.yaml: %v", err)
+	}
+
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	capturedReqs := &requestCaptureProvider{}
+	d := specialists.SpecialistDescriptor{
+		ID:   "test-ctx2",
+		Name: "TestCtx2",
+		Workflow: []specialists.WorkflowStep{
+			{ID: "step-one", InputRefs: []string{}, OutputArtifact: "test-ctx2/out"},
+		},
+		Artifacts: specialists.ArtifactContract{Writes: []string{"test-ctx2/out"}},
+	}
+	reg := fstest.MapFS{
+		"test-ctx2/SKILL.md": {Data: []byte("role content")},
+	}
+	deps := specialists.RunnerDeps{
+		Registry: prompt.NewEmbeddedRegistry(reg),
+		Provider: capturedReqs,
+		Store:    newMemStore(),
+		Memory:   memory.NullProvider{},
+		Pipeline: &mockPipeline{},
+	}
+	runner := specialists.New(d, deps)
+	if err := runner.Run(context.Background(), root, "fallback-change"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(capturedReqs.reqs) == 0 {
+		t.Fatal("no LLM requests captured")
+	}
+	p := capturedReqs.reqs[0].Messages[0].Content
+	if strings.Contains(p, "Platform Context (summary)") {
+		t.Error("expected fallback to NOT use '(summary)' label")
+	}
+	if !strings.Contains(p, "Platform Context") {
+		t.Errorf("expected prompt to contain 'Platform Context' fallback, got:\n%s", p)
+	}
+	if !strings.Contains(p, "detected_stack") {
+		t.Errorf("expected prompt to contain platform.yaml content, got:\n%s", p)
+	}
+}
+
+func TestLoadPlatformContext_BothAbsent(t *testing.T) {
+	// Neither file present — prompt must NOT contain any platform context header.
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(asdt, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	capturedReqs := &requestCaptureProvider{}
+	d := specialists.SpecialistDescriptor{
+		ID:   "test-ctx3",
+		Name: "TestCtx3",
+		Workflow: []specialists.WorkflowStep{
+			{ID: "step-one", InputRefs: []string{}, OutputArtifact: "test-ctx3/out"},
+		},
+		Artifacts: specialists.ArtifactContract{Writes: []string{"test-ctx3/out"}},
+	}
+	reg := fstest.MapFS{
+		"test-ctx3/SKILL.md": {Data: []byte("role content")},
+	}
+	deps := specialists.RunnerDeps{
+		Registry: prompt.NewEmbeddedRegistry(reg),
+		Provider: capturedReqs,
+		Store:    newMemStore(),
+		Memory:   memory.NullProvider{},
+		Pipeline: &mockPipeline{},
+	}
+	runner := specialists.New(d, deps)
+	if err := runner.Run(context.Background(), root, "absent-change"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(capturedReqs.reqs) == 0 {
+		t.Fatal("no LLM requests captured")
+	}
+	p := capturedReqs.reqs[0].Messages[0].Content
+	if strings.Contains(p, "Platform Context") {
+		t.Errorf("expected no platform context when both files absent, got:\n%s", p)
+	}
+}
+
+// --- Test: SkipIfInitialized gate ---
+
+func TestRunStep_SkipIfInitialized_SummaryPresent(t *testing.T) {
+	// Case A: summary present → LLM NOT called, OutputArtifact written with source marker.
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(filepath.Join(asdt, "knowledge"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	summaryYAML := "stack:\n- go\nprimary_language: go\npackage_manager: go modules\ntest_runner: go test\ndetected_at: 2026-01-01T00:00:00Z\n"
+	if err := os.WriteFile(filepath.Join(asdt, "knowledge", "platform-summary.yaml"), []byte(summaryYAML), 0o644); err != nil {
+		t.Fatalf("write summary: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	callCount := 0
+	trackProvider := &countingProvider{count: &callCount, response: "result: ok\n"}
+
+	store := newMemStore()
+	pl := &mockPipeline{}
+	d := specialists.SpecialistDescriptor{
+		ID:   "test-skip",
+		Name: "TestSkip",
+		Workflow: []specialists.WorkflowStep{
+			{
+				ID:                "platform-analysis",
+				InputRefs:         []string{},
+				OutputArtifact:    "platform-summary",
+				SkipIfInitialized: true,
+			},
+		},
+		Artifacts: specialists.ArtifactContract{Writes: []string{"platform-summary"}},
+	}
+	reg := fstest.MapFS{
+		"test-skip/SKILL.md": {Data: []byte("role content")},
+	}
+	deps := specialists.RunnerDeps{
+		Registry: prompt.NewEmbeddedRegistry(reg),
+		Provider: trackProvider,
+		Store:    store,
+		Memory:   memory.NullProvider{},
+		Pipeline: pl,
+	}
+	runner := specialists.New(d, deps)
+	if err := runner.Run(context.Background(), root, "skip-change"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// LLM must NOT have been called.
+	if callCount != 0 {
+		t.Errorf("LLM should not be called when SkipIfInitialized + summary present; got %d call(s)", callCount)
+	}
+
+	// OutputArtifact must exist with source marker.
+	if !store.Exists("skip-change", "platform-summary") {
+		t.Fatal("platform-summary artifact must be written even when step is skipped")
+	}
+	env, err := store.readEnvelope("skip-change", "platform-summary")
+	if err != nil {
+		t.Fatalf("read platform-summary envelope: %v", err)
+	}
+	source, _ := env.Payload["source"].(string)
+	if source != "platform-summary.yaml" {
+		t.Errorf("artifact source: got %q, want %q", source, "platform-summary.yaml")
+	}
+
+	// AdvanceStep must have been called for the step.
+	steps := pl.stepsFor("test-skip")
+	if len(steps) != 1 || steps[0] != "platform-analysis" {
+		t.Errorf("AdvanceStep: expected [platform-analysis], got %v", steps)
+	}
+}
+
+func TestRunStep_SkipIfInitialized_SummaryAbsent(t *testing.T) {
+	// Case B: SkipIfInitialized=true but summary absent → LLM IS called (normal path).
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(asdt, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	callCount := 0
+	trackProvider := &countingProvider{count: &callCount, response: "stack: [go]\nopen_items: []\n"}
+
+	store := newMemStore()
+	pl := &mockPipeline{}
+	d := specialists.SpecialistDescriptor{
+		ID:   "test-skip-absent",
+		Name: "TestSkipAbsent",
+		Workflow: []specialists.WorkflowStep{
+			{
+				ID:                "platform-analysis",
+				InputRefs:         []string{},
+				OutputArtifact:    "platform-summary",
+				SkipIfInitialized: true,
+			},
+		},
+		Artifacts: specialists.ArtifactContract{Writes: []string{"platform-summary"}},
+	}
+	reg := fstest.MapFS{
+		"test-skip-absent/SKILL.md": {Data: []byte("role content")},
+	}
+	deps := specialists.RunnerDeps{
+		Registry: prompt.NewEmbeddedRegistry(reg),
+		Provider: trackProvider,
+		Store:    store,
+		Memory:   memory.NullProvider{},
+		Pipeline: pl,
+	}
+	runner := specialists.New(d, deps)
+	if err := runner.Run(context.Background(), root, "absent-skip-change"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	// LLM MUST be called when summary is absent.
+	if callCount == 0 {
+		t.Error("LLM must be called when SkipIfInitialized + summary absent")
+	}
+}
+
+func TestRunStep_SkipIfInitialized_MalformedYAML_Fallthrough(t *testing.T) {
+	// Case C: malformed YAML → graceful fallthrough to LLM.
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(filepath.Join(asdt, "knowledge"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	// Write a YAML scalar (not a mapping) so Unmarshal into map[string]any yields nil payload.
+	if err := os.WriteFile(filepath.Join(asdt, "knowledge", "platform-summary.yaml"), []byte("- only\n- a\n- list\n"), 0o644); err != nil {
+		t.Fatalf("write malformed: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	callCount := 0
+	trackProvider := &countingProvider{count: &callCount, response: "stack: []\nopen_items: []\n"}
+
+	d := specialists.SpecialistDescriptor{
+		ID:   "test-malformed",
+		Name: "TestMalformed",
+		Workflow: []specialists.WorkflowStep{
+			{
+				ID:                "platform-analysis",
+				InputRefs:         []string{},
+				OutputArtifact:    "platform-summary",
+				SkipIfInitialized: true,
+			},
+		},
+		Artifacts: specialists.ArtifactContract{Writes: []string{"platform-summary"}},
+	}
+	reg := fstest.MapFS{
+		"test-malformed/SKILL.md": {Data: []byte("role content")},
+	}
+	deps := specialists.RunnerDeps{
+		Registry: prompt.NewEmbeddedRegistry(reg),
+		Provider: trackProvider,
+		Store:    newMemStore(),
+		Memory:   memory.NullProvider{},
+		Pipeline: &mockPipeline{},
+	}
+	runner := specialists.New(d, deps)
+	if err := runner.Run(context.Background(), root, "malformed-change"); err != nil {
+		t.Fatalf("Run must not error on malformed YAML: %v", err)
+	}
+
+	// LLM must be called (fallthrough).
+	if callCount == 0 {
+		t.Error("LLM must be called when platform-summary.yaml is malformed")
+	}
+}
+
+func TestRunStep_SkipIfInitialized_FalseAlwaysExecutes(t *testing.T) {
+	// Case D: SkipIfInitialized=false → step always executes, even when summary exists.
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(filepath.Join(asdt, "knowledge"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	summaryYAML := "stack: [go]\nprimary_language: go\n"
+	if err := os.WriteFile(filepath.Join(asdt, "knowledge", "platform-summary.yaml"), []byte(summaryYAML), 0o644); err != nil {
+		t.Fatalf("write summary: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	callCount := 0
+	trackProvider := &countingProvider{count: &callCount, response: "stack: [go]\nopen_items: []\n"}
+
+	d := specialists.SpecialistDescriptor{
+		ID:   "test-no-skip",
+		Name: "TestNoSkip",
+		Workflow: []specialists.WorkflowStep{
+			{
+				ID:                "explore",
+				InputRefs:         []string{},
+				OutputArtifact:    "test-no-skip/out",
+				SkipIfInitialized: false, // zero value — must always run
+			},
+		},
+		Artifacts: specialists.ArtifactContract{Writes: []string{"test-no-skip/out"}},
+	}
+	reg := fstest.MapFS{
+		"test-no-skip/SKILL.md": {Data: []byte("role content")},
+	}
+	deps := specialists.RunnerDeps{
+		Registry: prompt.NewEmbeddedRegistry(reg),
+		Provider: trackProvider,
+		Store:    newMemStore(),
+		Memory:   memory.NullProvider{},
+		Pipeline: &mockPipeline{},
+	}
+	runner := specialists.New(d, deps)
+	if err := runner.Run(context.Background(), root, "no-skip-change"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if callCount == 0 {
+		t.Error("LLM must be called when SkipIfInitialized=false, even when summary exists")
+	}
+}
+
 // --- sequentialProvider: deterministic multi-response mock ---
 
 type providerResult struct {
@@ -563,3 +952,50 @@ func (p *sequentialProvider) Stream(_ context.Context, _ llm.Request) (<-chan ll
 }
 
 func (p *sequentialProvider) Name() string { return "sequential-mock" }
+
+// --- requestCaptureProvider: records full llm.Request objects ---
+
+type requestCaptureProvider struct {
+	mu   sync.Mutex
+	reqs []llm.Request
+}
+
+func (p *requestCaptureProvider) Complete(_ context.Context, req llm.Request) (llm.Response, error) {
+	p.mu.Lock()
+	p.reqs = append(p.reqs, req)
+	p.mu.Unlock()
+	return llm.Response{Content: "result: ok\n"}, nil
+}
+
+func (p *requestCaptureProvider) Stream(_ context.Context, _ llm.Request) (<-chan llm.Chunk, error) {
+	ch := make(chan llm.Chunk, 1)
+	ch <- llm.Chunk{Done: true}
+	close(ch)
+	return ch, nil
+}
+
+func (p *requestCaptureProvider) Name() string { return "request-capture-mock" }
+
+// --- countingProvider: tracks how many times Complete() is called ---
+
+type countingProvider struct {
+	mu       sync.Mutex
+	count    *int
+	response string
+}
+
+func (p *countingProvider) Complete(_ context.Context, _ llm.Request) (llm.Response, error) {
+	p.mu.Lock()
+	*p.count++
+	p.mu.Unlock()
+	return llm.Response{Content: p.response}, nil
+}
+
+func (p *countingProvider) Stream(_ context.Context, _ llm.Request) (<-chan llm.Chunk, error) {
+	ch := make(chan llm.Chunk, 1)
+	ch <- llm.Chunk{Done: true}
+	close(ch)
+	return ch, nil
+}
+
+func (p *countingProvider) Name() string { return "counting-mock" }

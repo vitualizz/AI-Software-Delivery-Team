@@ -71,6 +71,28 @@ func (r *Runner) Run(ctx context.Context, root config.Root, change string) error
 
 // runStep executes a single workflow step.
 func (r *Runner) runStep(ctx context.Context, root config.Root, change string, step WorkflowStep) error {
+	// SkipIfInitialized gate: when the flag is set and platform-summary.yaml exists,
+	// emit the summary as the step's output artifact without invoking the LLM.
+	if step.SkipIfInitialized && step.OutputArtifact != "" {
+		summaryFile := filepath.Join(root.Path(), "knowledge", "platform-summary.yaml")
+		if data, err := os.ReadFile(summaryFile); err == nil {
+			var payload map[string]any
+			if unmarshalErr := yaml.Unmarshal(data, &payload); unmarshalErr == nil && payload != nil {
+				payload["source"] = "platform-summary.yaml" // provenance marker
+				payload["open_items"] = []any{}             // satisfy downstream expectations
+				role, rerr := r.deps.Registry.Role(r.descriptor.ID)
+				if rerr == nil {
+					if werr := r.writeStepArtifact(ctx, root, change, step.OutputArtifact, payload, role, nil); werr != nil {
+						return werr
+					}
+					return r.deps.Pipeline.AdvanceStep(ctx, root, change, r.descriptor.ID, step.ID)
+				}
+			}
+			// malformed YAML or role lookup failed — fall through to normal LLM path
+		}
+		// summary file absent — fall through to normal LLM path
+	}
+
 	sharedFragments := r.loadSharedSkills()
 	stepFragments := r.loadStepSkills(step)
 	artifactCtx, openItems := r.loadStepInputs(ctx, root, change, step)
@@ -193,15 +215,20 @@ func (r *Runner) loadInputArtifacts(ctx context.Context, root config.Root, chang
 	return strings.Join(parts, "\n\n"), missing
 }
 
-// loadPlatformContext reads .asdt/knowledge/platform.yaml and returns its
-// serialized content as a context string. Returns empty string on any error.
+// loadPlatformContext returns platform context for prompt injection.
+// Prefers the deterministic project-level summary (platform-summary.yaml),
+// falling back to raw platform.yaml, then to empty string.
 func (r *Runner) loadPlatformContext(root config.Root) string {
-	p := filepath.Join(root.Path(), "knowledge", "platform.yaml")
-	data, err := os.ReadFile(p)
-	if err != nil {
-		return "" // platform.yaml absent — degrade gracefully
+	base := filepath.Join(root.Path(), "knowledge")
+	// Prefer the deterministic project-level summary.
+	if data, err := os.ReadFile(filepath.Join(base, "platform-summary.yaml")); err == nil {
+		return fmt.Sprintf("## Platform Context (summary)\n\n```yaml\n%s```", string(data))
 	}
-	return fmt.Sprintf("## Platform Context\n\n```yaml\n%s```", string(data))
+	// Fall back to raw platform.yaml.
+	if data, err := os.ReadFile(filepath.Join(base, "platform.yaml")); err == nil {
+		return fmt.Sprintf("## Platform Context\n\n```yaml\n%s```", string(data))
+	}
+	return "" // both absent — degrade gracefully (unchanged contract)
 }
 
 // parseYAMLResponse unmarshals the LLM YAML response into a generic map.
