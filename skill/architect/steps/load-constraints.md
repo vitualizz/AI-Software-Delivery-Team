@@ -26,7 +26,7 @@ Classify constraints into three buckets:
 For each hard constraint, note: what it is, why it cannot change, and how it limits the solution space.
 
 ## Output
-Produces: `architect/approaches` (constraint analysis — feeds into evaluate-approaches)
+Produces: `architect/constraints-analysis` (constraint analysis — feeds into evaluate-approaches)
 
 Schema:
 ```yaml

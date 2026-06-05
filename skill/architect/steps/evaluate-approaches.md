@@ -5,7 +5,7 @@ Compare 2-3 viable technical approaches for the key architectural decision.
 Choose one with explicit reasoning. Document why alternatives were rejected.
 
 ## Inputs
-- `architect/constraints`: hard constraints, soft constraints, opportunities
+- `architect/constraints-analysis`: hard constraints, soft constraints, opportunities (produced by load-constraints)
 
 Extract: hard_constraints (limits approach space), opportunities (could favor one approach).
 

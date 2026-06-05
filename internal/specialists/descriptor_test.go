@@ -243,6 +243,49 @@ func TestSkipIfInitialized_FlaggedSteps(t *testing.T) {
 	}
 }
 
+// TestArchitectDescriptor_LoadConstraints_OutputArtifact verifies that the load-constraints
+// step produces architect/constraints-analysis (not architect/approaches), fixing the
+// artifact-key collision that caused silent overwrites.
+func TestArchitectDescriptor_LoadConstraints_OutputArtifact(t *testing.T) {
+	d := specialists.ArchitectDescriptor()
+
+	var loadConstraints *specialists.WorkflowStep
+	for i := range d.Workflow {
+		if d.Workflow[i].ID == "load-constraints" {
+			s := d.Workflow[i]
+			loadConstraints = &s
+			break
+		}
+	}
+	if loadConstraints == nil {
+		t.Fatal("load-constraints step not found in ArchitectDescriptor")
+	}
+	if loadConstraints.OutputArtifact != "architect/constraints-analysis" {
+		t.Errorf("load-constraints OutputArtifact = %q, want %q",
+			loadConstraints.OutputArtifact, "architect/constraints-analysis")
+	}
+
+	var evaluateApproaches *specialists.WorkflowStep
+	for i := range d.Workflow {
+		if d.Workflow[i].ID == "evaluate-approaches" {
+			s := d.Workflow[i]
+			evaluateApproaches = &s
+			break
+		}
+	}
+	if evaluateApproaches == nil {
+		t.Fatal("evaluate-approaches step not found in ArchitectDescriptor")
+	}
+	if evaluateApproaches.OutputArtifact != "architect/approaches" {
+		t.Errorf("evaluate-approaches OutputArtifact = %q, want %q",
+			evaluateApproaches.OutputArtifact, "architect/approaches")
+	}
+	if len(evaluateApproaches.InputRefs) == 0 || evaluateApproaches.InputRefs[0] != "architect/constraints-analysis" {
+		t.Errorf("evaluate-approaches InputRefs = %v, want [architect/constraints-analysis]",
+			evaluateApproaches.InputRefs)
+	}
+}
+
 // TestDescriptorValidate_RejectsDuplicateStepIDs verifies Validate catches duplicate step IDs.
 func TestDescriptorValidate_RejectsDuplicateStepIDs(t *testing.T) {
 	d := specialists.SpecialistDescriptor{
