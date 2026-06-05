@@ -19,6 +19,10 @@ type Reader interface {
 
 	// Write serializes p and persists it at {root}/knowledge/platform.yaml.
 	Write(root config.Root, p Platform) error
+
+	// WriteSummary serializes s and persists it at
+	// {root}/knowledge/platform-summary.yaml. Creates the directory if needed.
+	WriteSummary(root config.Root, s PlatformSummary) error
 }
 
 // FSReader is the filesystem-backed implementation of Reader.
@@ -62,6 +66,28 @@ func (r *FSReader) Write(root config.Root, p Platform) error {
 	}
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("knowledge write: %w", err)
+	}
+	return nil
+}
+
+// summaryPath returns the absolute path to platform-summary.yaml for the given root.
+func summaryPath(root config.Root) string {
+	return filepath.Join(root.Path(), "knowledge", "platform-summary.yaml")
+}
+
+// WriteSummary serializes s to YAML and writes it to
+// {root}/knowledge/platform-summary.yaml. Creates the directory if needed.
+func (r *FSReader) WriteSummary(root config.Root, s PlatformSummary) error {
+	path := summaryPath(root)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return fmt.Errorf("knowledge summary mkdir: %w", err)
+	}
+	data, err := yaml.Marshal(s)
+	if err != nil {
+		return fmt.Errorf("knowledge summary marshal: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return fmt.Errorf("knowledge summary write: %w", err)
 	}
 	return nil
 }
