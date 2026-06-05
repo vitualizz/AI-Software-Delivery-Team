@@ -999,3 +999,235 @@ func (p *countingProvider) Stream(_ context.Context, _ llm.Request) (<-chan llm.
 }
 
 func (p *countingProvider) Name() string { return "counting-mock" }
+
+// ----------------------------------------------------------------
+// Mock memory.Provider for runner memory-hook tests
+// ----------------------------------------------------------------
+
+type mockMemoryProvider struct {
+	mu          sync.Mutex
+	searchErr   error
+	searchRet   []memory.Entry
+	saveErr     error
+	savedEntries []memory.Entry
+	searchCalls  int
+	saveCalls    int
+}
+
+func (m *mockMemoryProvider) Search(_ context.Context, _ string) ([]memory.Entry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.searchCalls++
+	return m.searchRet, m.searchErr
+}
+
+func (m *mockMemoryProvider) Save(_ context.Context, entry memory.Entry) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.saveCalls++
+	m.savedEntries = append(m.savedEntries, entry)
+	return m.saveErr
+}
+
+func (m *mockMemoryProvider) Get(_ context.Context, _ string) (*memory.Entry, error) {
+	return nil, nil
+}
+
+func (m *mockMemoryProvider) Name() string { return "mock-memory" }
+
+// buildMinimalRegistryForMem builds a minimal registry suitable for the memory hook tests.
+func buildMinimalRegistryForMem() prompt.SkillRegistry {
+	fsys := fstest.MapFS{
+		"developer/SKILL.md": {Data: []byte("Developer role.")},
+	}
+	return prompt.NewEmbeddedRegistry(fsys)
+}
+
+// buildOneShotDeveloper returns a 1-step developer-like descriptor for fast tests.
+func buildOneShotDeveloper() specialists.SpecialistDescriptor {
+	return specialists.SpecialistDescriptor{
+		ID:   "developer",
+		Name: "Developer",
+		Workflow: []specialists.WorkflowStep{
+			{ID: "review", InputRefs: []string{}, OutputArtifact: "implementation-plan"},
+		},
+		Artifacts: specialists.ArtifactContract{
+			Reads:  []string{},
+			Writes: []string{"implementation-plan"},
+		},
+	}
+}
+
+// TestRunner_LoadsOrganizationalContext_InjectsBlock verifies that when memory.Search
+// returns entries, they appear in the first step's LLM prompt.
+func TestRunner_LoadsOrganizationalContext_InjectsBlock(t *testing.T) {
+	ctx := context.Background()
+
+	mem := &mockMemoryProvider{
+		searchRet: []memory.Entry{
+			{Title: "Prior JWT decision", Type: memory.EntryTypeDecision, Content: memory.EntryContent{What: "Use JWT for auth"}},
+		},
+	}
+
+	capture := &requestCaptureProvider{}
+	d := buildOneShotDeveloper()
+
+	deps := specialists.RunnerDeps{
+		Registry: buildMinimalRegistryForMem(),
+		Provider: capture,
+		Store:    newMemStore(),
+		Memory:   mem,
+		Pipeline: &mockPipeline{},
+	}
+
+	runner := specialists.New(d, deps)
+	if err := runner.Run(ctx, config.Root{}, "add-auth"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if mem.searchCalls == 0 {
+		t.Error("expected memory.Search to be called at least once")
+	}
+
+	if len(capture.reqs) == 0 {
+		t.Fatal("no LLM requests captured")
+	}
+	prompt := capture.reqs[0].Messages[0].Content
+	if !strings.Contains(prompt, "Organizational Context") {
+		t.Errorf("expected prompt to contain 'Organizational Context'; prompt:\n%s", prompt)
+	}
+	if !strings.Contains(prompt, "Prior JWT decision") {
+		t.Errorf("expected prompt to contain entry title; prompt:\n%s", prompt)
+	}
+}
+
+// TestRunner_SkipsOrgContext_WhenMemoryEmpty verifies that when memory.Search returns
+// no entries, no "Organizational Context" section is injected.
+func TestRunner_SkipsOrgContext_WhenMemoryEmpty(t *testing.T) {
+	ctx := context.Background()
+
+	mem := &mockMemoryProvider{searchRet: []memory.Entry{}}
+	capture := &requestCaptureProvider{}
+	d := buildOneShotDeveloper()
+
+	deps := specialists.RunnerDeps{
+		Registry: buildMinimalRegistryForMem(),
+		Provider: capture,
+		Store:    newMemStore(),
+		Memory:   mem,
+		Pipeline: &mockPipeline{},
+	}
+
+	runner := specialists.New(d, deps)
+	if err := runner.Run(ctx, config.Root{}, "add-auth"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if len(capture.reqs) == 0 {
+		t.Fatal("no LLM requests captured")
+	}
+	p := capture.reqs[0].Messages[0].Content
+	if strings.Contains(p, "Organizational Context") {
+		t.Errorf("expected NO 'Organizational Context' when memory is empty; prompt:\n%s", p)
+	}
+}
+
+// TestRunner_SavesKnowledgeRecord_AfterFinalStep verifies that memory.Save is called
+// once after the final step completes.
+func TestRunner_SavesKnowledgeRecord_AfterFinalStep(t *testing.T) {
+	ctx := context.Background()
+
+	mem := &mockMemoryProvider{searchRet: []memory.Entry{}}
+	d := buildOneShotDeveloper()
+	provider := llm.NewMockProvider(llm.WithRawResponses("result: ok\nopen_items: []\n"))
+
+	deps := specialists.RunnerDeps{
+		Registry: buildMinimalRegistryForMem(),
+		Provider: provider,
+		Store:    newMemStore(),
+		Memory:   mem,
+		Pipeline: &mockPipeline{},
+	}
+
+	runner := specialists.New(d, deps)
+	if err := runner.Run(ctx, config.Root{}, "add-auth"); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	if mem.saveCalls == 0 {
+		t.Error("expected memory.Save to be called after final step")
+	}
+	if len(mem.savedEntries) == 0 {
+		t.Fatal("no saved entries")
+	}
+	saved := mem.savedEntries[0]
+	if saved.Title == "" {
+		t.Error("saved entry Title must not be empty")
+	}
+	if saved.Type == "" {
+		t.Error("saved entry Type must not be empty")
+	}
+	if saved.Content.What == "" {
+		t.Error("saved entry Content.What must not be empty")
+	}
+}
+
+// TestRunner_DoesNotFail_WhenMemorySaveErrors verifies that a memory.Save error
+// does not abort the run — the run must complete normally.
+func TestRunner_DoesNotFail_WhenMemorySaveErrors(t *testing.T) {
+	ctx := context.Background()
+
+	mem := &mockMemoryProvider{
+		searchRet: []memory.Entry{},
+		saveErr:   errors.New("engram unavailable"),
+	}
+	d := buildOneShotDeveloper()
+	provider := llm.NewMockProvider(llm.WithRawResponses("result: ok\nopen_items: []\n"))
+
+	deps := specialists.RunnerDeps{
+		Registry: buildMinimalRegistryForMem(),
+		Provider: provider,
+		Store:    newMemStore(),
+		Memory:   mem,
+		Pipeline: &mockPipeline{},
+	}
+
+	runner := specialists.New(d, deps)
+	err := runner.Run(ctx, config.Root{}, "add-auth")
+	if err != nil {
+		t.Fatalf("Run must succeed even when memory.Save errors; got: %v", err)
+	}
+}
+
+// TestRunner_DoesNotFail_WhenMemorySearchErrors verifies that a memory.Search error
+// does not abort the run — the run proceeds without organizational context.
+func TestRunner_DoesNotFail_WhenMemorySearchErrors(t *testing.T) {
+	ctx := context.Background()
+
+	mem := &mockMemoryProvider{
+		searchErr: errors.New("engram unreachable"),
+	}
+	capture := &requestCaptureProvider{}
+	d := buildOneShotDeveloper()
+
+	deps := specialists.RunnerDeps{
+		Registry: buildMinimalRegistryForMem(),
+		Provider: capture,
+		Store:    newMemStore(),
+		Memory:   mem,
+		Pipeline: &mockPipeline{},
+	}
+
+	runner := specialists.New(d, deps)
+	if err := runner.Run(ctx, config.Root{}, "add-auth"); err != nil {
+		t.Fatalf("Run must succeed when memory.Search errors; got: %v", err)
+	}
+
+	// No "Organizational Context" should appear since search errored.
+	if len(capture.reqs) > 0 {
+		p := capture.reqs[0].Messages[0].Content
+		if strings.Contains(p, "Organizational Context") {
+			t.Errorf("expected no org context injection when Search errors; prompt:\n%s", p)
+		}
+	}
+}
