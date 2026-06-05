@@ -32,18 +32,46 @@ change.
 
 ---
 
+## How it works
+
+**Your AI assistant is the runtime.** ASDT is a set of `SKILL.md` files that
+Claude Code, OpenCode, Cursor, or any AI coding assistant reads and executes.
+When you invoke a specialist, the AI assistant runs the workflow steps, calls
+your memory provider (Engram) via MCP, and saves structured knowledge records —
+no separate process, no binary required.
+
+```
+You → /asdt:architect "add auth"
+         ↓
+   AI assistant reads skill/architect/SKILL.md
+         ↓
+   Executes 7-step workflow
+         ↓
+   Saves decisions → Engram (mem_save)
+         ↓
+   Future runs query prior decisions → Engram (mem_search)
+```
+
+**A memory provider is required.** There is no filesystem fallback. Knowledge
+that disappears between sessions is not organizational knowledge — it is a
+transcript. Configure Engram (or an equivalent MCP memory server) before
+running any specialist.
+
+---
+
 ## The specialists
 
 Each specialist is a **domain expert** with its own workflow, its own skills, and
-its own artifacts. They communicate through files, not conversations.
+its own artifacts. They communicate through the memory provider, not through
+conversations.
 
 | Command | Specialist | Produces |
 |---------|-----------|----------|
-| `asdt ux-ui` | UX/UI Designer | `ux-brief.yaml`, `component-spec.yaml` |
-| `asdt architect` | Software Architect | `architectural-decision.yaml`, `system-design.yaml`, `risk-register.yaml` |
-| `asdt developer` | Developer | `implementation-plan.yaml` |
-| `asdt qa` | QA Engineer | `test-plan.yaml`, `quality-report.yaml` |
-| `asdt security` | Security Engineer | `threat-model.yaml`, `security-findings.yaml`, `hardening-checklist.yaml` |
+| `asdt ux-ui` | UX/UI Designer | UX brief, component spec |
+| `asdt architect` | Software Architect | Architecture decision, system design, risk register |
+| `asdt developer` | Developer | Implementation plan |
+| `asdt qa` | QA Engineer | Test plan, quality report |
+| `asdt security` | Security Engineer | Threat model, security findings, hardening checklist |
 
 **Why specialists exist**: Domain experts with isolated context produce better
 decisions than a generalist with everything crammed into one conversation. An
@@ -62,72 +90,102 @@ output. A developer step writing code should not carry the UX specialist's
 information architecture thinking — that would dilute it. Skills enforce that each
 step operates with exactly the context it needs and nothing it does not.
 
----
+Each specialist defines its pipeline in `workflow.yaml`:
 
-## The artifacts
+```yaml
+# skill/architect/workflow.yaml
+steps:
+  - name: platform-context
+    skill: ../_shared/skills/platform-context.md
+  - name: knowledge-recall
+    skill: ../_shared/skills/knowledge-recall.md
+  - name: constraints-analysis
+    ...
+```
 
-Artifacts are YAML files written to `.asdt/artifacts/{change}/`. Each artifact is
-the **primary communication medium** between specialists: an architect produces
-`architectural-decision.yaml`, a developer reads it. No conversation, no ambiguity.
-
-**Why artifacts exist**: Specialists do not share conversations. They share
-documents. Artifacts are structured, versioned, traceable documents — every one
-carries a prompt version hash and references its inputs. You can `git diff` them,
-review them in a PR, and replay them months later.
+The AI assistant reads `workflow.yaml` at runtime to know which steps to
+execute and in what order.
 
 ---
 
 ## The memory layer
 
 Memory is the **organizational knowledge accumulation** layer. After each
-specialist run, ASDT records what was decided, why, and where. Future runs query
-this layer to avoid contradicting prior decisions.
+specialist run, ASDT records what was decided, why, and where. Future runs
+query this layer to avoid contradicting prior decisions.
 
-**Why memory exists**: Knowledge that disappears when a session ends is not
-organizational knowledge — it is a transcript. The memory layer (backed by Engram
-or the local `.asdt/runs/` filesystem) turns specialist output into durable
-institutional memory that accumulates across changes.
+**Memory is not optional.** Configure a provider before running specialists.
+ASDT supports any MCP-compatible memory server. Engram is the reference
+implementation.
+
+Add to `.asdt/config.yaml`:
+
+```yaml
+memory:
+  provider: engram
+  project: your-project-name
+```
 
 ---
 
 ## Quick start
 
-```bash
-# Initialize the project — scans your stack, writes platform-summary.yaml
-asdt init
+### 1. Install Engram
 
-# Run a specialist for a change
-asdt architect --change add-auth
-asdt developer --change add-auth
-asdt security  --change add-auth
+```bash
+go install github.com/Gentleman-Programming/engram@latest
+```
+
+### 2. Configure your AI assistant
+
+Add Engram as an MCP server. Example for Claude Code:
+
+```bash
+code --add-mcp '{"name":"engram","command":"engram","args":["mcp"]}'
+```
+
+### 3. Install ASDT skills
+
+```bash
+# Copy skills into your AI assistant's skill directory
+cp -r skill/ ~/.claude/skills/asdt
+```
+
+### 4. Initialize your project
+
+```bash
+asdt init
+# Scans your stack, writes .asdt/knowledge/platform-summary.yaml
+```
+
+### 5. Run a specialist
+
+```
+/asdt:architect "add auth"
+/asdt:developer "add auth"
+/asdt:security  "add auth"
 ```
 
 ---
 
-## What gets produced
+## What gets recorded
+
+Every specialist run saves structured knowledge to your memory provider:
 
 ```
-.asdt/
-├── config.yaml                         # memory provider, active change
-├── knowledge/
-│   ├── platform.yaml                   # detected stack, conventions
-│   └── platform-summary.yaml          # deterministic summary (zero LLM tokens)
-├── runs/                               # knowledge timeline (NullProvider default)
-│   └── 20260605-120000/
-│       └── architect-add-auth.yaml    # entry: what was decided and why
-└── artifacts/add-auth/
-    ├── architectural-decision.yaml    # ADR with alternatives considered
-    ├── system-design.yaml             # data model, API surface, risks
-    ├── risk-register.yaml             # top 3-5 risks + mitigations
-    ├── implementation-plan.yaml       # ordered tasks + code snippets
-    ├── test-plan.yaml                 # test strategy + test cases
-    ├── security-findings.yaml         # OWASP findings + remediations
-    ├── hardening-checklist.yaml       # ordered hardening actions
-    └── pipeline-state.yaml            # per-specialist step history
+Engram (mem_save):
+  - What was decided and why (architectural-decision)
+  - System design and data model (system-design)
+  - Top risks and mitigations (risk-register)
+  - Implementation plan with ordered tasks (implementation-plan)
+  - Test strategy and test cases (test-plan)
+  - OWASP findings and remediations (security-findings)
+  - Ordered hardening actions (hardening-checklist)
 ```
 
-Every file is plain YAML: open it in any editor, commit it to git, diff it in a
-PR, and replay it in a future session.
+Every record is searchable across sessions. The next specialist run queries
+prior decisions before acting — so your architect never contradicts a security
+finding made three changes ago.
 
 ---
 
@@ -141,21 +199,21 @@ skill/                    # THE PRODUCT: runtime-agnostic SKILL.md files
 │   ├── decision-preservation.md  # record decisions to org memory
 │   ├── platform-context.md
 │   └── artifact-envelope.md
-├── developer/            # 7-step workflow
-├── ux-ui/                # 7-step workflow
-├── architect/            # 7-step workflow
-├── qa/                   # 6-step workflow
-└── security/             # 5-step workflow (no required predecessor)
+├── architect/
+│   ├── SKILL.md          # specialist entry point
+│   └── workflow.yaml     # step pipeline definition
+├── developer/
+├── ux-ui/
+├── qa/
+└── security/
 
-internal/                 # Go packages for the optional binary
-├── specialists/          # SpecialistDescriptor + generic Runner
-├── memory/               # Provider port: NullProvider (FS) + EngramProvider (MCP)
-├── artifact/             # Envelope[T], FSStore
-├── pipeline/             # PipelineStateV2, AdvanceStep
-├── prompt/               # layered composition, ScopedSkill registry
-├── knowledge/            # platform.yaml detector
-├── llm/                  # Provider interface + Mock
-└── tui/                  # Bubbletea TUI (optional)
+cmd/asdt/                 # optional package manager binary
+├── main.go               # install skills, configure providers, manage .asdt/config.yaml
+
+internal/                 # Go packages for the package manager binary
+├── config/               # read/write .asdt/config.yaml
+├── knowledge/            # platform.yaml stack detector (zero LLM tokens)
+└── tui/                  # Bubbletea TUI
 
 schemas/                  # YAML schemas for all artifact types
 docs/adr/                 # Architecture Decision Records (ADR-001 through ADR-010)
@@ -163,41 +221,20 @@ docs/adr/                 # Architecture Decision Records (ADR-001 through ADR-0
 
 ---
 
-## Memory configuration
+## The binary (optional)
 
-By default, runs are stored in `.asdt/runs/` (NullProvider — no external
-dependencies). To use Engram for cross-session semantic search, add to
-`.asdt/config.yaml`:
+The `asdt` binary is a **package manager and configurator** — it is not the
+specialist runtime. The AI assistant is the runtime.
 
-```yaml
-memory:
-  provider: engram
-  project: your-project-name
-```
+What the binary does:
+- `asdt init` — detect your stack, write `platform-summary.yaml`
+- `asdt install` — copy skills to the right path for your AI assistant
+- `asdt update` — pull updated skills and memory provider
 
----
-
-## Adding a specialist
-
-```bash
-# 1. Write the skill file
-skill/my-specialist/SKILL.md
-
-# 2. Add a descriptor (one struct literal)
-func MySpecialistDescriptor() SpecialistDescriptor { ... }
-
-# 3. Register it
-descriptors["my-specialist"] = specialists.MySpecialistDescriptor()
-```
-
-Zero new Go packages. The specialist system is data-driven.
-
----
-
-## Install the binary (optional)
-
-ASDT works without the binary through any AI coding assistant. The binary is the
-TUI frontend for the same specialist system.
+What the binary does NOT do:
+- Run specialists (that is the AI assistant's job)
+- Call LLMs
+- Connect to Engram (the AI assistant handles MCP transport)
 
 ```bash
 go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt@latest
@@ -205,9 +242,24 @@ go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt@latest
 
 ---
 
-## Use in Claude Code
+## Adding a specialist
 
-Install `skill/` as a skill package:
+```bash
+# 1. Write the skill entry point
+skill/my-specialist/SKILL.md
+
+# 2. Define the pipeline
+skill/my-specialist/workflow.yaml
+
+# 3. Add any step-specific skills
+skill/my-specialist/steps/
+```
+
+No Go code required. Specialists are purely SKILL.md + workflow.yaml.
+
+---
+
+## Use in Claude Code
 
 ```bash
 cp -r skill/ ~/.claude/skills/asdt
