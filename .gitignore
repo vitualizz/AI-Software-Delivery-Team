@@ -1,1 +1,18 @@
+# Compiled binaries
+/asdt
+/asdt-tui
+
+# Go test artifacts
+*.test
+*.out
+coverage.html
+
+# Vendor (if ever used)
+vendor/
+
+# Internal tooling cache
 .atl
+
+# OS
+.DS_Store
+Thumbs.db

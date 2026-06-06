@@ -7,49 +7,44 @@ Without ASDT, AI assistants have no enforced discipline around how a feature get
 ## Requirements
 
 - Claude Code (`claude`) or OpenCode (`opencode`) installed
-- Engram MCP server running (persistent memory provider)
-- Go 1.22+ to build from source
+- [Engram MCP server](https://github.com/Gentleman-Programming/engram) installed and running (persistent memory provider)
+- Go 1.22+ to install from source
 
 ## Installation
 
-Install both binaries:
+**Quick install:**
 
 ```sh
-go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt@latest
+curl -fsSL https://raw.githubusercontent.com/vitualizz/ai-software-delivery-team/main/install.sh | bash
+```
+
+**Or manually:**
+
+```sh
 go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt-tui@latest
 ```
 
 ## Getting Started
 
-From the root of your software project:
-
-**1. Initialize the knowledge base**
-
-```sh
-asdt init
-```
-
-Detects your project stack (Go, Node, Rust, Python, Ruby) and writes `.asdt/knowledge/platform.yaml` and `.asdt/knowledge/platform-summary.yaml`. No LLM involved — pure static analysis.
-
-**2. Install skills into your AI assistant**
+**1. Install skills into your AI assistant**
 
 ```sh
 asdt-tui
 ```
 
-Interactive TUI that lets you choose which AI assistant(s) to install into, and configures Engram as the memory provider. Skills are installed to `~/.claude/skills/asdt/` (Claude Code) or `~/.config/opencode/skills/asdt/` (OpenCode).
+Interactive TUI that checks Engram is installed, lets you choose which AI assistant(s) to target, and copies the ASDT skills into them. Skills are installed to `~/.claude/skills/asdt/` (Claude Code) or `~/.config/opencode/skills/asdt/` (OpenCode).
 
-**3. Set your active change**
+**2. Initialize your project**
 
-In `.asdt/config.yaml` at the project root:
+Open your AI assistant in the project directory and run:
 
-```yaml
-active_change: my-feature-name
-memory:
-  provider: engram
+```
+/asdt:init
 ```
 
-**4. Start the Engram MCP server**, then open your AI assistant in the project directory.
+The assistant will detect your project stack, ask a few configuration questions, and write `.asdt/config.yaml` and `.asdt/knowledge/platform.yaml`.
+
+**3. Start the Engram MCP server**, then use the specialists.
 
 ## Using the Specialists
 
@@ -58,31 +53,26 @@ Invoke from inside your AI assistant:
 | Command | What it does | Produces |
 |---|---|---|
 | `/asdt` | Meta-orchestrator — analyzes your request, recommends which specialists to run and in what order | — |
+| `/asdt:init` | Initialize ASDT for the project — detects stack, writes config | `.asdt/config.yaml`, `platform.yaml` |
 | `/asdt:architect` | ADRs, system design, risk analysis | `architectural-decision.yaml`, `system-design.yaml` |
 | `/asdt:developer` | Implementation plan with code | `implementation-plan.yaml` |
 | `/asdt:qa` | Test plan | `test-plan.yaml` |
 | `/asdt:security` | Threat model and hardening checklist | `security-findings.yaml`, `hardening-checklist.yaml` |
 | `/asdt:ux-ui` | UX brief and component specs | `ux-brief.yaml`, `component-spec.yaml` |
 
-Each specialist reads prior decisions from Engram memory, analyzes the current context, produces its YAML artifacts under `.asdt/artifacts/{change}/`, and saves the decision back to memory for the next specialist to build on.
+Each specialist reads prior decisions from Engram memory, analyzes the current context, produces its artifacts, and saves the decision back to memory for the next specialist to build on.
 
 Start with `/asdt` if you are unsure which specialist to invoke — it will tell you.
-
-## Other Commands
-
-```sh
-asdt status   # Show the state of the active change
-```
 
 ## Project Layout
 
 ```
 cmd/
-  asdt/        CLI entrypoint
-  asdt-tui/    Installer TUI entrypoint
+  asdt-tui/    Installer TUI — the only user-facing binary
 internal/
   installer/   Skill detection and installation logic
-  setup/       Installer TUI (Bubbletea)
+  setup/       Installer TUI (Bubbletea + Lipgloss styles)
+  setup/styles/ Centralized color palette and style definitions
   tui/         Status observer: specialists panel + artifacts browser
   config/      Read/write .asdt/config.yaml, walk-up discovery
   knowledge/   Project stack detection (no LLM)
