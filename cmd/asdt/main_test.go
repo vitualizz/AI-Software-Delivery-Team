@@ -2,45 +2,33 @@ package main
 
 import (
 	"testing"
-
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
 )
 
-func TestBuildMemoryProvider_ReturnsError_WhenProviderEmpty(t *testing.T) {
-	cfg := config.Config{} // Memory.Provider == ""
-	_, err := buildMemoryProvider(cfg)
-	if err == nil {
-		t.Fatal("expected error when memory.provider is empty, got nil")
+// TestIsSpecialist verifies that known specialist IDs are recognized and
+// unknown IDs are rejected.
+func TestIsSpecialist_KnownIDs(t *testing.T) {
+	known := []string{"developer", "ux-ui", "architect", "qa", "security"}
+	for _, id := range known {
+		if !isSpecialist(id) {
+			t.Errorf("isSpecialist(%q) = false, want true", id)
+		}
 	}
 }
 
-func TestBuildMemoryProvider_ReturnsProvider_WhenEngram(t *testing.T) {
-	cfg := config.Config{
-		Memory: config.MemoryConfig{
-			Provider: "engram",
-			Project:  "test-project",
-		},
-	}
-	provider, err := buildMemoryProvider(cfg)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if provider == nil {
-		t.Fatal("expected non-nil provider, got nil")
-	}
-	if provider.Name() != "engram" {
-		t.Errorf("provider.Name() = %q, want %q", provider.Name(), "engram")
+func TestIsSpecialist_UnknownID(t *testing.T) {
+	unknown := []string{"", "runner", "llm", "requirements", "develop"}
+	for _, id := range unknown {
+		if isSpecialist(id) {
+			t.Errorf("isSpecialist(%q) = true, want false", id)
+		}
 	}
 }
 
-func TestBuildMemoryProvider_ReturnsError_WhenUnknownProvider(t *testing.T) {
-	cfg := config.Config{
-		Memory: config.MemoryConfig{
-			Provider: "unknown-backend",
-		},
-	}
-	_, err := buildMemoryProvider(cfg)
-	if err == nil {
-		t.Error("expected error for unknown provider, got nil")
+// TestListSpecialists verifies that listSpecialists returns a non-empty
+// comma-separated sorted string.
+func TestListSpecialists_NonEmpty(t *testing.T) {
+	result := listSpecialists()
+	if result == "" {
+		t.Error("listSpecialists() returned empty string")
 	}
 }

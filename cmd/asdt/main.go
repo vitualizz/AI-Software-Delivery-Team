@@ -1,11 +1,13 @@
 // Package main is the composition root for the asdt binary.
 // All dependency wiring happens here; no business logic lives here.
+// The binary is a package manager: it validates config, installs skills/providers,
+// and runs deterministic project analysis. Specialist execution lives in SKILL.md
+// files — it is never invoked by this binary.
 package main
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -14,11 +16,7 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
 	"github.com/vitualizz/ai-software-delivery-team/internal/config"
 	"github.com/vitualizz/ai-software-delivery-team/internal/knowledge"
-	"github.com/vitualizz/ai-software-delivery-team/internal/llm"
-	"github.com/vitualizz/ai-software-delivery-team/internal/memory"
 	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
-	"github.com/vitualizz/ai-software-delivery-team/internal/prompt"
-	"github.com/vitualizz/ai-software-delivery-team/internal/specialists"
 )
 
 // deprecated maps removed task-verb commands to guidance messages.
@@ -28,6 +26,18 @@ var deprecated = map[string]string{
 	"requirements": "use /asdt:architect (for system requirements) or /asdt:ux-ui (for product requirements)",
 	"develop":      "use /asdt:developer",
 	"knowledge":    "platform context is now loaded automatically by each specialist's Platform Analysis step",
+}
+
+// validSpecialists lists the specialist IDs supported by this package manager.
+// Specialist execution is handled by SKILL.md files in the AI assistant runtime —
+// not by this binary. Use these IDs to invoke a specialist in your AI assistant:
+// e.g. /asdt:developer, /asdt:architect, etc.
+var validSpecialists = []string{
+	"architect",
+	"developer",
+	"qa",
+	"security",
+	"ux-ui",
 }
 
 func main() {
@@ -42,7 +52,6 @@ func run(ctx context.Context, args []string) error {
 		return printHelp()
 	}
 	subcmd := args[0]
-	rest := args[1:]
 
 	// help does not require .asdt/ discovery.
 	if subcmd == "help" {
@@ -52,6 +61,15 @@ func run(ctx context.Context, args []string) error {
 	// Deprecated commands: print guidance and exit 0.
 	if msg, dep := deprecated[subcmd]; dep {
 		fmt.Printf("warning: `asdt %s` is deprecated: %s\n", subcmd, msg)
+		return nil
+	}
+
+	// Specialist commands: the binary no longer runs specialists.
+	// Redirect to the AI assistant runtime.
+	if isSpecialist(subcmd) {
+		fmt.Printf("Run specialist %q via your AI assistant: /%s:%s\n", subcmd, "asdt", subcmd)
+		fmt.Printf("The %q specialist is implemented in skill/%s/SKILL.md.\n", subcmd, subcmd)
+		fmt.Printf("It requires a configured memory provider — set memory.provider in .asdt/config.yaml.\n")
 		return nil
 	}
 
@@ -93,93 +111,25 @@ func run(ctx context.Context, args []string) error {
 		return printStatus(root, cfg, store, runner, ctx)
 	}
 
-	// Build the specialist descriptor registry (data-driven dispatch table).
-	descriptors := map[string]specialists.SpecialistDescriptor{
-		"developer": specialists.DeveloperDescriptor(),
-		"ux-ui":     specialists.UXUIDescriptor(),
-		"architect": specialists.ArchitectDescriptor(),
-		"qa":        specialists.QADescriptor(),
-		"security":  specialists.SecurityDescriptor(),
-	}
-
-	d, ok := descriptors[subcmd]
-	if !ok {
-		return fmt.Errorf("unknown specialist %q. Valid: %s", subcmd, validSpecialists(descriptors))
-	}
-
-	memProvider, err := buildMemoryProvider(cfg)
-	if err != nil {
-		return err
-	}
-
-	deps := specialists.RunnerDeps{
-		Registry: buildRegistry(root),
-		Composer: prompt.Compose,
-		Provider: buildProvider(),
-		Store:    store,
-		Pipeline: runner,
-		Memory:   memProvider,
-	}
-	change := resolveChange(rest, cfg)
-	return specialists.New(d, deps).Run(ctx, root, change)
+	return fmt.Errorf("unknown command %q. Run `asdt help` for usage", subcmd)
 }
 
-// buildRegistry returns an OverrideResolver that checks .asdt/prompts/ for local
-// overrides before falling back to the production embedded FS.
-func buildRegistry(root config.Root) prompt.SkillRegistry {
-	localDir := strings.TrimSuffix(root.Path(), "/.asdt") + "/.asdt/prompts"
-	globalDir := prompt.DefaultGlobalDir()
-	embedded := prompt.DefaultEmbeddedRegistry()
-	return prompt.NewOverrideResolver(localDir, globalDir, embedded)
-}
-
-// validSpecialists returns a sorted comma-separated list of specialist IDs.
-func validSpecialists(m map[string]specialists.SpecialistDescriptor) string {
-	ids := make([]string, 0, len(m))
-	for id := range m {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	return strings.Join(ids, ", ")
-}
-
-// buildMemoryProvider validates the config and returns the configured memory.Provider.
-// Returns an error if memory.provider is empty or unknown — there is no silent fallback.
-func buildMemoryProvider(cfg config.Config) (memory.Provider, error) {
-	if err := cfg.Validate(); err != nil {
-		return nil, err
-	}
-	switch cfg.Memory.Provider {
-	case "engram":
-		return memory.NewEngramProvider(cfg.Memory.Project, nil), nil
-	default:
-		return nil, fmt.Errorf("unknown memory provider %q: set memory.provider to \"engram\" in .asdt/config.yaml", cfg.Memory.Provider)
-	}
-}
-
-// buildProvider returns a real LLM provider when ANTHROPIC_API_KEY is set,
-// otherwise returns a MockProvider with a stub response for local development.
-func buildProvider() llm.Provider {
-	if os.Getenv("ANTHROPIC_API_KEY") != "" {
-		log.Println("Anthropic provider not yet implemented, using mock")
-	}
-	return llm.NewMockProvider(llm.WithScriptedResponses(
-		"mock LLM response — set ANTHROPIC_API_KEY and implement AnthropicProvider for production use",
-	))
-}
-
-// resolveChange parses --change <name> from args, falls back to cfg.ActiveChange,
-// then falls back to "default".
-func resolveChange(args []string, cfg config.Config) string {
-	for i := 0; i < len(args)-1; i++ {
-		if args[i] == "--change" {
-			return args[i+1]
+// isSpecialist returns true when the given ID is a known specialist.
+func isSpecialist(id string) bool {
+	for _, s := range validSpecialists {
+		if s == id {
+			return true
 		}
 	}
-	if cfg.ActiveChange != "" {
-		return cfg.ActiveChange
-	}
-	return "default"
+	return false
+}
+
+// listSpecialists returns a sorted comma-separated list of specialist IDs.
+func listSpecialists() string {
+	ids := make([]string, len(validSpecialists))
+	copy(ids, validSpecialists)
+	sort.Strings(ids)
+	return strings.Join(ids, ", ")
 }
 
 // runInit scans the project root, writes platform.yaml, derives a deterministic
@@ -209,36 +159,31 @@ func runInit(ctx context.Context, root config.Root) error {
 
 // printHelp prints CLI usage to stdout and returns nil.
 func printHelp() error {
-	fmt.Print(`asdt — AI Software Delivery Team
+	fmt.Printf(`asdt — AI Software Delivery Team
 
 Usage:
-  asdt <specialist> [args]
+  asdt <command> [args]
 
-Specialists:
-  developer               Generate implementation plan
-  ux-ui                   Generate UX/UI spec and component spec
-  architect               Generate architecture decision and system design
-  qa                      Generate test plan and quality report
-  security                Generate threat model and security findings
-
-Other commands:
+Package manager commands:
   init                    Scan project and write platform-summary.yaml (deterministic, zero LLM tokens)
   status                  Show current pipeline state
   help                    Print this help message
 
-Flags:
-  --change <name>         Use a named change (default: active_change from config, then "default")
+Specialist invocation (via AI assistant — not this binary):
+  %s
+
+  To run a specialist, use your AI assistant:
+    /asdt:developer --change add-auth
+    /asdt:architect
+    /asdt:security
+
+  Specialists require a configured memory provider in .asdt/config.yaml.
 
 Deprecated commands (use the specialist equivalents above):
   requirements            Replaced by: use /asdt:architect or /asdt:ux-ui
   develop                 Replaced by: /asdt:developer
   knowledge               Platform context is now auto-loaded by each specialist
-
-Examples:
-  asdt developer --change add-auth
-  asdt security
-  asdt status
-`)
+`, "  "+listSpecialists())
 	return nil
 }
 
