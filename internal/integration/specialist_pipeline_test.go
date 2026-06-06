@@ -159,7 +159,7 @@ func TestDeveloperSpecialistPipeline(t *testing.T) {
 		Composer: prompt.Compose,
 		Provider: provider,
 		Store:    store,
-		Memory:   memory.NullProvider{},
+		Memory:   memory.NewInMemoryProvider(),
 		Pipeline: machine,
 	}
 
