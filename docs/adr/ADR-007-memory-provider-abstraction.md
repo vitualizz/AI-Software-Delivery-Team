@@ -1,7 +1,7 @@
 # ADR-007: MemoryProvider Abstraction
 
 Date: 2026-06-04
-Status: Accepted
+Status: Superseded by ADR-010
 
 ## Context
 
