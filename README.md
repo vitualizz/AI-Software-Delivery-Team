@@ -12,17 +12,11 @@ Without ASDT, AI assistants have no enforced discipline around how a feature get
 
 ## Installation
 
-**Quick install:**
-
 ```sh
 curl -fsSL https://raw.githubusercontent.com/vitualizz/ai-software-delivery-team/main/install.sh | bash
 ```
 
-**Or manually:**
-
-```sh
-go install github.com/vitualizz/ai-software-delivery-team/cmd/asdt-tui@latest
-```
+Downloads the pre-built binary for your platform (Linux/macOS, x86_64/arm64) and installs it to `~/.local/bin/`. No Go required.
 
 ## Getting Started
 

@@ -1,0 +1,39 @@
+version: 2
+
+project_name: asdt-tui
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: asdt-tui
+    main: ./cmd/asdt-tui
+    binary: asdt-tui
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - id: asdt-tui
+    builds:
+      - asdt-tui
+    name_template: "asdt-tui_{{ .Os }}_{{ .Arch }}"
+    format: binary
+
+checksum:
+  name_template: "checksums.txt"
+
+release:
+  github:
+    owner: vitualizz
+    name: ai-software-delivery-team
+  draft: false
+  prerelease: auto
