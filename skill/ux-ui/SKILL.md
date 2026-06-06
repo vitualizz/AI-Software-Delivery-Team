@@ -30,6 +30,8 @@ write implementation code, architecture decisions, or test plans.
 
 ## Pipeline
 
+> **Before executing**: Read `workflow.yaml` in this directory. It is the canonical step order. The table below is a reference summary only.
+
 | Step | File | Reads | Writes |
 |------|------|-------|--------|
 | platform-analysis | (shared) | platform.yaml | `platform-summary` |

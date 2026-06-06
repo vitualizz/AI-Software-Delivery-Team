@@ -29,6 +29,8 @@ produce architecture decisions, UX specs, or test plans.
 
 ## Pipeline
 
+> **Before executing**: Read `workflow.yaml` in this directory. It is the canonical step order. The table below is a reference summary only.
+
 Each step executes in isolation. Only the declared inputs are loaded. Each step
 produces one artifact.
 

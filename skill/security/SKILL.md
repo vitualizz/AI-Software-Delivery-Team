@@ -36,6 +36,8 @@ Missing context → note in open_items and proceed with what's available.
 
 ## Pipeline
 
+> **Before executing**: Read `workflow.yaml` in this directory. It is the canonical step order. The table below is a reference summary only.
+
 | Step | File | Reads | Writes |
 |------|------|-------|--------|
 | platform-analysis | (shared) | platform.yaml | `platform-summary` |

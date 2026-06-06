@@ -30,6 +30,8 @@ or UX specs.
 
 ## Pipeline
 
+> **Before executing**: Read `workflow.yaml` in this directory. It is the canonical step order. The table below is a reference summary only.
+
 | Step | File | Reads | Writes |
 |------|------|-------|--------|
 | load-requirements | steps/load-requirements.md | upstream spec artifacts | `qa/ac-list` |

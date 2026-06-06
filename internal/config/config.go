@@ -14,7 +14,7 @@ type MemoryConfig struct {
 	Provider string `yaml:"provider,omitempty"`
 
 	// Endpoint is the optional URL or socket path for the memory backend.
-	// Used by EngramProvider when set.
+	// Used by the memory provider backend when configured.
 	Endpoint string `yaml:"endpoint,omitempty"`
 
 	// Project is the project identifier sent to the memory backend.
