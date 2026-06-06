@@ -1,9 +1,12 @@
+# DOCUMENTATION ONLY — This schema describes the expected structure of mem_save content.
+# Artifacts are NOT written to the filesystem during specialist execution.
+# Use mem_save with this structure as the content shape.
 $schema: "http://json-schema.org/draft-07/schema#"
 $id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/architect-constraints-analysis.schema.yaml"
 title: ArchitectConstraintsAnalysis
 description: >
   Intermediate artifact produced by the Architect specialist's load-constraints step.
-  Carried inside an ArtifactEnvelope under .asdt/artifacts/{change}/architect/constraints-analysis.yaml.
+  Persisted via mem_save to the memory provider (not written to .asdt/artifacts/).
 type: object
 
 required:

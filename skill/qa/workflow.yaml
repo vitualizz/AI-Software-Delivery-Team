@@ -1,0 +1,33 @@
+specialist: qa
+steps:
+  - name: knowledge-recall
+    skill: ../_shared/skills/knowledge-recall.md
+    description: Query organizational memory for prior QA decisions, known edge cases, and test strategies relevant to this change before acting
+
+  - name: load-requirements
+    skill: steps/load-requirements.md
+    description: Load upstream spec artifacts and extract acceptance criteria into the ac-list artifact
+
+  - name: ac-validation
+    skill: steps/ac-validation.md
+    description: Validate acceptance criteria for completeness and surface any gaps
+
+  - name: edge-case-analysis
+    skill: steps/edge-case-analysis.md
+    description: Identify edge cases not covered by the acceptance criteria
+
+  - name: test-strategy
+    skill: steps/test-strategy.md
+    description: Define the test strategy (unit / integration / e2e split, coverage targets)
+
+  - name: test-case-generation
+    skill: steps/test-case-generation.md
+    description: Generate concrete test cases from the strategy and edge case analysis
+
+  - name: quality-report
+    skill: steps/quality-report.md
+    description: Consolidate test cases and AC gaps into the final test-plan artifact
+
+  - name: decision-preservation
+    skill: ../_shared/skills/decision-preservation.md
+    description: Save a permanent organizational knowledge record of QA decisions made during this run

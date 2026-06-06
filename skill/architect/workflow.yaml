@@ -1,0 +1,37 @@
+specialist: architect
+steps:
+  - name: knowledge-recall
+    skill: ../_shared/skills/knowledge-recall.md
+    description: Query organizational memory for prior architectural decisions relevant to this change before acting
+
+  - name: platform-analysis
+    skill: ../_shared/skills/platform-context.md
+    description: Load and inject platform conventions and design fingerprint from platform.yaml
+
+  - name: load-constraints
+    skill: steps/load-constraints.md
+    description: Load architectural constraints from platform context into the constraints artifact
+
+  - name: evaluate-approaches
+    skill: steps/evaluate-approaches.md
+    description: Evaluate candidate architectural approaches against the loaded constraints
+
+  - name: decision-record
+    skill: steps/decision-record.md
+    description: Select the winning approach and produce an Architecture Decision Record
+
+  - name: system-design
+    skill: steps/system-design.md
+    description: Produce the full system design artifact (data model + API surface) from the ADR
+
+  - name: risk-analysis
+    skill: steps/risk-analysis.md
+    description: Identify risks introduced by the system design and rate them by severity
+
+  - name: technical-handoff
+    skill: steps/technical-handoff.md
+    description: Consolidate ADR, system-design, and risks into the final architectural-decision + system-design artifacts
+
+  - name: decision-preservation
+    skill: ../_shared/skills/decision-preservation.md
+    description: Save a permanent organizational knowledge record of the architectural decision made during this run

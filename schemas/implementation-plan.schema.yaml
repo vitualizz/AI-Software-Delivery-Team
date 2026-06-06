@@ -1,5 +1,7 @@
+# DOCUMENTATION ONLY — This schema describes the expected structure of mem_save content.
+# Artifacts are NOT written to the filesystem during specialist execution.
+# Use mem_save with this structure as the content shape.
 # JSON Schema (draft-07) for the ImplementationPlan payload.
-# Written by the Developer Agent under .asdt/artifacts/{change}/implementation-plan.yaml
 $schema: "http://json-schema.org/draft-07/schema#"
 $id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/implementation-plan.schema.yaml"
 title: ImplementationPlan

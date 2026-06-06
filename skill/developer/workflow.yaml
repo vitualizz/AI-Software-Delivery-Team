@@ -1,0 +1,37 @@
+specialist: developer
+steps:
+  - name: knowledge-recall
+    skill: ../_shared/skills/knowledge-recall.md
+    description: Query organizational memory for prior decisions relevant to this change before acting
+
+  - name: explore
+    skill: steps/explore.md
+    description: Explore the request and platform context to produce a development exploration artifact
+
+  - name: spec
+    skill: steps/spec.md
+    description: Transform the exploration into a structured development specification
+
+  - name: design
+    skill: steps/design.md
+    description: Produce a technical design from the spec (data model, API surface, component boundaries)
+
+  - name: tasks
+    skill: steps/tasks.md
+    description: Break the design into an ordered task list with dependency graph
+
+  - name: implement
+    skill: steps/implement.md
+    description: Generate the concrete implementation from the task list and design
+
+  - name: test
+    skill: steps/test.md
+    description: Write tests covering the implementation tasks and edge cases
+
+  - name: review
+    skill: steps/review.md
+    description: Review implementation and tests; produce the consolidated implementation-plan artifact
+
+  - name: decision-preservation
+    skill: ../_shared/skills/decision-preservation.md
+    description: Save a permanent organizational knowledge record of decisions made during this run

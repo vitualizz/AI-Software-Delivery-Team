@@ -1,10 +1,13 @@
-# JSON Schema (draft-07) for the ArtifactEnvelope header.
-# Every artifact YAML written by any ASDT agent MUST conform to this schema.
+# DOCUMENTATION ONLY — This schema describes the expected structure of mem_save content.
+# Artifacts are NOT written to the filesystem during specialist execution.
+# Use mem_save with this structure as the content shape.
+# Historical context: this was the ArtifactEnvelope header for filesystem YAML artifacts.
+# With the org-knowledge change, artifacts are persisted via mem_save to the memory provider.
 $schema: "http://json-schema.org/draft-07/schema#"
 $id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/envelope.schema.yaml"
 title: ArtifactEnvelope
 description: >
-  Uniform header written at the root of every artifact YAML file.
+  Uniform header describing the structure of artifact content passed to mem_save.
   The payload field carries the agent-specific typed content.
 type: object
 

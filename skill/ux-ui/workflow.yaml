@@ -1,0 +1,37 @@
+specialist: ux-ui
+steps:
+  - name: knowledge-recall
+    skill: ../_shared/skills/knowledge-recall.md
+    description: Query organizational memory for prior UX decisions and component patterns relevant to this change before acting
+
+  - name: platform-analysis
+    skill: ../_shared/skills/platform-context.md
+    description: Load and inject platform conventions and design system fingerprint from platform.yaml
+
+  - name: feature-brief
+    skill: steps/feature-brief.md
+    description: Transform the user request and platform summary into a structured feature brief
+
+  - name: information-architecture
+    skill: steps/information-architecture.md
+    description: Define the information architecture (navigation, hierarchy, content model) from the feature brief
+
+  - name: user-flows
+    skill: steps/user-flows.md
+    description: Map user flows from the information architecture artifact
+
+  - name: component-mapping
+    skill: steps/component-mapping.md
+    description: Map user flows to design system components and identify gaps
+
+  - name: responsive-strategy
+    skill: steps/responsive-strategy.md
+    description: Define the responsive layout strategy for the mapped components
+
+  - name: ux-handoff
+    skill: steps/ux-handoff.md
+    description: Consolidate feature-brief, IA, flows, components, and responsive into the final ux-brief + component-spec artifacts
+
+  - name: decision-preservation
+    skill: ../_shared/skills/decision-preservation.md
+    description: Save a permanent organizational knowledge record of UX decisions made during this run
