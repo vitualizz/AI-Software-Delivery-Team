@@ -8,7 +8,7 @@ import (
 )
 
 // Dependencies holds the injected ports the TUI requires.
-// Populated by the composition root (cmd/asdt/main.go) and passed to New.
+// Populated by the composition root (cmd/asdt-tui/main.go) and passed to New.
 type Dependencies struct {
 	// ConfigRoot is the discovered .asdt/ boundary.
 	ConfigRoot config.Root

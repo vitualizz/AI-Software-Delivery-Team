@@ -11,8 +11,26 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup"
 )
 
+func TestView_EngramMissingScreenShowsTitle(t *testing.T) {
+	m := setup.New(fstest.MapFS{})
+	// State starts at StateEngramMissing (zero value before Init fires).
+	view := m.View()
+	if !strings.Contains(view, "Engram Required") {
+		t.Errorf("engram missing view should contain 'Engram Required', got:\n%s", view)
+	}
+}
+
+func TestView_EngramMissingScreenShowsURL(t *testing.T) {
+	m := setup.New(fstest.MapFS{})
+	view := m.View()
+	if !strings.Contains(view, "github.com/Gentleman-Programming/engram") {
+		t.Errorf("engram missing view should contain URL, got:\n%s", view)
+	}
+}
+
 func TestView_MainMenuContainsInstallOption(t *testing.T) {
-	m := setup.New(fstest.MapFS{}, makeCfgRoot(t))
+	m := setup.New(fstest.MapFS{})
+	m = sendEngramFound(t, m)
 	view := m.View()
 	if !strings.Contains(view, "Install / Update Skills") {
 		t.Errorf("main menu view missing 'Install / Update Skills', got:\n%s", view)
@@ -20,7 +38,8 @@ func TestView_MainMenuContainsInstallOption(t *testing.T) {
 }
 
 func TestView_AssistantListShowsBothNames(t *testing.T) {
-	m := setup.New(fstest.MapFS{}, makeCfgRoot(t))
+	m := setup.New(fstest.MapFS{})
+	m = sendEngramFound(t, m)
 	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList
 	view := m2.View()
 	for _, d := range installer.Descriptors {
@@ -31,7 +50,8 @@ func TestView_AssistantListShowsBothNames(t *testing.T) {
 }
 
 func TestView_AssistantListSelectedItemHasCursor(t *testing.T) {
-	m := setup.New(fstest.MapFS{}, makeCfgRoot(t))
+	m := setup.New(fstest.MapFS{})
+	m = sendEngramFound(t, m)
 	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList; cursor=0
 	view := m2.View()
 	if !strings.Contains(view, "►") {
@@ -42,7 +62,7 @@ func TestView_AssistantListSelectedItemHasCursor(t *testing.T) {
 func TestView_DoneScreenShowsBothAssistants(t *testing.T) {
 	successResult := installer.InstallResult{AssistantID: installer.AssistantClaudeCode, Err: nil}
 	failResult := installer.InstallResult{AssistantID: installer.AssistantOpenCode, Err: fmt.Errorf("fail")}
-	m := setup.New(fstest.MapFS{}, makeCfgRoot(t))
+	m := setup.New(fstest.MapFS{})
 	next, _ := m.Update(setup.InstallDoneMsg{Results: []installer.InstallResult{successResult, failResult}})
 	m2 := next.(setup.Model)
 	view := m2.View()
@@ -52,13 +72,4 @@ func TestView_DoneScreenShowsBothAssistants(t *testing.T) {
 	if !strings.Contains(view, "OpenCode") {
 		t.Errorf("done screen missing 'OpenCode', view:\n%s", view)
 	}
-}
-
-func TestView_NoLipglossImport(t *testing.T) {
-	// If lipgloss were imported in internal/setup/, the build would fail.
-	// This test verifies the package compiles and renders without it.
-	m := setup.New(fstest.MapFS{}, makeCfgRoot(t))
-	m2 := updateKey(t, m, tea.KeyEnter)
-	view := m2.View()
-	_ = view
 }

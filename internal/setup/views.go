@@ -5,19 +5,15 @@ import (
 	"strings"
 
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
 )
 
-const (
-	ansiReset  = "\033[0m"
-	ansiGreen  = "\033[32m"
-	ansiRed    = "\033[31m"
-	ansiDim    = "\033[2m"
-	ansiBold   = "\033[1m"
-	cursorChar = "►"
-)
+const cursorChar = "►"
 
 func renderState(m Model) string {
 	switch m.state {
+	case StateEngramMissing:
+		return renderEngramMissing()
 	case StateMainMenu:
 		return renderMainMenu(m)
 	case StateAssistantList:
@@ -35,16 +31,26 @@ func renderState(m Model) string {
 	}
 }
 
+func renderEngramMissing() string {
+	var b strings.Builder
+	b.WriteString(styles.Default.Header.Render("Engram Required") + "\n\n")
+	b.WriteString("ASDT requires the Engram MCP server to manage cross-session memory.\n")
+	b.WriteString("Please install it before continuing.\n\n")
+	b.WriteString("  " + styles.Default.Success.Render("https://github.com/Gentleman-Programming/engram") + "\n\n")
+	b.WriteString("[q] quit")
+	return b.String()
+}
+
 func renderMainMenu(m Model) string {
 	var b strings.Builder
-	b.WriteString(ansiBold + "ASDT Installer" + ansiReset + "\n\n")
+	b.WriteString(styles.Default.Header.Render("ASDT Installer") + "\n\n")
 
 	items := []string{"Install / Update Skills", "Quit"}
 	for i, item := range items {
 		if i == m.cursor {
-			fmt.Fprintf(&b, "  %s%s %s%s\n", ansiBold, cursorChar, item, ansiReset)
+			fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(item))
 		} else {
-			fmt.Fprintf(&b, "  %s  %s%s\n", ansiDim, item, ansiReset)
+			fmt.Fprintf(&b, "    %s\n", styles.Default.Dim.Render(item))
 		}
 	}
 	b.WriteString("\n[q] quit")
@@ -53,25 +59,29 @@ func renderMainMenu(m Model) string {
 
 func renderAssistantList(m Model) string {
 	var b strings.Builder
-	b.WriteString(ansiBold + "Installed Assistants" + ansiReset + "\n\n")
+	b.WriteString(styles.Default.Header.Render("Installed Assistants") + "\n\n")
 
 	for i, d := range installer.Descriptors {
 		bp, sp, _ := installer.Detect(d)
 		present := bp && sp
 
-		label := ansiRed + "missing" + ansiReset
+		var label string
 		if present {
-			label = ansiGreen + "present" + ansiReset
+			label = styles.Default.Success.Render("present")
+		} else {
+			label = styles.Default.Error.Render("missing")
 		}
 
 		cursor := "  "
-		nameStyle := ansiDim
+		var nameStr string
 		if i == m.cursor {
 			cursor = cursorChar + " "
-			nameStyle = ansiBold
+			nameStr = styles.Default.Cursor.Render(d.Name)
+		} else {
+			nameStr = styles.Default.Dim.Render(d.Name)
 		}
 
-		fmt.Fprintf(&b, "  %s%s%s%s [%s]\n", cursor, nameStyle, d.Name, ansiReset, label)
+		fmt.Fprintf(&b, "  %s%s [%s]\n", cursor, nameStr, label)
 	}
 
 	b.WriteString("\n[enter] continue  [esc] back  [q] quit")
@@ -80,7 +90,7 @@ func renderAssistantList(m Model) string {
 
 func renderSelectAssistants(m Model) string {
 	var b strings.Builder
-	b.WriteString(ansiBold + "Select Assistants to Install" + ansiReset + "\n\n")
+	b.WriteString(styles.Default.Header.Render("Select Assistants to Install") + "\n\n")
 
 	for i, d := range installer.Descriptors {
 		check := "[ ]"
@@ -89,13 +99,15 @@ func renderSelectAssistants(m Model) string {
 		}
 
 		cursor := "  "
-		nameStyle := ansiDim
+		var nameStr string
 		if i == m.cursor {
 			cursor = cursorChar + " "
-			nameStyle = ansiBold
+			nameStr = styles.Default.Cursor.Render(d.Name)
+		} else {
+			nameStr = styles.Default.Dim.Render(d.Name)
 		}
 
-		fmt.Fprintf(&b, "  %s%s %s%s%s\n", cursor, check, nameStyle, d.Name, ansiReset)
+		fmt.Fprintf(&b, "  %s%s %s\n", cursor, check, nameStr)
 	}
 
 	b.WriteString("\n[space] toggle  [enter] confirm  [esc] back  [q] quit")
@@ -104,17 +116,19 @@ func renderSelectAssistants(m Model) string {
 
 func renderSelectProvider(m Model) string {
 	var b strings.Builder
-	b.WriteString(ansiBold + "Select Memory Provider" + ansiReset + "\n\n")
+	b.WriteString(styles.Default.Header.Render("Select Memory Provider") + "\n\n")
 
 	for i, p := range installer.Providers {
 		cursor := "  "
-		nameStyle := ansiDim
+		var nameStr string
 		if i == m.cursor {
 			cursor = cursorChar + " "
-			nameStyle = ansiBold
+			nameStr = styles.Default.Cursor.Render(p.Name)
+		} else {
+			nameStr = styles.Default.Dim.Render(p.Name)
 		}
 
-		fmt.Fprintf(&b, "  %s%s%s%s — %s\n", cursor, nameStyle, p.Name, ansiReset, p.Description)
+		fmt.Fprintf(&b, "  %s%s — %s\n", cursor, nameStr, p.Description)
 	}
 
 	b.WriteString("\n[enter] install  [esc] back  [q] quit")
@@ -122,12 +136,12 @@ func renderSelectProvider(m Model) string {
 }
 
 func renderInstalling() string {
-	return ansiBold + "Installing..." + ansiReset + "\n"
+	return styles.Default.Bold.Render("Installing...") + "\n"
 }
 
 func renderDone(m Model) string {
 	var b strings.Builder
-	b.WriteString(ansiBold + "Installation Complete" + ansiReset + "\n\n")
+	b.WriteString(styles.Default.Header.Render("Installation Complete") + "\n\n")
 
 	nameFor := make(map[installer.AssistantID]string, len(installer.Descriptors))
 	for _, d := range installer.Descriptors {
@@ -140,9 +154,9 @@ func renderDone(m Model) string {
 			name = string(r.AssistantID)
 		}
 		if r.Err == nil {
-			fmt.Fprintf(&b, "  %s✓ %s%s\n", ansiGreen, name, ansiReset)
+			fmt.Fprintf(&b, "  %s\n", styles.Default.Success.Render("✓ "+name))
 		} else {
-			fmt.Fprintf(&b, "  %s✗ %s: %v%s\n", ansiRed, name, r.Err, ansiReset)
+			fmt.Fprintf(&b, "  %s\n", styles.Default.Error.Render(fmt.Sprintf("✗ %s: %v", name, r.Err)))
 		}
 	}
 

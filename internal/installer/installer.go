@@ -5,8 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
 )
 
 // InstallResult holds the outcome of installing skills for one assistant.
@@ -17,20 +15,14 @@ type InstallResult struct {
 }
 
 // Install copies skill files from skillsFS into each assistant's SkillsDir,
-// applies provider.CustomizeSkill to each file's content, and writes the chosen
-// provider ID to .asdt/config.yaml. It returns one result per assistant;
-// a failure for one assistant does not abort the others.
-func Install(assistants []AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS, cfgRoot config.Root) []InstallResult {
+// applies provider.CustomizeSkill to each file's content, and returns one
+// result per assistant. A failure for one assistant does not abort the others.
+func Install(assistants []AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS) []InstallResult {
 	results := make([]InstallResult, len(assistants))
 
 	for i, assistant := range assistants {
 		results[i] = installOne(assistant, provider, skillsFS)
 	}
-
-	// Write provider choice to config regardless of per-assistant errors.
-	cfg, _ := config.Load(cfgRoot)
-	cfg.Memory.Provider = string(provider.ID)
-	_ = config.Save(cfgRoot, cfg)
 
 	return results
 }

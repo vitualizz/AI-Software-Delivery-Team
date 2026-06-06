@@ -23,10 +23,16 @@ func TestInstallCmd_ReturnsNonNilCmd(t *testing.T) {
 	var skillsFS fs.FS = fstest.MapFS{}
 	assistants := installer.Descriptors
 	provider := installer.Providers[0]
-	root := makeCfgRoot(t)
 
-	cmd := setup.InstallCmd(assistants, provider, skillsFS, root)
+	cmd := setup.InstallCmd(assistants, provider, skillsFS)
 	if cmd == nil {
 		t.Error("InstallCmd returned nil tea.Cmd")
+	}
+}
+
+func TestEngramCheckCmd_ReturnsNonNilCmd(t *testing.T) {
+	cmd := setup.EngramCheckCmd()
+	if cmd == nil {
+		t.Error("EngramCheckCmd returned nil tea.Cmd")
 	}
 }

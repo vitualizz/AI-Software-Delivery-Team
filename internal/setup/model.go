@@ -4,7 +4,6 @@ import (
 	"io/fs"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 )
 
@@ -12,7 +11,10 @@ import (
 type ViewState int
 
 const (
-	StateMainMenu ViewState = iota
+	// StateEngramMissing is the zero-value state; the TUI starts here until
+	// EngramCheckCmd reports whether the engram binary is on PATH.
+	StateEngramMissing ViewState = iota
+	StateMainMenu
 	StateAssistantList
 	StateSelectAssistants
 	StateSelectProvider
@@ -28,28 +30,34 @@ type Model struct {
 	provider int
 	results  []installer.InstallResult
 	skillsFS fs.FS
-	cfgRoot  config.Root
 }
 
-// New constructs an initial Model at StateMainMenu.
-func New(skillsFS fs.FS, cfgRoot config.Root) Model {
+// New constructs an initial Model. Init() fires EngramCheckCmd to determine
+// whether to transition to StateMainMenu or remain at StateEngramMissing.
+func New(skillsFS fs.FS) Model {
 	return Model{
-		state:    StateMainMenu,
 		selected: make(map[int]bool),
 		skillsFS: skillsFS,
-		cfgRoot:  cfgRoot,
 	}
 }
 
 // State returns the current ViewState. Exported for tests.
 func (m Model) State() ViewState { return m.state }
 
-// Init implements tea.Model. No startup commands needed.
-func (m Model) Init() tea.Cmd { return nil }
+// Init implements tea.Model. Fires an async engram PATH check.
+func (m Model) Init() tea.Cmd { return EngramCheckCmd() }
 
 // Update handles all messages and key events.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case EngramCheckMsg:
+		if msg.Found {
+			m.state = StateMainMenu
+		} else {
+			m.state = StateEngramMissing
+		}
+		return m, nil
+
 	case InstallDoneMsg:
 		m.results = msg.Results
 		m.state = StateDone
@@ -62,6 +70,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// StateEngramMissing handles its own keys exclusively.
+	if m.state == StateEngramMissing {
+		return m.handleEngramMissing(msg)
+	}
+
 	switch msg.Type {
 	case tea.KeyCtrlC:
 		return m, tea.Quit
@@ -83,6 +96,19 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSelectProvider(msg)
 	case StateDone:
 		return m.handleDone(msg)
+	}
+	return m, nil
+}
+
+// handleEngramMissing only allows q and ctrl+c; all other keys are no-ops.
+func (m Model) handleEngramMissing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return m, tea.Quit
+	case tea.KeyRunes:
+		if string(msg.Runes) == "q" {
+			return m, tea.Quit
+		}
 	}
 	return m, nil
 }
@@ -142,10 +168,8 @@ func (m Model) handleSelectAssistants(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.cursor < count-1 {
 			m.cursor++
 		}
-	case tea.KeyRunes:
-		if string(msg.Runes) == " " {
-			m.selected[m.cursor] = !m.selected[m.cursor]
-		}
+	case tea.KeySpace:
+		m.selected[m.cursor] = !m.selected[m.cursor]
 	case tea.KeyEnter:
 		m.state = StateSelectProvider
 		m.cursor = 0
@@ -201,7 +225,7 @@ func (m Model) buildInstallCmd() tea.Cmd {
 		assistants = installer.Descriptors
 	}
 	provider := installer.Providers[m.provider]
-	return InstallCmd(assistants, provider, m.skillsFS, m.cfgRoot)
+	return InstallCmd(assistants, provider, m.skillsFS)
 }
 
 // View renders the current state.
