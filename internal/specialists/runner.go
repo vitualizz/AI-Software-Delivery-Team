@@ -23,8 +23,8 @@ import (
 type ComposeFunc func(role prompt.Fragment, skills []prompt.Fragment, artifactCtx, platformCtx string) (string, prompt.Manifest)
 
 // RunnerDeps holds all the dependencies required by a Runner.
-// All fields are required except Memory (defaults to NullProvider) and Composer
-// (defaults to prompt.Compose).
+// All fields are required except Composer (defaults to prompt.Compose).
+// Memory must be provided by the caller; there is no silent fallback.
 type RunnerDeps struct {
 	Registry prompt.SkillRegistry
 	Composer ComposeFunc
@@ -43,12 +43,9 @@ type Runner struct {
 }
 
 // New constructs a Runner for the given descriptor.
-// If deps.Memory is nil, NullProvider is used.
 // If deps.Composer is nil, prompt.Compose is used.
+// deps.Memory must not be nil; callers must provide a memory.Provider.
 func New(d SpecialistDescriptor, deps RunnerDeps) *Runner {
-	if deps.Memory == nil {
-		deps.Memory = &memory.NullProvider{}
-	}
 	if deps.Composer == nil {
 		deps.Composer = prompt.Compose
 	}

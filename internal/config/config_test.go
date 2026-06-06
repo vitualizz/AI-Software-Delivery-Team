@@ -164,6 +164,37 @@ func TestLoadSave_ZeroValues(t *testing.T) {
 	}
 }
 
+// ------------------------------------------------------------------ Validate --
+
+func TestMemoryConfig_Validate_ErrorOnEmpty(t *testing.T) {
+	mc := config.MemoryConfig{Provider: ""}
+	if err := mc.Validate(); err == nil {
+		t.Error("expected error when Provider is empty, got nil")
+	} else if !strings.Contains(err.Error(), "memory.provider") {
+		t.Errorf("error message should mention memory.provider; got: %q", err.Error())
+	}
+}
+
+func TestMemoryConfig_Validate_PassWhenSet(t *testing.T) {
+	mc := config.MemoryConfig{Provider: "engram"}
+	if err := mc.Validate(); err != nil {
+		t.Errorf("expected no error when Provider is set, got: %v", err)
+	}
+}
+
+func TestConfig_Validate_Delegates(t *testing.T) {
+	// Config with empty memory provider should propagate MemoryConfig error.
+	cfg := config.Config{}
+	if err := cfg.Validate(); err == nil {
+		t.Error("Config.Validate: expected error when memory.provider is empty, got nil")
+	}
+	// Config with memory provider set should pass.
+	cfg.Memory = config.MemoryConfig{Provider: "engram"}
+	if err := cfg.Validate(); err != nil {
+		t.Errorf("Config.Validate: expected no error when memory.provider is set, got: %v", err)
+	}
+}
+
 // TestDiscover_StopsAtFilesystemRoot verifies that Discover returns ErrNotFound
 // when walking from a temp directory that has no .asdt/ anywhere in its ancestry.
 // This exercises the "reached root" stop condition.

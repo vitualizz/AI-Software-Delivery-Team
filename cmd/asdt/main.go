@@ -107,13 +107,18 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("unknown specialist %q. Valid: %s", subcmd, validSpecialists(descriptors))
 	}
 
+	memProvider, err := buildMemoryProvider(cfg)
+	if err != nil {
+		return err
+	}
+
 	deps := specialists.RunnerDeps{
 		Registry: buildRegistry(root),
 		Composer: prompt.Compose,
 		Provider: buildProvider(),
 		Store:    store,
 		Pipeline: runner,
-		Memory:   buildMemoryProvider(cfg),
+		Memory:   memProvider,
 	}
 	change := resolveChange(rest, cfg)
 	return specialists.New(d, deps).Run(ctx, root, change)
@@ -138,16 +143,17 @@ func validSpecialists(m map[string]specialists.SpecialistDescriptor) string {
 	return strings.Join(ids, ", ")
 }
 
-// buildMemoryProvider returns the configured memory.Provider.
-// Defaults to NullProvider when config is absent or provider is unset.
-func buildMemoryProvider(cfg config.Config) memory.Provider {
+// buildMemoryProvider validates the config and returns the configured memory.Provider.
+// Returns an error if memory.provider is empty or unknown — there is no silent fallback.
+func buildMemoryProvider(cfg config.Config) (memory.Provider, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
 	switch cfg.Memory.Provider {
 	case "engram":
-		// EngramProvider requires a configured MCPCaller; defer to NullProvider
-		// until the MCP transport is wired in a future change.
-		return memory.NewNullProvider(cfg.Memory.Project)
+		return memory.NewEngramProvider(cfg.Memory.Project, nil), nil
 	default:
-		return memory.NewNullProvider("")
+		return nil, fmt.Errorf("unknown memory provider %q: set memory.provider to \"engram\" in .asdt/config.yaml", cfg.Memory.Provider)
 	}
 }
 

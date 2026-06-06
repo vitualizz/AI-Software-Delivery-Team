@@ -20,7 +20,7 @@ type Provider interface {
 
 // Entry is one structured knowledge record.
 type Entry struct {
-	// ID is set on Save: NullProvider=relative filepath, Engram=observation ID.
+	// ID is set on Save by the concrete provider implementation (e.g. Engram observation ID).
 	ID       string
 	Title    string
 	Type     EntryType

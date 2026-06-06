@@ -10,7 +10,7 @@ import (
 
 // MemoryConfig holds settings for the cross-session memory provider.
 type MemoryConfig struct {
-	// Provider selects the backend: "null" (default, no-op) or "engram".
+	// Provider selects the memory backend. Only "engram" is supported.
 	Provider string `yaml:"provider,omitempty"`
 
 	// Endpoint is the optional URL or socket path for the memory backend.
@@ -31,9 +31,23 @@ type Config struct {
 	// Defaults holds project-level default settings.
 	Defaults map[string]string `yaml:"defaults,omitempty"`
 
-	// Memory configures the optional cross-session memory provider.
-	// When absent or provider is empty, NullProvider is used.
+	// Memory configures the cross-session memory provider.
+	// Provider must be set to "engram"; use Validate() to enforce this before use.
 	Memory MemoryConfig `yaml:"memory,omitempty"`
+}
+
+// Validate returns an error if the MemoryConfig is incomplete.
+// Currently it requires Provider to be non-empty.
+func (m MemoryConfig) Validate() error {
+	if m.Provider == "" {
+		return fmt.Errorf("memory provider is required: set memory.provider in .asdt/config.yaml")
+	}
+	return nil
+}
+
+// Validate delegates to MemoryConfig.Validate. Returns the first error encountered.
+func (c Config) Validate() error {
+	return c.Memory.Validate()
 }
 
 // configPath returns the absolute path to config.yaml within the given root.
