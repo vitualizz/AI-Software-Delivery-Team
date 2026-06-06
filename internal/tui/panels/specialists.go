@@ -33,7 +33,7 @@ var specialistNames = map[string]string{
 // SpecialistsPanel renders one row per specialist showing their current state.
 // It replaces the linear PipelinePanel for the specialist-first architecture.
 type SpecialistsPanel struct {
-	state    *pipeline.PipelineStateV2
+	state    *pipeline.StateV2
 	selected int
 	focused  bool
 	width    int
@@ -77,7 +77,7 @@ func (p SpecialistsPanel) UpdateSize(width, height int) (SpecialistsPanel, tea.C
 func (p SpecialistsPanel) View() string {
 	titleStyle := lipgloss.NewStyle().Bold(true).Padding(0, 1)
 	activeStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6")) // cyan
-	completedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))          // green
+	completedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("2"))         // green
 	selectedStyle := lipgloss.NewStyle().Background(lipgloss.Color("237"))
 
 	var b strings.Builder
@@ -119,7 +119,7 @@ func (p SpecialistsPanel) View() string {
 }
 
 // SetState stores the loaded pipeline v2 state.
-func (p *SpecialistsPanel) SetState(state *pipeline.PipelineStateV2) { p.state = state }
+func (p *SpecialistsPanel) SetState(state *pipeline.StateV2) { p.state = state }
 
 // SelectedSpecialist returns the specialist ID for the currently selected row.
 func (p SpecialistsPanel) SelectedSpecialist() string {

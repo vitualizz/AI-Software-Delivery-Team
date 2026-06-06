@@ -73,8 +73,8 @@ func (p *InMemoryProvider) Get(_ context.Context, id string) (*Entry, error) {
 	if !ok {
 		return nil, fmt.Errorf("memory: inmemory: entry %q not found", id)
 	}
-	copy := entry
-	return &copy, nil
+	entryCopy := entry
+	return &entryCopy, nil
 }
 
 // Name returns "inmemory".

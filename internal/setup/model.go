@@ -14,11 +14,17 @@ const (
 	// StateEngramMissing is the zero-value state; the TUI starts here until
 	// EngramCheckCmd reports whether the engram binary is on PATH.
 	StateEngramMissing ViewState = iota
+	// StateMainMenu is the main menu screen.
 	StateMainMenu
+	// StateAssistantList displays the list of available assistants.
 	StateAssistantList
+	// StateSelectAssistants allows the user to choose assistants to install.
 	StateSelectAssistants
+	// StateSelectProvider allows the user to choose a memory provider.
 	StateSelectProvider
+	// StateInstalling shows installation progress.
 	StateInstalling
+	// StateDone is the terminal state shown after installation completes.
 	StateDone
 )
 

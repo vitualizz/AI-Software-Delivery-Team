@@ -19,7 +19,7 @@ func TestBuild_ExitsZero(t *testing.T) {
 func TestEmbeddedFS_ContainsSkillMD(t *testing.T) {
 	skillsFS := skill.FS()
 	found := false
-	err := fs.WalkDir(skillsFS, ".", func(path string, d fs.DirEntry, walkErr error) error {
+	err := fs.WalkDir(skillsFS, ".", func(_ string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}

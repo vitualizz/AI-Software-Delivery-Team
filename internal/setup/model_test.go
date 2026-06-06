@@ -64,7 +64,7 @@ func TestUpdate_EngramMissing_CtrlCQuits(t *testing.T) {
 func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	m := setup.New(fstest.MapFS{})
 	// Navigate to StateSelectAssistants.
-	m = sendEngramFound(t, m) // → StateMainMenu
+	m = sendEngramFound(t, m)         // → StateMainMenu
 	m = updateKey(t, m, tea.KeyEnter) // → StateAssistantList
 	m = updateKey(t, m, tea.KeyEnter) // → StateSelectAssistants
 

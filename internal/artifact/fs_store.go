@@ -26,7 +26,6 @@ func (s *FSStore) artifactPath(change, artifactType string) string {
 	return filepath.Join(s.root, "artifacts", change, artifactType+".yaml")
 }
 
-
 // Read deserializes the YAML artifact at change/artifactType into out.
 func (s *FSStore) Read(_ context.Context, change, artifactType string, out any) error {
 	p := s.artifactPath(change, artifactType)

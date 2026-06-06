@@ -1,4 +1,4 @@
-.PHONY: build test lint clean
+.PHONY: build test lint clean hooks
 
 build:
 	go build ./...
@@ -11,3 +11,7 @@ lint:
 
 clean:
 	go clean ./...
+
+hooks:
+	go install github.com/evilmartians/lefthook@latest
+	lefthook install

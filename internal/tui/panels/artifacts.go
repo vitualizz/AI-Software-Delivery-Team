@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -17,7 +17,6 @@ type ArtifactPanel struct {
 	files    []string
 	selected int
 	content  string // YAML content of selected file
-	focused  bool
 	width    int
 	height   int
 	viewport viewport.Model
@@ -143,7 +142,7 @@ func (p ArtifactPanel) View() string {
 	}
 
 	// Separator.
-	sb.WriteString(styleSeparator.Render(strings.Repeat("─", max(p.width-4, 10))))
+	sb.WriteString(styleSeparator.Render(strings.Repeat("─", panelMax(p.width-4, 10))))
 	sb.WriteString("\n")
 
 	// YAML viewer.
@@ -167,7 +166,7 @@ func loadFileContent(path string) (string, error) {
 	return string(data), nil
 }
 
-func max(a, b int) int {
+func panelMax(a, b int) int {
 	if a > b {
 		return a
 	}

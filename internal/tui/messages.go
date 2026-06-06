@@ -10,7 +10,7 @@ type PipelineLoadedMsg struct {
 
 // SpecialistsLoadedMsg is sent when pipeline-state.yaml (v2) is successfully read.
 type SpecialistsLoadedMsg struct {
-	State *pipeline.PipelineStateV2
+	State *pipeline.StateV2
 }
 
 // ArtifactListMsg is sent when the artifact directory listing completes.

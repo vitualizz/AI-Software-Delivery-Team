@@ -1,3 +1,4 @@
+// Package setup implements the Bubbletea-based installer TUI for ASDT.
 package setup
 
 import (

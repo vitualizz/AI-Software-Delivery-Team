@@ -62,7 +62,6 @@ func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skil
 		result.Written = append(result.Written, target)
 		return nil
 	})
-
 	if err != nil {
 		result.Err = err
 	}

@@ -3,7 +3,6 @@ package artifact_test
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -265,9 +264,6 @@ func TestFSStore_Read_NotFound(t *testing.T) {
 	if !strings.Contains(err.Error(), "nonexistent-change") && !strings.Contains(err.Error(), "nonexistent-artifact") {
 		t.Errorf("error %q should mention the change or artifact name", err.Error())
 	}
-	// Must not be a raw *os.PathError leaked directly — it should be wrapped.
-	if errors.Is(err, os.ErrNotExist) {
-		// The underlying cause may be ErrNotExist, but the message should be wrapped
-		// with context. This is acceptable — the important thing is the message has context.
-	}
+	// The underlying cause may be ErrNotExist, but the message should be wrapped
+	// with context. The important thing is the message has context (checked above).
 }

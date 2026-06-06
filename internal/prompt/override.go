@@ -14,9 +14,9 @@ import (
 //  2. User-global:    ~/.config/asdt/prompts/{role}/role.md
 //  3. Packaged:       embedded FS via the backing SkillRegistry
 type OverrideResolver struct {
-	localDir  string         // absolute path to .asdt/prompts/
-	globalDir string         // absolute path to ~/.config/asdt/prompts/
-	fallback  SkillRegistry  // packaged registry (EmbeddedRegistry)
+	localDir  string        // absolute path to .asdt/prompts/
+	globalDir string        // absolute path to ~/.config/asdt/prompts/
+	fallback  SkillRegistry // packaged registry (EmbeddedRegistry)
 }
 
 // NewOverrideResolver constructs an OverrideResolver.
@@ -111,4 +111,4 @@ func DefaultGlobalDir() string {
 var _ SkillRegistry = (*OverrideResolver)(nil)
 
 // Ensure EmbeddedRegistry satisfies fs.FS-based reading.
-var _ fs.FS = (fs.FS)(nil)
+var _ fs.FS = fs.FS(nil)

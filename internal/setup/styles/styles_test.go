@@ -18,11 +18,11 @@ func TestDefaultPaletteAllFieldsNonZero(t *testing.T) {
 	p := styles.Default
 
 	cases := []struct {
-		name        string
-		style       lipgloss.Style
-		wantFg      bool // true if style should have a non-default foreground
-		wantBold    bool
-		wantFaint   bool
+		name      string
+		style     lipgloss.Style
+		wantFg    bool // true if style should have a non-default foreground
+		wantBold  bool
+		wantFaint bool
 	}{
 		{"Header", p.Header, true, true, false},
 		{"Cursor", p.Cursor, true, true, false},

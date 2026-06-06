@@ -2,14 +2,13 @@
 // It manages a registry of role and skill fragments, resolves overrides,
 // and composes them into a final prompt string with a version manifest.
 //
-// go:embed wiring happens in T-1-5. Use SetEmbedFS to inject the embedded FS
+// NOTE: go:embed wiring happens in T-1-5. Use SetEmbedFS to inject the embedded FS
 // during initialization, allowing tests to use a plain os.DirFS.
 package prompt
 
 import (
 	"crypto/sha256"
 	"fmt"
-	"io/fs"
 )
 
 // Source identifies where a Fragment was resolved from.
@@ -56,14 +55,4 @@ func NewFragment(name, content string, source Source) Fragment {
 func fragmentVersion(content string) string {
 	sum := sha256.Sum256([]byte(content))
 	return fmt.Sprintf("%x", sum[:4]) // 4 bytes = 8 hex chars
-}
-
-// embedFS holds the injected embedded filesystem.
-// Tests inject a plain fs.FS via SetEmbedFS; T-1-5 injects the real go:embed FS.
-var embedFS fs.FS
-
-// SetEmbedFS sets the embedded filesystem used by the EmbeddedRegistry.
-// Call this once at startup (main.go composition root or test setup).
-func SetEmbedFS(f fs.FS) {
-	embedFS = f
 }

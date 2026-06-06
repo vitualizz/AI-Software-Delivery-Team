@@ -5,27 +5,27 @@ import (
 	"time"
 )
 
-// KnowledgeDetector is the port for scanning a project root and producing a Platform.
-type KnowledgeDetector interface {
+// Detector is the port for scanning a project root and producing a Platform.
+type Detector interface {
 	// Detect scans projectRoot and returns a Platform populated with the
 	// detected stack. It never returns an error for an unknown project —
 	// instead it returns a Platform with an empty detected_stack.
 	Detect(ctx context.Context, projectRoot string) (Platform, error)
 }
 
-// Detector is the concrete implementation of KnowledgeDetector.
+// ProbeDetector is the concrete implementation of Detector.
 // It runs all registered StackProbes against the project root.
-type Detector struct {
+type ProbeDetector struct {
 	probes []StackProbe
 }
 
-// NewDetector constructs a Detector with the given set of probes.
-func NewDetector(probes []StackProbe) *Detector {
-	return &Detector{probes: probes}
+// NewDetector constructs a ProbeDetector with the given set of probes.
+func NewDetector(probes []StackProbe) *ProbeDetector {
+	return &ProbeDetector{probes: probes}
 }
 
-// DefaultDetector returns a Detector pre-configured with all built-in probes.
-func DefaultDetector() *Detector {
+// DefaultDetector returns a ProbeDetector pre-configured with all built-in probes.
+func DefaultDetector() *ProbeDetector {
 	return NewDetector([]StackProbe{
 		GoProbe(),
 		NodeProbe(),
@@ -37,7 +37,7 @@ func DefaultDetector() *Detector {
 
 // Detect runs all probes against projectRoot and returns a Platform.
 // Unknown projects return a Platform with an empty DetectedStack — no error.
-func (d *Detector) Detect(_ context.Context, projectRoot string) (Platform, error) {
+func (d *ProbeDetector) Detect(_ context.Context, projectRoot string) (Platform, error) {
 	var stack []string
 
 	for _, probe := range d.probes {
@@ -56,10 +56,10 @@ func (d *Detector) Detect(_ context.Context, projectRoot string) (Platform, erro
 	}
 
 	return Platform{
-		SchemaVersion: PlatformSchemaVersion,
-		ScannedAt:     time.Now().UTC(),
-		DetectedStack: stack,
-		Conventions:   Conventions{},
+		SchemaVersion:     PlatformSchemaVersion,
+		ScannedAt:         time.Now().UTC(),
+		DetectedStack:     stack,
+		Conventions:       Conventions{},
 		DesignFingerprint: DesignFingerprint{},
 	}, nil
 }

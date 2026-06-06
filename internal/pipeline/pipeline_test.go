@@ -69,7 +69,7 @@ func TestAdvanceStep_StepsCompletedGrows(t *testing.T) {
 	}
 
 	// Read the raw v2 state and verify two steps are recorded.
-	var sv2 pipeline.PipelineStateV2
+	var sv2 pipeline.StateV2
 	if err := store.Read(ctx, change, pipeline.ArtifactTypeV2, &sv2); err != nil {
 		t.Fatalf("read v2 state: %v", err)
 	}

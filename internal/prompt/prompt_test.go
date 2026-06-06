@@ -15,8 +15,8 @@ import (
 func buildTestFS(t *testing.T) fstest.MapFS {
 	t.Helper()
 	return fstest.MapFS{
-		"roles/requirements/role.md": {Data: []byte("# packaged requirements role\nI am the requirements persona.")},
-		"roles/knowledge/role.md":    {Data: []byte("# packaged knowledge role\nI am the knowledge persona.")},
+		"roles/requirements/role.md":   {Data: []byte("# packaged requirements role\nI am the requirements persona.")},
+		"roles/knowledge/role.md":      {Data: []byte("# packaged knowledge role\nI am the knowledge persona.")},
 		"skills/user-story-writing.md": {Data: []byte("# user story writing skill\nWrite stories as: As a ... I want ... So that ...")},
 	}
 }
@@ -159,7 +159,7 @@ func TestFragmentVersionIsStable(t *testing.T) {
 // TestDefaultEmbeddedRegistry_RoleDeveloper verifies the developer role resolves
 // from the production embedded FS.
 func TestDefaultEmbeddedRegistry_RoleDeveloper(t *testing.T) {
-	reg := prompt.NewEmbeddedRegistry(skill.PromptSubFS())
+	reg := prompt.NewEmbeddedRegistry(skill.FS())
 	frag, err := reg.Role("developer")
 	if err != nil {
 		t.Fatalf("Role(developer): %v", err)
@@ -172,7 +172,7 @@ func TestDefaultEmbeddedRegistry_RoleDeveloper(t *testing.T) {
 // TestDefaultEmbeddedRegistry_VersionStability verifies that Version returns
 // a stable 8-character hash for the same embedded content across two calls.
 func TestDefaultEmbeddedRegistry_VersionStability(t *testing.T) {
-	reg := prompt.NewEmbeddedRegistry(skill.PromptSubFS())
+	reg := prompt.NewEmbeddedRegistry(skill.FS())
 
 	v1, err := reg.Version("developer")
 	if err != nil {

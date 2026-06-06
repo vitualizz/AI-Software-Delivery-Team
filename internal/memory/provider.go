@@ -41,6 +41,7 @@ type EntryContent struct {
 // EntryType is a typed string enum for the kind of knowledge record.
 type EntryType string
 
+// Known EntryType values.
 const (
 	EntryTypeDecision     EntryType = "decision"
 	EntryTypeArchitecture EntryType = "architecture"

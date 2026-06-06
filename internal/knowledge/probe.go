@@ -17,7 +17,7 @@ type StackProbe interface {
 
 // fileProbe is a StackProbe that checks for the presence of a single marker file.
 type fileProbe struct {
-	name    string // stack name (e.g. "go", "node")
+	name    string   // stack name (e.g. "go", "node")
 	markers []string // filenames to check (any one match → detected)
 }
 

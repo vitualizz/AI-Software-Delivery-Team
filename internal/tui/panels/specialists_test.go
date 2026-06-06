@@ -25,7 +25,7 @@ func TestSpecialistsPanelNilStateRendersPlaceholder(t *testing.T) {
 // with two completed steps where CurrentStep == last step ID renders completed style (✓).
 func TestSpecialistsPanelDeveloperCompletedShowsCheckmark(t *testing.T) {
 	now := time.Now()
-	state := &pipeline.PipelineStateV2{
+	state := &pipeline.StateV2{
 		SchemaVersion: pipeline.SchemaVersionV2,
 		ChangeID:      "test-change",
 		Specialists: map[string]pipeline.SpecialistState{

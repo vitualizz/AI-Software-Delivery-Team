@@ -31,7 +31,7 @@ func LoadPipelineCmd(store artifact.Store, change string) tea.Cmd {
 	}
 }
 
-// LoadSpecialistsCmd reads pipeline-state.yaml as a PipelineStateV2 document
+// LoadSpecialistsCmd reads pipeline-state.yaml as a StateV2 document
 // and returns a SpecialistsLoadedMsg on success. If the file is absent or cannot
 // be decoded as v2, it returns SpecialistsLoadedMsg with a nil State so the panel
 // renders the "No specialists have run yet" placeholder gracefully.
@@ -41,7 +41,7 @@ func LoadSpecialistsCmd(store artifact.Store, change string) tea.Cmd {
 		if store == nil {
 			return SpecialistsLoadedMsg{State: nil}
 		}
-		var state pipeline.PipelineStateV2
+		var state pipeline.StateV2
 		if err := store.Read(context.Background(), change, "pipeline-state", &state); err != nil {
 			// Missing or unreadable — return nil state so panel shows placeholder.
 			return SpecialistsLoadedMsg{State: nil}

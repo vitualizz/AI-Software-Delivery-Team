@@ -3,6 +3,7 @@ package installer
 // ProviderID identifies a known memory provider.
 type ProviderID = string
 
+// ProviderEngram identifies the Engram memory provider.
 const ProviderEngram ProviderID = "engram"
 
 // ProviderDescriptor describes a known memory provider.

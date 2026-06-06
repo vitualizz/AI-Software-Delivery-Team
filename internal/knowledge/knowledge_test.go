@@ -306,11 +306,11 @@ func TestDeriveSummary_TableDriven(t *testing.T) {
 	ts := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	cases := []struct {
-		name            string
-		stack           []string
-		wantLanguage    string
-		wantPkgMgr      string
-		wantTestRunner  string
+		name           string
+		stack          []string
+		wantLanguage   string
+		wantPkgMgr     string
+		wantTestRunner string
 	}{
 		{"go", []string{"go"}, "go", "go modules", "go test"},
 		{"node", []string{"node"}, "node", "npm", "jest"},

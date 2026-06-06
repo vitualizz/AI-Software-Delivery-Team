@@ -1,11 +1,11 @@
 // Package pipeline implements the sequential FSM for ASDT change delivery.
-// Valid transitions are enforced by the specialist model (PipelineStateV2 / AdvanceStep).
+// Valid transitions are enforced by the specialist model (StateV2 / AdvanceStep).
 // The Phase type and constants are kept for backward compatibility with v1 state files.
 package pipeline
 
 // Phase represents a pipeline stage as a string enum.
 // Kept for backward compatibility with v1 pipeline-state.yaml files.
-// New code should use the specialist model (PipelineStateV2 / AdvanceStep).
+// New code should use the specialist model (StateV2 / AdvanceStep).
 type Phase string
 
 const (

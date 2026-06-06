@@ -4,7 +4,7 @@ import "time"
 
 // State is the v1 pipeline-state.yaml document (linear FSM).
 // It matches the pipeline-state.schema.yaml contract exactly.
-// Kept for backward compatibility — new code should use PipelineStateV2.
+// Kept for backward compatibility — new code should use StateV2.
 type State struct {
 	SchemaVersion string       `yaml:"schema_version"`
 	ChangeID      string       `yaml:"change_id"`
@@ -21,11 +21,12 @@ type Transition struct {
 
 // --- v2 Specialist-scoped pipeline state ---
 
+// SchemaVersionV2 is the schema_version value for v2 pipeline state documents.
 const SchemaVersionV2 = "2"
 
-// PipelineStateV2 is the per-specialist pipeline state document (schema_version "2").
+// StateV2 is the per-specialist pipeline state document (schema_version "2").
 // Each specialist has independent state; there is no global FSM.
-type PipelineStateV2 struct {
+type StateV2 struct {
 	SchemaVersion string                     `yaml:"schema_version"`
 	ChangeID      string                     `yaml:"change_id"`
 	Specialists   map[string]SpecialistState `yaml:"specialists"`

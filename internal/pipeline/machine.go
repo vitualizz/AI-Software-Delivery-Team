@@ -14,8 +14,8 @@ const (
 	schemaVersion = "1"
 )
 
-// PipelineRunner is the port for reading and advancing pipeline state.
-type PipelineRunner interface {
+// Runner is the port for reading and advancing pipeline state.
+type Runner interface {
 	// Current returns the current pipeline State for the given change.
 	// If no state file exists, it returns a zero State without error.
 	Current(ctx context.Context, change string) (State, error)
@@ -29,7 +29,7 @@ type PipelineRunner interface {
 	AdvanceStep(ctx context.Context, root config.Root, change, specialistID, stepID string) error
 }
 
-// FSMachine is the filesystem-backed implementation of PipelineRunner.
+// FSMachine is the filesystem-backed implementation of Runner.
 // It reads and writes pipeline-state.yaml via the artifact.Store port.
 type FSMachine struct {
 	store artifact.Store
@@ -60,12 +60,12 @@ var ErrIllegalTransition = fmt.Errorf("illegal pipeline transition")
 // ArtifactTypeV2 is the artifact type key for the specialist-scoped pipeline state.
 const ArtifactTypeV2 = "pipeline-state-v2"
 
-// AdvanceStep records a specialist step completion in PipelineStateV2.
+// AdvanceStep records a specialist step completion in StateV2.
 // It reads the current v2 state (or creates it), appends the step, and writes back.
 func (m *FSMachine) AdvanceStep(_ context.Context, _ config.Root, change, specialistID, stepID string) error {
 	ctx := context.Background()
 
-	var sv2 PipelineStateV2
+	var sv2 StateV2
 	if m.store.Exists(change, ArtifactTypeV2) {
 		if err := m.store.Read(ctx, change, ArtifactTypeV2, &sv2); err != nil {
 			return fmt.Errorf("pipeline advance-step read %s: %w", change, err)
@@ -74,7 +74,7 @@ func (m *FSMachine) AdvanceStep(_ context.Context, _ config.Root, change, specia
 
 	// Bootstrap on first use.
 	if sv2.SchemaVersion == "" {
-		sv2 = PipelineStateV2{
+		sv2 = StateV2{
 			SchemaVersion: SchemaVersionV2,
 			ChangeID:      change,
 			Specialists:   make(map[string]SpecialistState),

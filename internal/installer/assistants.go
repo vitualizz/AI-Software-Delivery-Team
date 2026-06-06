@@ -1,3 +1,4 @@
+// Package installer provides types and logic for installing ASDT skills into AI assistants.
 package installer
 
 import "os"
@@ -6,8 +7,10 @@ import "os"
 type AssistantID = string
 
 const (
+	// AssistantClaudeCode identifies the Claude Code assistant.
 	AssistantClaudeCode AssistantID = "claude-code"
-	AssistantOpenCode   AssistantID = "opencode"
+	// AssistantOpenCode identifies the OpenCode assistant.
+	AssistantOpenCode AssistantID = "opencode"
 )
 
 // AssistantDescriptor describes a known AI assistant and where its skills are installed.
