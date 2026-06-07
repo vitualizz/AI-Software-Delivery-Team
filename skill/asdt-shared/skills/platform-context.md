@@ -46,19 +46,27 @@ If `platform.yaml` exists but is partially populated (some fields empty or missi
 
 ## Injection Format
 
-When summarizing platform context for prompt injection, use this compact format:
+Build the injection from only the fields that are actually present — omit a line entirely when its source field is empty or missing. Never emit a label with nothing after it (`Architecture: ` on its own conveys nothing and still costs tokens):
 
 ```
 Stack: {detected_stack values, comma-separated}
-Conventions: {naming style} | {file structure note}
-Architecture: {design_fingerprint}
+Conventions: {naming style, if present}{ | file structure note, if present}
+Architecture: {design_fingerprint, only if present}
 ```
 
-Example:
+`Conventions` joins its two parts with ` | ` only when BOTH are present. If only one is present, emit that one alone with no separator. If neither is present, omit the `Conventions` line too.
+
+Fully-populated example:
 ```
 Stack: Go 1.22, no frontend framework
 Conventions: PascalCase exported types, snake_case files | internal/ for packages, cmd/ for binaries
 Architecture: Hexagonal — ports in internal/, adapters in cmd/
+```
+
+Partially-populated example — e.g. a `platform.yaml` straight out of `asdt init`, which only runs bounded presence checks and intentionally leaves `conventions.naming` and `design_fingerprint` for a dedicated future analysis step:
+```
+Stack: Go
+Conventions: cmd/ for binaries, internal/ for private packages
 ```
 
 ---
