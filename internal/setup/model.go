@@ -14,6 +14,8 @@ const (
 	// StateEngramMissing is the zero-value state; the TUI starts here until
 	// EngramCheckCmd reports whether the engram binary is on PATH.
 	StateEngramMissing ViewState = iota
+	// StateDashboard shows the dashboard overview (Coming Soon).
+	StateDashboard
 	// StateMainMenu is the main menu screen.
 	StateMainMenu
 	// StateAssistantList displays the list of available assistants.
@@ -39,6 +41,7 @@ type Model struct {
 	currentVersion  string
 	latestVersion   string
 	updateAvailable bool
+	width           int
 }
 
 // New constructs an initial Model with the running binary version. Init()
@@ -50,6 +53,7 @@ func New(skillsFS fs.FS, version string) Model {
 		selected:       make(map[int]bool),
 		skillsFS:       skillsFS,
 		currentVersion: version,
+		width:          80,
 	}
 }
 
@@ -87,6 +91,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = StateDone
 		return m, nil
 
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		return m, nil
+
 	case tea.KeyMsg:
 		return m.handleKey(msg)
 	}
@@ -110,6 +118,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	switch m.state {
+	case StateDashboard:
+		return m.handleDashboard(msg)
 	case StateMainMenu:
 		return m.handleMainMenu(msg)
 	case StateAssistantList:
@@ -144,18 +154,31 @@ func (m Model) handleMainMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		}
 	case tea.KeyDown:
-		if m.cursor < 1 {
+		if m.cursor < 2 {
 			m.cursor++
 		}
 	case tea.KeyEnter:
-		if m.cursor == 0 {
+		switch m.cursor {
+		case 0:
+			m.state = StateDashboard
+			m.cursor = 0
+		case 1:
 			m.state = StateAssistantList
 			m.cursor = 0
-		} else {
+		default:
 			return m, tea.Quit
 		}
 	case tea.KeyEsc:
 		// No-op at MainMenu.
+	}
+	return m, nil
+}
+
+func (m Model) handleDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyEsc:
+		m.state = StateMainMenu
+		m.cursor = 0
 	}
 	return m, nil
 }

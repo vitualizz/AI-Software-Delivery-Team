@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
+	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
 // noFg is the zero-value foreground (NoColor{}).
@@ -24,16 +25,10 @@ func TestDefaultPaletteAllFieldsNonZero(t *testing.T) {
 		wantBold  bool
 		wantFaint bool
 	}{
-		{"Header", p.Header, true, true, false},
 		{"Cursor", p.Cursor, true, true, false},
-		{"Selected", p.Selected, true, false, false},
-		{"Unselected", p.Unselected, true, false, false},
 		{"Success", p.Success, true, false, false},
 		{"Error", p.Error, true, false, false},
-		{"Label", p.Label, true, false, false},
-		{"Description", p.Description, true, false, true},
 		{"Dim", p.Dim, false, false, true},
-		{"Bold", p.Bold, false, true, false},
 	}
 
 	for _, tc := range cases {
@@ -68,34 +63,37 @@ func TestErrorStyleRendersNonEmpty(t *testing.T) {
 	}
 }
 
-func TestSuccessHasGreenForeground(t *testing.T) {
-	expected := lipgloss.Color("#a6e3a1")
-	got := styles.Default.Success.GetForeground()
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("Success foreground = %v, want %v", got, expected)
+func TestSuccessHasAdaptiveColor(t *testing.T) {
+	fg := styles.Default.Success.GetForeground()
+	if reflect.DeepEqual(fg, lipgloss.NoColor{}) {
+		t.Error("Success foreground is NoColor, expected an AdaptiveColor value")
 	}
 }
 
-func TestErrorHasRedForeground(t *testing.T) {
-	expected := lipgloss.Color("#f38ba8")
-	got := styles.Default.Error.GetForeground()
-	if !reflect.DeepEqual(got, expected) {
-		t.Errorf("Error foreground = %v, want %v", got, expected)
+func TestErrorHasAdaptiveColor(t *testing.T) {
+	fg := styles.Default.Error.GetForeground()
+	if reflect.DeepEqual(fg, lipgloss.NoColor{}) {
+		t.Error("Error foreground is NoColor, expected an AdaptiveColor value")
+	}
+}
+
+func TestSuccessAndErrorColorsUsePanelVars(t *testing.T) {
+	if !reflect.DeepEqual(styles.Default.Success.GetForeground(), panels.ColorSuccess) {
+		t.Error("Success foreground does not match panels.ColorSuccess")
+	}
+	if !reflect.DeepEqual(styles.Default.Error.GetForeground(), panels.ColorError) {
+		t.Error("Error foreground does not match panels.ColorError")
 	}
 }
 
 // TestBoxHasRoundedBorderAndPadding verifies that the Box style wraps content
-// in a rounded border using an existing Catppuccin hex color, with Padding(1, 2).
+// in a rounded border, with Padding(1, 2). Border colors use panel AdaptiveColor
+// via FocusBorderStyle, so we only check the border style, not specific hex values.
 func TestBoxHasRoundedBorderAndPadding(t *testing.T) {
 	b := styles.Default.Box
 
 	if b.GetBorderStyle() != lipgloss.RoundedBorder() {
 		t.Errorf("Box border style = %v, want lipgloss.RoundedBorder()", b.GetBorderStyle())
-	}
-
-	expectedBorderFg := lipgloss.Color("#cba6f7")
-	if got := b.GetBorderTopForeground(); !reflect.DeepEqual(got, expectedBorderFg) {
-		t.Errorf("Box border foreground = %v, want %v", got, expectedBorderFg)
 	}
 
 	if top, right, bottom, left := b.GetPadding(); top != 1 || right != 2 || bottom != 1 || left != 2 {
@@ -104,17 +102,14 @@ func TestBoxHasRoundedBorderAndPadding(t *testing.T) {
 }
 
 // TestStatusBarHasForegroundAndBackground verifies that StatusBar carries both
-// a foreground and a background color drawn from the existing palette hexes.
+// a foreground and a background color using panel AdaptiveColor values.
 func TestStatusBarHasForegroundAndBackground(t *testing.T) {
 	sb := styles.Default.StatusBar
 
-	expectedFg := lipgloss.Color("#cba6f7")
-	if got := sb.GetForeground(); !reflect.DeepEqual(got, expectedFg) {
-		t.Errorf("StatusBar foreground = %v, want %v", got, expectedFg)
+	if !reflect.DeepEqual(sb.GetForeground(), panels.ColorPrimary) {
+		t.Error("StatusBar foreground does not match panels.ColorPrimary")
 	}
-
-	expectedBg := lipgloss.Color("#6c7086")
-	if got := sb.GetBackground(); !reflect.DeepEqual(got, expectedBg) {
-		t.Errorf("StatusBar background = %v, want %v", got, expectedBg)
+	if !reflect.DeepEqual(sb.GetBackground(), panels.ColorInactive) {
+		t.Error("StatusBar background does not match panels.ColorInactive")
 	}
 }

@@ -9,7 +9,7 @@ import (
 // helper joins title, body, and footer and wraps the result in a rounded
 // border (proving Box + StatusBar + JoinVertical composition).
 func TestFrameComposesTitleBodyFooterWithBorder(t *testing.T) {
-	got := frame("T", "B", "F")
+	got := frame("T", "B", "F", true)
 
 	for _, want := range []string{"T", "B", "F"} {
 		if !strings.Contains(got, want) {

@@ -65,6 +65,7 @@ func TestView_MainMenuShowsUpdateBanner(t *testing.T) {
 func TestView_AssistantListShowsBothNames(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)
+	m = updateKey(t, m, tea.KeyDown)    // cursor → 1 (Install)
 	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList
 	view := m2.View()
 	for _, d := range installer.Descriptors {
@@ -77,7 +78,8 @@ func TestView_AssistantListShowsBothNames(t *testing.T) {
 func TestView_AssistantListSelectedItemHasCursor(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)
-	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList; cursor=0
+	m = updateKey(t, m, tea.KeyDown)    // cursor → 1 (Install)
+	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList
 	view := m2.View()
 	if !strings.Contains(view, "►") {
 		t.Errorf("assistant list missing cursor ►, view:\n%s", view)
@@ -116,6 +118,7 @@ func stateView(t *testing.T, target string) string {
 		return m.View()
 	}
 
+	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Install)
 	m = updateKey(t, m, tea.KeyEnter) // MainMenu → AssistantList
 	if target == "AssistantList" {
 		return m.View()
@@ -162,6 +165,16 @@ func TestView_AllStatesHaveBorder(t *testing.T) {
 		})
 	}
 
+	t.Run("Dashboard", func(t *testing.T) {
+		m := setup.New(fstest.MapFS{}, "dev")
+		m = sendEngramFound(t, m)
+		m = updateKey(t, m, tea.KeyEnter) // cursor 0 → StateDashboard
+		view := m.View()
+		if !strings.ContainsAny(view, "╭╮╰╯│") {
+			t.Errorf("Dashboard view missing rounded-border runes, got:\n%s", view)
+		}
+	})
+
 	t.Run("Done", func(t *testing.T) {
 		successResult := installer.InstallResult{AssistantID: installer.AssistantClaudeCode, Err: nil}
 		m := setup.New(fstest.MapFS{}, "dev")
@@ -183,12 +196,12 @@ func TestView_FooterRendersHintText(t *testing.T) {
 		state string
 		hint  string
 	}{
-		{"EngramMissing", "quit"},
-		{"MainMenu", "quit"},
-		{"AssistantList", "continue"},
-		{"SelectAssistants", "toggle"},
-		{"SelectProvider", "install"},
-		{"Installing", "quit"},
+		{"EngramMissing", "q"},
+		{"MainMenu", "↑↓"},
+		{"AssistantList", "enter"},
+		{"SelectAssistants", "space"},
+		{"SelectProvider", "esc"},
+		{"Installing", "q"},
 	}
 
 	for _, tc := range cases {
@@ -200,14 +213,34 @@ func TestView_FooterRendersHintText(t *testing.T) {
 		})
 	}
 
+	t.Run("Dashboard", func(t *testing.T) {
+		m := setup.New(fstest.MapFS{}, "dev")
+		m = sendEngramFound(t, m)
+		m = updateKey(t, m, tea.KeyEnter) // cursor 0 → StateDashboard
+		view := m.View()
+		if !strings.Contains(view, "esc") {
+			t.Errorf("Dashboard view missing footer hint %q, got:\n%s", "esc", view)
+		}
+	})
+
 	t.Run("Done", func(t *testing.T) {
 		successResult := installer.InstallResult{AssistantID: installer.AssistantClaudeCode, Err: nil}
 		m := setup.New(fstest.MapFS{}, "dev")
 		next, _ := m.Update(setup.InstallDoneMsg{Results: []installer.InstallResult{successResult}})
 		m2 := next.(setup.Model)
 		view := m2.View()
-		if !strings.Contains(view, "back to menu") {
-			t.Errorf("Done view missing footer hint %q, got:\n%s", "back to menu", view)
+		if !strings.Contains(view, "enter/esc") {
+			t.Errorf("Done view missing footer hint %q, got:\n%s", "enter/esc", view)
 		}
 	})
+}
+
+func TestView_DashboardShowsComingSoon(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = sendEngramFound(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // cursor 0 → StateDashboard
+	view := m.View()
+	if !strings.Contains(view, "Coming Soon") {
+		t.Errorf("Dashboard view missing 'Coming Soon', got:\n%s", view)
+	}
 }

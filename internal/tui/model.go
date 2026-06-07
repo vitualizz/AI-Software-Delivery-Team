@@ -9,17 +9,27 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
+type layoutMode int
+
+const (
+	modeHorizontal layoutMode = iota // ≥80 cols — side by side
+	modeVertical                     // 50-79 cols — stacked
+	modeCompact                      // <50 cols — compact stacked
+)
+
 // Model is the root Bubbletea model. It holds layout state and delegates
 // message processing to its child panels. It never contains agent logic.
 type Model struct {
 	deps        Dependencies
 	specialists panels.SpecialistsPanel
 	artifacts   panels.ArtifactPanel
+	statusBar   panels.StatusBar
 	width       int
 	height      int
 	err         error
 	ready       bool
 	focused     int // 0 = specialists, 1 = artifacts
+	mode        layoutMode
 }
 
 // New constructs a root Model with the given dependencies.
@@ -28,6 +38,7 @@ func New(deps Dependencies) Model {
 		deps:        deps,
 		specialists: panels.NewSpecialistsPanel(),
 		artifacts:   panels.NewArtifactPanel(),
+		statusBar:   panels.NewStatusBar(),
 	}
 }
 
@@ -64,14 +75,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ready = true
-		specialistsWidth := msg.Width * 30 / 100
-		artifactWidth := msg.Width - specialistsWidth
-		panelHeight := msg.Height - 2 // reserve 2 lines for status bar
 
-		var specCmd, artCmd tea.Cmd
-		m.specialists, specCmd = m.specialists.UpdateSize(specialistsWidth, panelHeight)
-		m.artifacts, artCmd = m.artifacts.UpdateSize(artifactWidth, panelHeight)
-		return m, tea.Batch(specCmd, artCmd)
+		switch {
+		case m.width >= 120:
+			m.mode = modeHorizontal
+		case m.width >= 50:
+			m.mode = modeVertical
+		default:
+			m.mode = modeCompact
+		}
+
+		panelHeight := m.height - 2 // reserve 2 lines for status bar
+
+		var specCmd, artCmd, sbCmd tea.Cmd
+		if m.mode == modeHorizontal {
+			specialistsWidth := m.width * 30 / 100
+			artifactWidth := m.width - specialistsWidth
+			m.specialists, specCmd = m.specialists.UpdateSize(specialistsWidth, panelHeight)
+			m.artifacts, artCmd = m.artifacts.UpdateSize(artifactWidth, panelHeight)
+		} else {
+			// vertical or compact — full width for each
+			artHeight := panelHeight / 2
+			specHeight := panelHeight - artHeight
+			m.specialists, specCmd = m.specialists.UpdateSize(m.width, specHeight)
+			m.artifacts, artCmd = m.artifacts.UpdateSize(m.width, artHeight)
+		}
+		m.statusBar, sbCmd = m.statusBar.UpdateSize(m.width, 1)
+		return m, tea.Batch(specCmd, artCmd, sbCmd)
 
 	case SpecialistsLoadedMsg:
 		m.specialists.SetState(msg.State)
@@ -130,35 +160,54 @@ func (m Model) View() string {
 		return "Initializing..."
 	}
 
-	specialistsWidth := m.width * 30 / 100
-	artifactWidth := m.width - specialistsWidth
+	var body string
 
-	specialistsStyle := lipgloss.NewStyle().Width(specialistsWidth)
-	artifactStyle := lipgloss.NewStyle().Width(artifactWidth)
+	focusedStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(panels.ColorPrimary)
+	unfocusedStyle := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(panels.ColorInactive)
 
-	if m.focused == 0 {
-		specialistsStyle = specialistsStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("6"))
-		artifactStyle = artifactStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("8"))
-	} else {
-		specialistsStyle = specialistsStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("8"))
-		artifactStyle = artifactStyle.BorderStyle(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("6"))
+	switch m.mode {
+	case modeHorizontal:
+		specialistsWidth := m.width * 30 / 100
+		artifactWidth := m.width - specialistsWidth
+
+		specStyle := focusedStyle.Width(specialistsWidth)
+		artStyle := unfocusedStyle.Width(artifactWidth)
+		if m.focused == 1 {
+			specStyle, artStyle = artStyle, specStyle
+		}
+
+		left := specStyle.Render(m.specialists.View())
+		right := artStyle.Render(m.artifacts.View())
+		body = lipgloss.JoinHorizontal(lipgloss.Top, left, right)
+
+	case modeVertical:
+		artHeight := m.height / 2
+		specHeight := m.height - artHeight
+
+		specStyle := focusedStyle.Width(m.width)
+		artStyle := unfocusedStyle.Width(m.width)
+		if m.focused == 1 {
+			specStyle, artStyle = artStyle, specStyle
+		}
+
+		top := specStyle.Height(specHeight).Render(m.specialists.View())
+		bottom := artStyle.Height(artHeight).Render(m.artifacts.View())
+		body = lipgloss.JoinVertical(lipgloss.Top, top, bottom)
+
+	default: // modeCompact
+		specStyle := focusedStyle.Width(m.width)
+		if m.focused != 0 {
+			specStyle = unfocusedStyle.Width(m.width)
+		}
+		body = specStyle.Render(m.specialists.View())
 	}
-
-	left := specialistsStyle.Render(m.specialists.View())
-	right := artifactStyle.Render(m.artifacts.View())
-
-	body := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
 
 	change := m.deps.Config.ActiveChange
 	if change == "" {
 		change = "default"
 	}
-	selectedSpec := m.specialists.SelectedSpecialist()
-	statusBar := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("15")).
-		Background(lipgloss.Color("237")).
-		Width(m.width).
-		Render(fmt.Sprintf(" change: %s  specialist: %s  [tab] switch panel  [q] quit", change, selectedSpec))
+	m.statusBar.SetChange(change)
+	m.statusBar.SetSpecialist(m.specialists.SelectedSpecialist())
 
-	return lipgloss.JoinVertical(lipgloss.Left, body, statusBar)
+	return lipgloss.JoinVertical(lipgloss.Left, body, m.statusBar.View())
 }

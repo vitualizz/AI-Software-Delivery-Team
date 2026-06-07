@@ -76,7 +76,7 @@ func TestModelCtrlCQuits(t *testing.T) {
 // TestModelHorizontalLayout verifies that at >=80 width both panels render
 // side by side with horizontal layout.
 func TestModelHorizontalLayout(t *testing.T) {
-	m := tui.New(tui.Dependencies{})
+	var m tea.Model = tui.New(tui.Dependencies{})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	view := m.View()
 
@@ -94,7 +94,7 @@ func TestModelHorizontalLayout(t *testing.T) {
 // TestModelVerticalLayout verifies that at 50-79 width both panels render
 // stacked top-to-bottom.
 func TestModelVerticalLayout(t *testing.T) {
-	m := tui.New(tui.Dependencies{})
+	var m tea.Model = tui.New(tui.Dependencies{})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 70, Height: 40})
 	view := m.View()
 
@@ -112,7 +112,7 @@ func TestModelVerticalLayout(t *testing.T) {
 // TestModelCompactLayout verifies that at <50 width the model renders
 // without crashing.
 func TestModelCompactLayout(t *testing.T) {
-	m := tui.New(tui.Dependencies{})
+	var m tea.Model = tui.New(tui.Dependencies{})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 40, Height: 40})
 	view := m.View()
 
@@ -124,10 +124,10 @@ func TestModelCompactLayout(t *testing.T) {
 // TestModelTabTogglesFocus verifies that pressing Tab toggles the focused
 // panel without triggering a quit.
 func TestModelTabTogglesFocus(t *testing.T) {
-	m := tui.New(tui.Dependencies{})
+	var m tea.Model = tui.New(tui.Dependencies{})
 	m, _ = m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 
-	m, cmd := m.Update(tea.KeyMsg{Type: tea.KeyTab})
+	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyTab})
 	if cmd != nil {
 		t.Errorf("expected nil command on tab toggle, got %T", cmd)
 	}

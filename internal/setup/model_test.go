@@ -67,6 +67,7 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	// Navigate to StateSelectAssistants.
 	m = sendEngramFound(t, m)         // → StateMainMenu
+	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Install)
 	m = updateKey(t, m, tea.KeyEnter) // → StateAssistantList
 	m = updateKey(t, m, tea.KeyEnter) // → StateSelectAssistants
 
@@ -89,12 +90,44 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 func TestUpdate_EnterOnInstallTransitionsToAssistantList(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m) // → StateMainMenu
-	// Cursor starts at 0 = "Install / Update Skills".
+	// Cursor starts at 0 = "Dashboard". Move down to cursor 1 = "Install / Update Skills".
+	m = updateKey(t, m, tea.KeyDown)
 	msg := tea.KeyMsg{Type: tea.KeyEnter}
 	next, _ := m.Update(msg)
 	m2 := next.(setup.Model)
 	if m2.State() != setup.StateAssistantList {
-		t.Errorf("after Enter at MainMenu: state = %v, want StateAssistantList", m2.State())
+		t.Errorf("after Enter at cursor 1 (Install): state = %v, want StateAssistantList", m2.State())
+	}
+}
+
+func TestUpdate_EnterOnDashboardTransitionsToDashboard(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = sendEngramFound(t, m) // → StateMainMenu, cursor=0
+	// Cursor at 0 = "Dashboard".
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	m2 := next.(setup.Model)
+	if m2.State() != setup.StateDashboard {
+		t.Errorf("after Enter at cursor 0 (Dashboard): state = %v, want StateDashboard", m2.State())
+	}
+}
+
+func TestUpdate_EscFromDashboardReturnsToMenu(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = sendEngramFound(t, m)         // → StateMainMenu
+	m = updateKey(t, m, tea.KeyEnter) // → StateDashboard
+	m2 := updateKey(t, m, tea.KeyEsc) // Esc → back
+	if m2.State() != setup.StateMainMenu {
+		t.Errorf("Esc from Dashboard: state = %v, want StateMainMenu", m2.State())
+	}
+}
+
+func TestUpdate_DashboardShowsComingSoon(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = sendEngramFound(t, m)         // → StateMainMenu
+	m = updateKey(t, m, tea.KeyEnter) // → StateDashboard
+	view := m.View()
+	if !strings.Contains(view, "Coming Soon") {
+		t.Errorf("Dashboard view missing 'Coming Soon', got:\n%s", view)
 	}
 }
 
@@ -102,6 +135,7 @@ func TestUpdate_ESCAtSelectAssistantsGoesBack(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m) // → StateMainMenu
 	// Navigate: MainMenu → AssistantList → SelectAssistants.
+	m = updateKey(t, m, tea.KeyDown)     // cursor → 1 (Install)
 	m2 := updateKey(t, m, tea.KeyEnter)  // → AssistantList
 	m3 := updateKey(t, m2, tea.KeyEnter) // → SelectAssistants
 	if m3.State() != setup.StateSelectAssistants {
