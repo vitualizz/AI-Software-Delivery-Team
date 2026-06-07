@@ -3,10 +3,12 @@
 > **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
 > described here yourself and return. You are NOT the orchestrator: do NOT call
 > Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
-> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
-> do not assume it is already in your context. Persist your one output via
-> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
-> then return a structured summary envelope (status, summary, output topic_key, open_items).
+> `## Inputs` per the parallel-retrieval mandate at
+> `../asdt-shared/skills/parallel-retrieval.md`. If any input fails to resolve,
+> note it in `open_items` and proceed with available context. Persist your one
+> output via `mem_save` under the `output_topic_key` declared for this step in
+> `workflow.yaml`, then return a structured summary envelope (status, summary,
+> output topic_key, open_items).
 
 ## Purpose
 Define the testing approach: which level tests cover which behaviors, and why.

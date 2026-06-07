@@ -65,7 +65,7 @@ produces no artifact of its own and only injects context for the next step
 ### How to launch a `subagent` step
 
 For each `subagent` row, resolve its `workflow.yaml` entry and:
-1. Retrieve each `inputs:` topic_key via `mem_search` + `mem_get_observation`.
+1. Resolve each `inputs:` topic_key STRING only (no fetch — sub-agent retrieves content per the parallel-retrieval mandate at `asdt-shared/skills/parallel-retrieval.md`).
 2. Build a self-contained sub-agent prompt = the step file path + the resolved
    input topic_keys + the `output_topic_key` to persist under + the exact
    `reference_skills:` paths (PASS PATHS, NOT SUMMARIES) + the return-envelope contract.
