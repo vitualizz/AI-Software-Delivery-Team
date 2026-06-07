@@ -19,14 +19,22 @@ None — this is the setup step. Run this before any other ASDT specialist.
 ## Workflow
 
 ### Step 1 — Detect project stack
-Inspect the project root for stack markers:
+Run ONE command to check for stack marker files at the project root — do not eyeball a directory listing or infer from visible files. The result must be identical no matter which model or session runs it:
+
+```
+fd -d 1 -t f -H '^(go\.mod|package\.json|Cargo\.toml|pyproject\.toml|requirements\.txt|Gemfile)$' .
+```
+
+Map each match deterministically — no judgment calls:
 - `go.mod` → Go
 - `package.json` → Node.js
 - `Cargo.toml` → Rust
 - `pyproject.toml` or `requirements.txt` → Python
 - `Gemfile` → Ruby
 
-List the detected technologies.
+A project can match more than one stack (e.g. a Go backend with a Node frontend) — list every match the command returns, in the order it returns them. If nothing matches, record an empty stack — do not guess a stack from other files.
+
+List the detected technologies to the user.
 
 ### Step 2 — Ask configuration questions
 Ask the user:
