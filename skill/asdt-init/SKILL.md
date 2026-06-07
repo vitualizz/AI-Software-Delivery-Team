@@ -43,8 +43,16 @@ List the detected technologies to the user.
 - If they're present → Engram is installed and reachable. Tell the user so and continue.
 - If they're absent → tell the user Engram is required for ASDT's cross-session memory and is not reachable in this session, explain how to install/connect it, and STOP. Do not write `.asdt/config.yaml` with `provider: engram` when the provider isn't actually present — that would silently point every future specialist at a memory backend that doesn't exist.
 
-Once the provider is confirmed present, ask the user only this:
-1. What is the name of the first change you want to work on? (e.g. `add-user-auth`)
+Once the provider is confirmed present, infer a default change name from the current git branch — don't make the user retype something you can read yourself:
+
+```
+git branch --show-current
+```
+
+Strip a conventional prefix if present (`feat/`, `feature/`, `fix/`, `chore/`, `refactor/` — e.g. `feat/add-user-auth` → `add-user-auth`). If the branch is `main`, `master`, `develop`, has no prefix, or the command returns nothing (detached HEAD), there's no usable default.
+
+Ask the user only this — offering the inferred name as a default when you have one:
+1. What is the name of the first change you want to work on? (e.g. `add-user-auth`{— press enter to use `{inferred-name}` from your current branch, or type a different name, when a default was inferred})
 
 ### Step 3 — Write configuration files
 
