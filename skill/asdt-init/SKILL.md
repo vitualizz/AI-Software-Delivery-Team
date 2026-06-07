@@ -47,6 +47,11 @@ Once the provider is confirmed present, ask the user only this:
 1. What is the name of the first change you want to work on? (e.g. `add-user-auth`)
 
 ### Step 3 — Write configuration files
+
+**Check for an existing setup first — never overwrite silently.** Look for `.asdt/config.yaml`:
+- Absent → proceed to create the files below.
+- Present → read it and show the user its current `active_change`. Ask explicitly whether to keep it (skip writing `config.yaml`) or replace `active_change` with the new value from Step 2. Re-running init on an already-initialized project must never silently discard a change someone is mid-way through.
+
 Create `.asdt/config.yaml`:
 ```yaml
 active_change: {user-provided-change-name}
