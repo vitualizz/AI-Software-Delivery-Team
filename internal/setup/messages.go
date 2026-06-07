@@ -62,7 +62,7 @@ func UpdateCheckCmd(current string) tea.Cmd {
 		if err != nil {
 			return UpdateCheckMsg{Current: current, Err: err}
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusOK {
 			return UpdateCheckMsg{Current: current, Err: fmt.Errorf("github status %d", resp.StatusCode)}
 		}
