@@ -38,8 +38,8 @@ Any step that produces a **final decision artifact**:
    ```yaml
    summary: "Chose JWT over sessions for stateless auth — enables horizontal scaling"
    ```
-   The runner reads `payload["summary"]` and calls `memory.Save` automatically at
-   run end. **You do not call Save yourself.**
+   You MUST call `mem_save` yourself with this summary as the permanent record —
+   there is no runner; persistence is your responsibility.
 
 ## Context Budget
 
@@ -54,5 +54,5 @@ Your final artifact payload MUST include:
 summary: string  # ≤150 tokens — the decision in one sentence
 ```
 
-The runner lifts this into a permanent `memory.Entry` of type `architecture` or
-`decision` so future specialists can query it via `knowledge-recall`.
+Your `mem_save` call persists this as a permanent record (type `architecture` or
+`decision`) so future specialists can query it via `knowledge-recall`.

@@ -18,8 +18,8 @@ Any step that makes an architectural, UX, security, or quality **decision**:
 
 1. **Formulate a query** from the step's topic — use 3-5 words from the change
    name and specialist role (e.g. `"auth session strategy"`, `"ux payment flow"`).
-2. The runner performs `memory.Search(query)` and injects results as an
-   `## Organizational Context` block in your prompt before this step executes.
+2. Call `mem_search(query)` yourself and treat the top results as the Organizational
+   Context for this step.
 3. **If Organizational Context is present**:
    - Treat prior decisions as defaults — deviate only with explicit rationale.
    - If your current direction **conflicts** with a prior decision, surface it
@@ -31,7 +31,7 @@ Any step that makes an architectural, UX, security, or quality **decision**:
 
 Organizational Context block: **max 300 tokens** (top 3 records only).
 
-The runner enforces this limit. You do not need to truncate the injected context.
+Keep the injected context within this budget yourself.
 
 ## Output
 

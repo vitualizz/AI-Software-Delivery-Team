@@ -3,35 +3,84 @@ steps:
   - name: knowledge-recall
     skill: ../_shared/skills/knowledge-recall.md
     description: Query organizational memory for prior decisions relevant to this change before acting
+    execution: inline
 
   - name: explore
     skill: steps/explore.md
     description: Explore the request and platform context to produce a development exploration artifact
+    execution: subagent
+    inputs: []
+    output_topic_key: "{project}/{change}/developer/dev-exploration"
+    reference_skills:
+      - ../_shared/skills/platform-context.md
+      - ../_shared/skills/artifact-loading.md
 
   - name: spec
     skill: steps/spec.md
     description: Transform the exploration into a structured development specification
+    execution: subagent
+    inputs:
+      - "{project}/{change}/developer/dev-exploration"
+    output_topic_key: "{project}/{change}/developer/dev-spec"
+    reference_skills:
+      - ../_shared/skills/scope-definition.md
 
   - name: design
     skill: steps/design.md
     description: Produce a technical design from the spec (data model, API surface, component boundaries)
+    execution: subagent
+    inputs:
+      - "{project}/{change}/developer/dev-spec"
+    output_topic_key: "{project}/{change}/developer/dev-design"
+    reference_skills: []
 
   - name: tasks
     skill: steps/tasks.md
     description: Break the design into an ordered task list with dependency graph
+    execution: subagent
+    inputs:
+      - "{project}/{change}/developer/dev-spec"
+      - "{project}/{change}/developer/dev-design"
+    output_topic_key: "{project}/{change}/developer/dev-tasks"
+    reference_skills: []
 
   - name: implement
     skill: steps/implement.md
     description: Generate the concrete implementation from the task list and design
+    execution: subagent
+    inputs:
+      - "{project}/{change}/developer/dev-tasks"
+      - "{project}/{change}/developer/dev-design"
+    output_topic_key: "{project}/{change}/developer/dev-implementation"
+    reference_skills:
+      - skills/code-generation.md
+      - ../_shared/skills/platform-context.md
 
   - name: test
     skill: steps/test.md
     description: Write tests covering the implementation tasks and edge cases
+    execution: subagent
+    inputs:
+      - "{project}/{change}/developer/dev-tasks"
+      - "{project}/{change}/developer/dev-implementation"
+    output_topic_key: "{project}/{change}/developer/dev-tests"
+    reference_skills:
+      - skills/test-generation.md
+      - ../_shared/skills/platform-context.md
 
   - name: review
     skill: steps/review.md
     description: Review implementation and tests; produce the consolidated implementation-plan artifact
+    execution: subagent
+    inputs:
+      - "{project}/{change}/developer/dev-implementation"
+      - "{project}/{change}/developer/dev-tests"
+    output_topic_key: "{project}/{change}/developer/implementation-plan"
+    reference_skills:
+      - ../_shared/skills/review.md
+      - ../_shared/skills/context-extraction.md
 
   - name: decision-preservation
     skill: ../_shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of decisions made during this run
+    execution: inline

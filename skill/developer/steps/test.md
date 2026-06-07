@@ -1,11 +1,21 @@
 # Test — Developer Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Generate tests for the implementation, covering happy paths and key edge cases.
 
 ## Inputs
 - `developer/dev-tasks`: task list with acceptance criteria references
 - `developer/dev-implementation`: code snippets per task
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Extract from dev-tasks: `tasks[].ac_ref`, `tasks[].id`.
 Extract from dev-implementation: `steps[].code_snippets[].content` (signatures only, not full bodies).
@@ -24,6 +34,8 @@ Do NOT test implementation internals — test behavior.
 
 ## Output
 Produces: `developer/dev-tests`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml
