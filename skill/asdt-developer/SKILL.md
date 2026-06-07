@@ -1,6 +1,6 @@
 ---
 name: asdt:developer
-description: "Trigger: developer, implement, code, build, create feature, write code, generate implementation"
+description: "Turns specs and designs into working code — implementation plans, production code, and test suites — the specialist to bring in once the shape of the solution is settled and it's time to build it."
 user-invocable: true
 specialist-id: developer
 shared-skills:
@@ -8,6 +8,9 @@ shared-skills:
   - artifact-envelope
   - scope-definition
   - artifact-loading
+metadata:
+  author: "Lee Palacios (vitualizz)"
+  version: "1.0"
 ---
 
 # Developer Specialist

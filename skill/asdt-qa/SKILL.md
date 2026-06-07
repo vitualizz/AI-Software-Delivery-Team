@@ -1,6 +1,6 @@
 ---
 name: asdt:qa
-description: "Trigger: qa, quality, test, testing, acceptance criteria, edge cases, test plan, coverage, regression, validation"
+description: "Builds the safety net before code ships — test plans, acceptance criteria validation, edge case analysis, and quality reports — the specialist to bring in when 'it works on my machine' isn't good enough."
 user-invocable: true
 specialist-id: qa
 shared-skills:
@@ -9,6 +9,9 @@ shared-skills:
   - artifact-loading
   - context-extraction
   - report
+metadata:
+  author: "Lee Palacios (vitualizz)"
+  version: "1.0"
 ---
 
 # QA Specialist

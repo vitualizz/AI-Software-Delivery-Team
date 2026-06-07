@@ -1,8 +1,11 @@
 ---
 name: asdt:init
-description: "Trigger: asdt init, initialize project, setup asdt, configure asdt"
+description: "Sets up the ground ASDT stands on — initializes .asdt/config.yaml and wires the memory provider so every other specialist has somewhere to read from and write to."
 user-invocable: true
 specialist-id: asdt-init
+metadata:
+  author: "Lee Palacios (vitualizz)"
+  version: "1.0"
 ---
 
 # ASDT Init

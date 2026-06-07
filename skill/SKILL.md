@@ -1,7 +1,10 @@
 ---
 name: asdt
-description: "ASDT — AI Software Delivery Team meta-orchestrator. Use to coordinate the whole delivery team or to route a request across multiple specialists when you are unsure which one to pick. Trigger: asdt, delivery team, route the team, coordinate specialists, full team"
+description: "Analyzes a feature request and recommends which specialists should work on it and in what order — the one to ask when you're not sure which specialist(s) the work actually needs."
 user-invocable: true
+metadata:
+  author: "Lee Palacios (vitualizz)"
+  version: "1.0"
 ---
 
 # ASDT — AI Software Delivery Team Meta-Orchestrator

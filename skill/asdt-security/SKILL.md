@@ -1,6 +1,6 @@
 ---
 name: asdt:security
-description: "Trigger: security, vulnerability, threat, attack, owasp, penetration, auth, authorization, injection, xss, csrf, hardening"
+description: "Hunts for the gaps an attacker would find first — threat models, OWASP reviews, hardening checklists — the specialist to bring in whenever auth, data handling, or external integrations are on the table, at any point in the pipeline."
 user-invocable: true
 specialist-id: security
 shared-skills:
@@ -10,6 +10,9 @@ shared-skills:
   - artifact-loading
   - context-extraction
   - report
+metadata:
+  author: "Lee Palacios (vitualizz)"
+  version: "1.0"
 ---
 
 # Security Specialist

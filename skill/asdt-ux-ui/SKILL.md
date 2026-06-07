@@ -1,6 +1,6 @@
 ---
 name: asdt:ux-ui
-description: "Trigger: ux, ui, design, interface, wireframe, user experience, component, layout, responsive, accessibility, user flow"
+description: "Shapes how people actually experience the product — user flows, information architecture, component specs, responsive and accessibility strategy — the specialist to bring in before a single screen gets built."
 user-invocable: true
 specialist-id: ux-ui
 shared-skills:
@@ -9,6 +9,9 @@ shared-skills:
   - platform-analysis
   - context-extraction
   - report
+metadata:
+  author: "Lee Palacios (vitualizz)"
+  version: "1.0"
 ---
 
 # UX/UI Specialist

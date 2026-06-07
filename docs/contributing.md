@@ -23,13 +23,16 @@ skill/{name}/
 ```markdown
 ---
 name: asdt:{name}
-description: "Trigger: ..."
+description: "One sentence: what this specialist produces and when to reach for it."
 user-invocable: true
 specialist-id: {name}
 shared-skills:
   - platform-context
   - artifact-envelope
   - scope-definition
+metadata:
+  author: "Your Name (handle)"
+  version: "1.0"
 ---
 
 # {Name} Specialist
@@ -51,6 +54,8 @@ shared-skills:
 ## Output Contract
 ...
 ```
+
+`metadata` (`author` + `version`) is a required frontmatter field — every `SKILL.md` must carry it.
 
 ### 3. Write workflow.yaml
 

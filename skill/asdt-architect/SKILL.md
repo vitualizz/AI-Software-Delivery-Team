@@ -1,6 +1,6 @@
 ---
 name: asdt:architect
-description: "Trigger: architect, architecture, system design, api design, database, scalability, technical decision, adr, data model, service boundaries"
+description: "Makes architecture decisions and produces ADRs, system design, and API design artifacts — the specialist to bring in when a choice will shape service boundaries, data models, or scalability for the long haul."
 user-invocable: true
 specialist-id: architect
 shared-skills:
@@ -10,6 +10,9 @@ shared-skills:
   - scope-definition
   - context-extraction
   - report
+metadata:
+  author: "Lee Palacios (vitualizz)"
+  version: "1.0"
 ---
 
 # Architect Specialist
