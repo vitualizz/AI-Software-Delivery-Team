@@ -36,10 +36,15 @@ A project can match more than one stack (e.g. a Go backend with a Node frontend)
 
 List the detected technologies to the user.
 
-### Step 2 — Ask configuration questions
-Ask the user:
+### Step 2 — Detect the memory provider, then ask for the change name
+
+**Detect Engram yourself — do not ask the user to confirm something you can observe directly.** Check your own current tool list for Engram's memory tools (`mem_save`, `mem_search`, `mem_context`, etc. — Claude Code exposes them prefixed as `mcp__plugin_engram_engram__mem_*`; other host assistants may expose the same tools under a different prefix or none).
+
+- If they're present → Engram is installed and reachable. Tell the user so and continue.
+- If they're absent → tell the user Engram is required for ASDT's cross-session memory and is not reachable in this session, explain how to install/connect it, and STOP. Do not write `.asdt/config.yaml` with `provider: engram` when the provider isn't actually present — that would silently point every future specialist at a memory backend that doesn't exist.
+
+Once the provider is confirmed present, ask the user only this:
 1. What is the name of the first change you want to work on? (e.g. `add-user-auth`)
-2. Confirm memory provider: ASDT uses Engram for cross-session memory. Is Engram installed and running?
 
 ### Step 3 — Write configuration files
 Create `.asdt/config.yaml`:
