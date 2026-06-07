@@ -1,11 +1,3 @@
-// Package installer provides types and logic for installing ASDT skills into AI assistants.
-//
-// adapters.go implements the CommandAdapter abstraction: a per-assistant,
-// additive registry of generators that produce extra discoverability
-// artifacts (e.g. OpenCode command-palette wrappers) on top of the
-// shared skill-tree copy that installOne already performs. Assistants
-// absent from CommandAdapters get no extra artifacts — absence IS the
-// no-op (see CommandAdapters doc comment).
 package installer
 
 import (
@@ -16,30 +8,16 @@ import (
 	"strings"
 )
 
-// frontmatterDelimiter marks the start and end of a SKILL.md YAML
-// frontmatter block.
 const frontmatterDelimiter = "---"
 
-// specialistFrontmatter holds the flat scalar fields read from a
-// specialist's SKILL.md frontmatter block that the OpenCode wrapper
-// needs to render itself. It is produced exclusively by
-// parseSpecialistFrontmatter — never constructed with partial data.
+// specialistFrontmatter holds the scalar fields read from a SKILL.md
+// frontmatter block needed to render an OpenCode command wrapper.
 type specialistFrontmatter struct {
-	// SpecialistID is the SKILL.md "specialist-id" value (e.g. "developer").
 	SpecialistID string
-	// Name is the SKILL.md "name" value (e.g. "asdt:developer").
-	Name string
-	// Description is the SKILL.md "description" value, verbatim, with
-	// surrounding double-quotes stripped if present (e.g. the specialist's
-	// own one-line picker description).
-	Description string
+	Name         string
+	Description  string
 }
 
-// parseSpecialistFrontmatter isolates the leading "---" ... "---" block of
-// skillMD and reads the flat scalar keys specialist-id, name, and
-// description. All three are required and must be non-empty; a missing or
-// empty field yields an error naming that field — the caller must never
-// proceed with a zero-value specialistFrontmatter.
 func parseSpecialistFrontmatter(skillMD string) (specialistFrontmatter, error) {
 	block, ok := extractFrontmatterBlock(skillMD)
 	if !ok {
@@ -67,9 +45,6 @@ func parseSpecialistFrontmatter(skillMD string) (specialistFrontmatter, error) {
 	return fm, nil
 }
 
-// extractFrontmatterBlock returns the lines strictly between the first two
-// "---" delimiter lines, joined by newlines. ok is false when skillMD does
-// not open with a "---" delimiter line or never closes one.
 func extractFrontmatterBlock(skillMD string) (block string, ok bool) {
 	lines := strings.Split(skillMD, "\n")
 
@@ -80,7 +55,6 @@ func extractFrontmatterBlock(skillMD string) (block string, ok bool) {
 			break
 		}
 		if strings.TrimSpace(line) != "" {
-			// Frontmatter must be the very first non-blank content.
 			return "", false
 		}
 	}
@@ -97,10 +71,6 @@ func extractFrontmatterBlock(skillMD string) (block string, ok bool) {
 	return "", false
 }
 
-// scanFrontmatterFields reads top-level "key: value" scalar lines from a
-// frontmatter block into a map. Nested/list values (lines indented further
-// than the key) are ignored — only flat scalars at column 0 are recognized,
-// which is exactly what specialist-id/name/description are.
 func scanFrontmatterFields(block string) map[string]string {
 	fields := make(map[string]string)
 
@@ -120,10 +90,6 @@ func scanFrontmatterFields(block string) map[string]string {
 	return fields
 }
 
-// unquoteScalar strips a single pair of surrounding double-quotes from a
-// YAML scalar value, leaving the inner text (including embedded
-// punctuation such as em-dashes and apostrophes) untouched. Values that
-// are not quoted are returned as-is.
 func unquoteScalar(value string) string {
 	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
 		return value[1 : len(value)-1]
@@ -131,12 +97,6 @@ func unquoteScalar(value string) string {
 	return value
 }
 
-// renderOpenCodeWrapper renders the full content of an OpenCode
-// command-palette wrapper for the given specialist frontmatter. It is a
-// PURE function — the same fm always renders to the byte-identical
-// string — which is the sole idempotency primitive for the generated
-// wrapper files (AC#3). It must never read the clock, the environment,
-// or any non-deterministic source.
 func renderOpenCodeWrapper(fm specialistFrontmatter) string {
 	var b strings.Builder
 
@@ -156,10 +116,6 @@ func renderOpenCodeWrapper(fm specialistFrontmatter) string {
 	return b.String()
 }
 
-// openCodeCommandRoot returns OpenCode's command-palette directory: a
-// sibling of its skills directory. CONFIRMED against a live OpenCode
-// install (only "commands", plural, exists under ~/.config/opencode/) —
-// this is the verified contract, not a placeholder.
 func openCodeCommandRoot() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return xdg + "/opencode/commands"
@@ -168,23 +124,13 @@ func openCodeCommandRoot() string {
 	return home + "/.config/opencode/commands"
 }
 
-// CommandAdapterDescriptor describes how to generate extra
-// discoverability artifacts (beyond the shared skill-tree copy) for one
-// assistant. Generate must be non-nil — exactly like
-// ProviderDescriptor.CustomizeSkill.
+// CommandAdapterDescriptor describes how to generate extra discoverability
+// artifacts for one assistant, on top of the shared skill-tree copy.
 type CommandAdapterDescriptor struct {
 	AssistantID AssistantID
-	// Generate produces discoverability artifacts for every specialist
-	// found in skillsFS, writes them under commandRoot, and returns the
-	// absolute paths written. A non-nil error indicates a PARTIAL failure
-	// (e.g. one specialist's malformed frontmatter) — callers must still
-	// use any returned paths rather than discard them.
-	Generate func(skillsFS fs.FS, commandRoot string) ([]string, error)
+	Generate    func(skillsFS fs.FS, commandRoot string) ([]string, error)
 }
 
-// adapterFor performs a generic linear lookup of id in CommandAdapters.
-// It returns (zero value, false) when id is absent — which is how
-// Claude Code (intentionally not registered) yields no extra artifacts.
 func adapterFor(id AssistantID) (CommandAdapterDescriptor, bool) {
 	for _, adapter := range CommandAdapters {
 		if adapter.AssistantID == id {
@@ -194,23 +140,6 @@ func adapterFor(id AssistantID) (CommandAdapterDescriptor, bool) {
 	return CommandAdapterDescriptor{}, false
 }
 
-// generateOpenCodeCommands walks the top-level entries of skillsFS,
-// and for every directory containing a SKILL.md, parses its frontmatter,
-// renders a deterministic OpenCode command-palette wrapper, and writes
-// it to {commandRoot}/{dirName}.md, where dirName is the specialist's
-// own sibling install directory name (e.g. "asdt-developer",
-// "asdt-init") — the correct on-disk address even for the one
-// specialist (asdt-init) whose specialist-id is already prefixed.
-//
-// Partial success (AC#5): a malformed specialist's frontmatter error is
-// recorded but does NOT abort the loop — every well-formed specialist
-// still gets its wrapper. The first error encountered is returned
-// alongside the paths successfully written so far.
-//
-// Idempotent (AC#3): the destination path is determined solely by
-// dirName and renderOpenCodeWrapper is pure, so re-running this
-// over the same skillsFS truncate-overwrites each wrapper with
-// byte-identical content — no stale or duplicate files within a run.
 func generateOpenCodeCommands(skillsFS fs.FS, commandRoot string) ([]string, error) {
 	entries, err := fs.ReadDir(skillsFS, ".")
 	if err != nil {
@@ -244,10 +173,6 @@ func generateOpenCodeCommands(skillsFS fs.FS, commandRoot string) ([]string, err
 	return written, firstErr
 }
 
-// generateOneOpenCodeCommand handles a single top-level specialist
-// directory. It returns ("", nil) — not an error — when the directory
-// has no SKILL.md, since not every top-level entry is a specialist
-// (e.g. asdt-shared has no command-worthy SKILL.md of its own).
 func generateOneOpenCodeCommand(skillsFS fs.FS, dirName, commandRoot string) (string, error) {
 	skillPath := dirName + "/SKILL.md"
 
@@ -264,13 +189,8 @@ func generateOneOpenCodeCommand(skillsFS fs.FS, dirName, commandRoot string) (st
 		return "", fmt.Errorf("parse frontmatter %s: %w", skillPath, parseErr)
 	}
 
-	// Name the wrapper after the specialist's own sibling install directory
-	// (dirName), NOT "asdt-"+specialist-id: most specialists' specialist-id
-	// is the bare role name ("developer" -> dirName "asdt-developer", and
-	// concatenation happens to agree), but asdt-init's specialist-id is
-	// itself "asdt-init" — concatenating would yield "asdt-asdt-init.md",
-	// a double-prefixed name that doesn't match the directory OpenCode
-	// users actually see on disk. dirName is always the correct address.
+	// dirName, not "asdt-"+fm.SpecialistID: asdt-init's specialist-id is
+	// itself "asdt-init", which would double-prefix to asdt-asdt-init.md.
 	target := filepath.Join(commandRoot, dirName+".md")
 	content := renderOpenCodeWrapper(fm)
 
@@ -281,19 +201,9 @@ func generateOneOpenCodeCommand(skillsFS fs.FS, dirName, commandRoot string) (st
 	return target, nil
 }
 
-// CommandAdapters lists the assistants that need EXTRA generated
-// discoverability artifacts beyond the shared skill-tree copy.
-//
-// Only assistants that need something extra are listed here — absence
-// IS the no-op. Claude Code is intentionally ABSENT: it discovers
-// specialists directly from the copied skill tree and needs no
-// generated command-palette wrappers, so adding a NullCommandAdapter
-// placeholder here would exist solely to do nothing, contradicting
-// this codebase's flat-registry idiom (see Providers, which likewise
-// carries no placeholder for "no provider").
-//
-// New assistant support = one new appended entry here, zero edits to
-// Install/installOne/copyEntry/writeSkillFile or any existing entry.
+// CommandAdapters lists assistants that need extra generated discoverability
+// artifacts beyond the shared skill-tree copy. Absence is the no-op — Claude
+// Code needs none, so it carries no entry here.
 var CommandAdapters = []CommandAdapterDescriptor{
 	{
 		AssistantID: AssistantOpenCode,

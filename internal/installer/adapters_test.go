@@ -8,13 +8,6 @@ import (
 	"testing/fstest"
 )
 
-// realisticSpecialistFS models the embedded skill/ tree shape used by the
-// real ASDT installer: top-level specialist directories with realistic
-// SKILL.md frontmatter (field order, quoting, and em-dashes copied from the
-// production asdt-developer/asdt-architect SKILL.md files), plus a
-// "asdt-shared" directory that — exactly like the real one — has no
-// command-worthy SKILL.md of its own and therefore must NOT produce a
-// wrapper.
 var realisticSpecialistFS = fstest.MapFS{
 	"asdt-developer/SKILL.md": &fstest.MapFile{Data: []byte(`---
 name: asdt:developer
@@ -49,11 +42,6 @@ metadata:
 	"asdt-shared/skills/x.md": &fstest.MapFile{Data: []byte("# Shared fragment")},
 }
 
-// malformedFrontmatterFS models a hand-edited skill tree where one
-// specialist (asdt-broken) is missing a required frontmatter field
-// (specialist-id) — the most realistic real-world failure mode — alongside
-// a well-formed sibling (asdt-developer) that must still get its wrapper
-// (AC#5 partial success).
 var malformedFrontmatterFS = fstest.MapFS{
 	"asdt-developer/SKILL.md": &fstest.MapFile{Data: []byte(`---
 name: asdt:developer
@@ -80,14 +68,6 @@ metadata:
 `)},
 }
 
-// prefixedSpecialistIDFS models the one real-world outlier: asdt-init's
-// specialist-id is itself "asdt-init" (already carrying the "asdt-"
-// prefix), unlike every other specialist whose specialist-id is a bare
-// role name (e.g. "developer"). A naive "asdt-" + specialist-id
-// derivation would double-prefix this into "asdt-asdt-init.md" — a
-// filename that doesn't match the sibling install directory users see
-// on disk. The wrapper filename must be derived from the directory name
-// instead, so this fixture's expected output is "asdt-init.md".
 var prefixedSpecialistIDFS = fstest.MapFS{
 	"asdt-init/SKILL.md": &fstest.MapFile{Data: []byte(`---
 name: asdt:init
@@ -103,8 +83,6 @@ metadata:
 `)},
 }
 
-// readWrapperContents reads each path in paths and returns its content
-// keyed by path, failing the test fatally on any read error.
 func readWrapperContents(t *testing.T, paths []string) map[string]string {
 	t.Helper()
 	contents := make(map[string]string, len(paths))
@@ -166,13 +144,6 @@ func TestGenerateOpenCodeCommands_ProducesCorrectlyDerivedWrappers(t *testing.T)
 	checkFileAbsent(t, filepath.Join(commandRoot, "asdt-shared.md"))
 }
 
-// TestGenerateOpenCodeCommands_DerivesFilenameFromDirNotSpecialistID is a
-// regression test for the asdt-init double-prefix bug found via live smoke
-// testing against the real embedded skill FS (synthetic fixtures alone
-// didn't catch it, since "developer"/"architect" both happen to satisfy
-// dirName == "asdt-" + specialist-id). asdt-init breaks that coincidence:
-// its specialist-id is "asdt-init", so "asdt-"+specialist-id would wrongly
-// yield "asdt-asdt-init.md" instead of the correct "asdt-init.md".
 func TestGenerateOpenCodeCommands_DerivesFilenameFromDirNotSpecialistID(t *testing.T) {
 	dir := t.TempDir()
 	commandRoot := filepath.Join(dir, "commands")
@@ -302,12 +273,6 @@ func TestInstallOne_ClaudeCodeUnaffectedByCommandAdapters(t *testing.T) {
 	}
 }
 
-// TestCommandRootFor exercises commandRootFor's per-assistant dispatch — the
-// one new switch T-008 introduces. AssistantOpenCode must resolve to a
-// non-empty path ending in ".../opencode/commands" (mirroring how
-// openCodeSkillsDir resolves to ".../opencode/skills"); any other assistant
-// (e.g. Claude Code, which has no CommandAdapter entry) must yield "" — the
-// defensive no-op default that keeps generateCommands a no-op for it.
 func TestCommandRootFor(t *testing.T) {
 	cases := []struct {
 		name           string
