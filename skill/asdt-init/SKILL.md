@@ -16,6 +16,20 @@ Initialize ASDT for the current project. Detect the project stack, collect confi
 ## Prerequisites
 None — this is the setup step. Run this before any other ASDT specialist.
 
+## Orchestration
+
+This is a light, mostly-mechanical flow — but it has one gate only the orchestrator can pass correctly, and everything downstream depends on it.
+
+**Resolve Engram presence yourself, first, before delegating anything** (Step 2's detection). "Does THIS session have Engram's memory tools" is a question about the orchestrator's own tool list — the one the user is actually relying on for every other specialist. A sub-agent has its own tool list (narrower for specialized agent types, full for `general-purpose`); asking it risks a false "absent" when Engram is actually present in the session that matters. It costs nothing to check yourself — you're inspecting your own tools, not running commands or reading files.
+
+- **Absent** → stop right here and tell the user, exactly as Step 2 describes. Nothing downstream can run without it — don't launch a sub-agent only to have it discover the same dead end.
+- **Present** → delegate the rest to ONE sub-agent, passing "Engram confirmed present" into its prompt as an established fact:
+  - Stack detection (Step 1)
+  - The idempotency check and file writes (Step 3)
+  - The confirmation message (Step 4)
+
+It returns a short summary of what it found and wrote — keeping the bash output, file reads, and intermediate reasoning out of your main context, which is the whole point of routing work through ASDT specialists in the first place.
+
 ## Workflow
 
 ### Step 1 — Detect project stack
