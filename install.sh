@@ -8,8 +8,8 @@ INSTALL_DIR="${HOME}/.local/bin"
 # ── helpers ────────────────────────────────────────────────────────────────────
 
 fatal()   { echo "  [error] $*" >&2; exit 1; }
-success() { echo "  [ok]    $*"; }
-info()    { echo "  [...]   $*"; }
+success() { echo "  [ok]    $*" >&2; }
+info()    { echo "  [...]   $*" >&2; }
 
 # ── platform detection ─────────────────────────────────────────────────────────
 
