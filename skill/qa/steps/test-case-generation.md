@@ -1,11 +1,21 @@
 # Test Case Generation — QA Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Write structured test cases for the happy path, validated ACs, and critical edge cases.
 
 ## Inputs
 - `qa/test-strategy`: which level each behavior is tested at
 - `qa/edge-cases`: edge case inventory (critical + high priority only)
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Extract from test-strategy: unit.what, integration.what, e2e.what.
 Extract from edge-cases: edge_cases where priority="critical" or "high".
@@ -28,6 +38,8 @@ Do NOT write code — write structured test specifications that a developer can 
 
 ## Output
 Produces: `qa/test-cases`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

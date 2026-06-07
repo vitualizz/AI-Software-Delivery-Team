@@ -28,18 +28,47 @@ You are ASDT's QA Specialist. You validate acceptance criteria, define test stra
 and produce test plans. You do NOT write implementation code, architecture decisions,
 or UX specs.
 
-## Pipeline
+## Orchestration Plan
 
-> **Before executing**: Read `workflow.yaml` in this directory. It is the canonical step order. The table below is a reference summary only.
+> **ORCHESTRATOR GATE**: This file is a PLAN, not an executable pipeline. The
+> calling assistant (Claude Code / OpenCode) is the SOLE orchestrator. For every
+> step marked `subagent` below you MUST launch a dedicated sub-agent via your
+> native delegation primitive (Agent/Task) — do NOT run subagent steps inline in
+> this thread. Steps marked `inline` run in your own context. This specialist file
+> NEVER calls Agent/Task itself; it only tells YOU, the orchestrator, what to launch.
 
-| Step | File | Reads | Writes |
-|------|------|-------|--------|
-| load-requirements | steps/load-requirements.md | upstream spec artifacts | `qa/ac-list` |
-| ac-validation | steps/ac-validation.md | `qa/ac-list` | `qa/ac-gaps` |
-| edge-case-analysis | steps/edge-case-analysis.md | `qa/ac-list` | `qa/edge-cases` |
-| test-strategy | steps/test-strategy.md | `qa/edge-cases` | `qa/test-strategy` |
-| test-case-generation | steps/test-case-generation.md | `qa/test-strategy`, `qa/edge-cases` | `qa/test-cases` |
-| quality-report | steps/quality-report.md | `qa/test-cases`, `qa/ac-gaps` | `test-plan` |
+> **Before driving**: read `workflow.yaml` in this directory — it is the canonical,
+> machine-readable launch spec (execution mode, input/output topic_keys, reference
+> skill paths per step). The table below is a human-readable summary.
+
+**Execution policy (the rule, not just the list)**: a step that produces its OWN
+persisted artifact (generative / decision-producing) is `subagent`; a step that
+produces no artifact of its own and only injects context for the next step
+(recall / wrapper) is `inline`. If steps change later, re-apply this rule.
+
+| Step | File | Execution | Reads | Writes |
+|------|------|-----------|-------|--------|
+| knowledge-recall | ../_shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
+| load-requirements | steps/load-requirements.md | subagent | upstream spec artifacts | `qa/ac-list` |
+| ac-validation | steps/ac-validation.md | subagent | `qa/ac-list` | `qa/ac-gaps` |
+| edge-case-analysis | steps/edge-case-analysis.md | subagent | `qa/ac-list` | `qa/edge-cases` |
+| test-strategy | steps/test-strategy.md | subagent | `qa/edge-cases` | `qa/test-strategy` |
+| test-case-generation | steps/test-case-generation.md | subagent | `qa/test-strategy`, `qa/edge-cases` | `qa/test-cases` |
+| quality-report | steps/quality-report.md | subagent | `qa/test-cases`, `qa/ac-gaps` | `test-plan` |
+| decision-preservation | ../_shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
+
+### How to launch a `subagent` step
+
+For each `subagent` row, resolve its `workflow.yaml` entry and:
+1. Retrieve each `inputs:` topic_key via `mem_search` + `mem_get_observation`.
+2. Build a self-contained sub-agent prompt = the step file path + the resolved
+   input topic_keys + the `output_topic_key` to persist under + the exact
+   `reference_skills:` paths (PASS PATHS, NOT SUMMARIES) + the return-envelope contract.
+3. Launch the sub-agent. Read its returned envelope. Decide proceed / retry / abort.
+4. Move to the next step. Never let a step sub-agent launch further sub-agents.
+
+`inline` steps (`knowledge-recall`, `decision-preservation`) fold into your own
+orchestrator context — no launch.
 
 ## Final Output
 `test-plan` — consumed by Developer specialist and used as QA sign-off artifact.
@@ -50,9 +79,17 @@ All artifacts produced by this specialist MUST be saved to the memory provider v
 
 For each artifact, call `mem_save` with:
 - `title`: `"{change-name}/qa/{artifact-type}"` (e.g. `"add-auth/qa/test-plan"`)
-- `topic_key`: `"{project}/{change}/qa"`
+- `topic_key`: `"{project}/{change}/qa/{artifact-type}"` (e.g. `"add-auth/qa/test-plan"`)
 - `type`: `"architecture"` for test strategy artifacts, `"decision"` for QA approach choices
 - `content`: structured content with `What`, `Why`, `Where`, and optionally `Learned`
+
+> **Breaking convention change**: this replaces the prior coarse
+> `"{project}/{change}/qa"` key (one key shared by every artifact this
+> specialist produces) with one `topic_key` per artifact type. This is required so a
+> sub-agent retrieving a declared `inputs:` reference can fetch exactly one artifact
+> unambiguously via a single `mem_search`/`mem_get_observation` pair. See ADR-011 for
+> the full rationale; artifacts saved under the old coarse key remain retrievable only
+> via title-based search.
 
 The `quality-report` step (final step) MUST include a `summary` field in its output payload (≤ 150 tokens). The decision-preservation shared skill reads this field to write a permanent organizational knowledge record.
 

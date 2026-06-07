@@ -3,31 +3,70 @@ steps:
   - name: knowledge-recall
     skill: ../_shared/skills/knowledge-recall.md
     description: Query organizational memory for prior QA decisions, known edge cases, and test strategies relevant to this change before acting
+    execution: inline
 
   - name: load-requirements
     skill: steps/load-requirements.md
     description: Load upstream spec artifacts and extract acceptance criteria into the ac-list artifact
+    execution: subagent
+    inputs: []
+    output_topic_key: "{project}/{change}/qa/ac-list"
+    reference_skills:
+      - ../_shared/skills/artifact-loading.md
 
   - name: ac-validation
     skill: steps/ac-validation.md
     description: Validate acceptance criteria for completeness and surface any gaps
+    execution: subagent
+    inputs:
+      - "{project}/{change}/qa/ac-list"
+    output_topic_key: "{project}/{change}/qa/ac-gaps"
+    reference_skills:
+      - skills/acceptance-criteria.md
 
   - name: edge-case-analysis
     skill: steps/edge-case-analysis.md
     description: Identify edge cases not covered by the acceptance criteria
+    execution: subagent
+    inputs:
+      - "{project}/{change}/qa/ac-list"
+    output_topic_key: "{project}/{change}/qa/edge-cases"
+    reference_skills:
+      - skills/edge-case-analysis.md
 
   - name: test-strategy
     skill: steps/test-strategy.md
     description: Define the test strategy (unit / integration / e2e split, coverage targets)
+    execution: subagent
+    inputs:
+      - "{project}/{change}/qa/edge-cases"
+    output_topic_key: "{project}/{change}/qa/test-strategy"
+    reference_skills:
+      - skills/test-strategy.md
 
   - name: test-case-generation
     skill: steps/test-case-generation.md
     description: Generate concrete test cases from the strategy and edge case analysis
+    execution: subagent
+    inputs:
+      - "{project}/{change}/qa/test-strategy"
+      - "{project}/{change}/qa/edge-cases"
+    output_topic_key: "{project}/{change}/qa/test-cases"
+    reference_skills: []
 
   - name: quality-report
     skill: steps/quality-report.md
     description: Consolidate test cases and AC gaps into the final test-plan artifact
+    execution: subagent
+    inputs:
+      - "{project}/{change}/qa/test-cases"
+      - "{project}/{change}/qa/ac-gaps"
+    output_topic_key: "{project}/{change}/qa/test-plan"
+    reference_skills:
+      - ../_shared/skills/context-extraction.md
+      - ../_shared/skills/report.md
 
   - name: decision-preservation
     skill: ../_shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of QA decisions made during this run
+    execution: inline

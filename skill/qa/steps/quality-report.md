@@ -1,5 +1,13 @@
 # Quality Report — QA Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Produce the final test-plan artifact. Apply the report shared skill to consolidate
 test cases and AC validation into a coherent quality document.
@@ -7,6 +15,8 @@ test cases and AC validation into a coherent quality document.
 ## Inputs
 - `qa/test-cases`: all test cases
 - `qa/ac-gaps`: AC validation results
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Apply context-extraction: from test-cases keep counts + critical cases only.
 From ac-gaps keep gap_count + open_items only.
@@ -24,7 +34,11 @@ Apply the `report` shared skill:
 6. Write a quality verdict: READY / READY WITH CAVEATS / BLOCKED.
 
 ## Output
-Produces: `test-plan` (final cross-specialist artifact)
+Produces: `test-plan` (final cross-specialist artifact — single artifact, unlike
+architect's dual-output `technical-handoff`; persist it once under this step's
+`output_topic_key`)
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

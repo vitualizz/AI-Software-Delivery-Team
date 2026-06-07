@@ -1,11 +1,21 @@
 # Edge Case Analysis — QA Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Systematically discover edge cases using structured techniques.
 Edge cases are not random — they can be derived methodically.
 
 ## Inputs
 - `qa/ac-list`: normalized acceptance criteria
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Extract: acceptance_criteria[].given/when/then (to derive boundaries).
 
@@ -40,6 +50,8 @@ Apply these edge case discovery techniques to each AC:
 
 ## Output
 Produces: `qa/edge-cases`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

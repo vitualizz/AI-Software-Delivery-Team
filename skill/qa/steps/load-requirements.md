@@ -1,5 +1,13 @@
 # Load Requirements — QA Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Extract and normalize acceptance criteria from whatever upstream artifacts exist.
 QA starts from the deliverables of other specialists — not from the raw request.
@@ -11,6 +19,11 @@ QA starts from the deliverables of other specialists — not from the raw reques
   - `architectural-decision` (if Architect specialist ran)
   - `implementation-plan` (if Developer specialist ran)
   - Raw request (fallback if no upstream artifacts)
+
+Note: this step's `inputs:` list in `workflow.yaml` is empty by design — it has
+no prior `subagent`-produced QA artifact to retrieve; it is QA's first generative
+step and reads directly from upstream specialists' artifacts (or the raw request
+as fallback). Retrieve via mem_search + mem_get_observation by topic_key.
 
 ## Context budget
 Extract only: user_stories/acceptance_criteria/scope from each artifact.
@@ -29,6 +42,8 @@ what "done" would look like for a typical user. Mark all as "inferred".
 
 ## Output
 Produces: `qa/ac-list`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml
