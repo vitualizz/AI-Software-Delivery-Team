@@ -37,8 +37,8 @@ go run ./cmd/asdt-tui
 
 ## Testing the TUI in a sandbox
 
-`asdt-tui` writes directly into your AI assistant's real config directories —
-`~/.claude/skills/asdt` and `~/.config/opencode/skills/asdt` (see
+`asdt-tui` writes directly into your AI assistant's real skills ROOT —
+`~/.claude/skills` and `~/.config/opencode/skills` (see
 `internal/installer/assistants.go`). Both paths are resolved at runtime from
 `$HOME` / `$XDG_CONFIG_HOME` via `os.UserHomeDir()` and `os.Getenv`, which means
 you can redirect the entire install into a throwaway directory just by
@@ -49,14 +49,16 @@ mkdir -p /tmp/asdt-sandbox
 HOME=/tmp/asdt-sandbox go run ./cmd/asdt-tui
 ```
 
-This installs into `/tmp/asdt-sandbox/.claude/skills/asdt` and
-`/tmp/asdt-sandbox/.config/opencode/skills/asdt` — your real `~/.claude` and
-`~/.config/opencode` are never touched.
+This installs into `/tmp/asdt-sandbox/.claude/skills` and
+`/tmp/asdt-sandbox/.config/opencode/skills` — your real `~/.claude` and
+`~/.config/opencode` are never touched. Each skill lands as its own top-level
+sibling directory under that root (`asdt/`, `asdt-architect/`, `asdt-shared/`,
+…) — never nested inside another skill's directory.
 
 Inspect the result:
 
 ```sh
-eza --tree /tmp/asdt-sandbox/.claude/skills/asdt
+eza --tree /tmp/asdt-sandbox/.claude/skills
 ```
 
 Re-run the TUI against the same `$HOME` to exercise the "already installed /
@@ -85,7 +87,7 @@ binary and proving it installs.
 2. **Wire it into the embed — do not skip this.** `skill/embedded.go` lists every directory that gets compiled into the binary explicitly:
 
    ```go
-   //go:embed SKILL.md _shared developer ux-ui architect qa security
+   //go:embed SKILL.md asdt-shared asdt-developer asdt-ux-ui asdt-architect asdt-qa asdt-security asdt-init
    var skillFS embed.FS
    ```
 
@@ -95,12 +97,7 @@ binary and proving it installs.
    appears in the installed output. There is no compile-time or runtime error.
    Add `{name}` to the directive's file list.
 
-   > At the time of writing, `skill/asdt-init/` exists on disk and is
-   > referenced in README.md, but is missing from this directive — it will not
-   > be installed by the current binary. If you're touching this area, fix
-   > that line too.
-
-3. **Verify with the sandbox flow** — `HOME=/tmp/asdt-sandbox go run ./cmd/asdt-tui`, install, then confirm `skill/{name}/` appears under `/tmp/asdt-sandbox/.claude/skills/asdt/{name}/` with all expected files.
+3. **Verify with the sandbox flow** — `HOME=/tmp/asdt-sandbox go run ./cmd/asdt-tui`, install, then confirm `skill/{name}/` appears as its own top-level sibling directory under `/tmp/asdt-sandbox/.claude/skills/{name}/` (NOT nested inside `asdt/`) with all expected files.
 
 4. **Run the prompt registry tests** — `go test ./internal/prompt/...` confirms the `go:embed` registry picks up the new SKILL.md and step files and that prompt assembly resolves them.
 

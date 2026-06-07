@@ -26,7 +26,7 @@ Downloads the pre-built binary for your platform (Linux/macOS, x86_64/arm64) and
 asdt-tui
 ```
 
-Interactive TUI that checks Engram is installed, lets you choose which AI assistant(s) to target, and copies the ASDT skills into them. Skills are installed to `~/.claude/skills/asdt/` (Claude Code) or `~/.config/opencode/skills/asdt/` (OpenCode).
+Interactive TUI that checks Engram is installed, lets you choose which AI assistant(s) to target, and copies the ASDT skills into them. Each skill (the `asdt` consultant, every specialist, and the shared fragment library) is installed as its own top-level sibling directory directly under `~/.claude/skills/` (Claude Code) or `~/.config/opencode/skills/` (OpenCode) — e.g. `~/.claude/skills/asdt-architect/`, `~/.claude/skills/asdt-shared/` — so each specialist is independently invocable (`asdt:architect`, `asdt:developer`, …) alongside `/asdt`.
 
 **2. Initialize your project**
 

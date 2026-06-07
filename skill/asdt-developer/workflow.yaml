@@ -1,7 +1,7 @@
 specialist: developer
 steps:
   - name: knowledge-recall
-    skill: ../_shared/skills/knowledge-recall.md
+    skill: ../asdt-shared/skills/knowledge-recall.md
     description: Query organizational memory for prior decisions relevant to this change before acting
     execution: inline
 
@@ -12,8 +12,8 @@ steps:
     inputs: []
     output_topic_key: "{project}/{change}/developer/dev-exploration"
     reference_skills:
-      - ../_shared/skills/platform-context.md
-      - ../_shared/skills/artifact-loading.md
+      - ../asdt-shared/skills/platform-context.md
+      - ../asdt-shared/skills/artifact-loading.md
 
   - name: spec
     skill: steps/spec.md
@@ -23,7 +23,7 @@ steps:
       - "{project}/{change}/developer/dev-exploration"
     output_topic_key: "{project}/{change}/developer/dev-spec"
     reference_skills:
-      - ../_shared/skills/scope-definition.md
+      - ../asdt-shared/skills/scope-definition.md
 
   - name: design
     skill: steps/design.md
@@ -54,7 +54,7 @@ steps:
     output_topic_key: "{project}/{change}/developer/dev-implementation"
     reference_skills:
       - skills/code-generation.md
-      - ../_shared/skills/platform-context.md
+      - ../asdt-shared/skills/platform-context.md
 
   - name: test
     skill: steps/test.md
@@ -66,7 +66,7 @@ steps:
     output_topic_key: "{project}/{change}/developer/dev-tests"
     reference_skills:
       - skills/test-generation.md
-      - ../_shared/skills/platform-context.md
+      - ../asdt-shared/skills/platform-context.md
 
   - name: review
     skill: steps/review.md
@@ -77,10 +77,10 @@ steps:
       - "{project}/{change}/developer/dev-tests"
     output_topic_key: "{project}/{change}/developer/implementation-plan"
     reference_skills:
-      - ../_shared/skills/review.md
-      - ../_shared/skills/context-extraction.md
+      - ../asdt-shared/skills/review.md
+      - ../asdt-shared/skills/context-extraction.md
 
   - name: decision-preservation
-    skill: ../_shared/skills/decision-preservation.md
+    skill: ../asdt-shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of decisions made during this run
     execution: inline

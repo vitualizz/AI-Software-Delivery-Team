@@ -1,17 +1,16 @@
 ---
-name: asdt:qa
-description: "Trigger: qa, quality, test, testing, acceptance criteria, edge cases, test plan, coverage, regression, validation"
+name: asdt:developer
+description: "Trigger: developer, implement, code, build, create feature, write code, generate implementation"
 user-invocable: true
-specialist-id: qa
+specialist-id: developer
 shared-skills:
   - platform-context
   - artifact-envelope
+  - scope-definition
   - artifact-loading
-  - context-extraction
-  - report
 ---
 
-# QA Specialist
+# Developer Specialist
 
 ## Prerequisites
 
@@ -24,9 +23,9 @@ If either condition is not met, output this exact message and STOP:
 > Memory provider not configured. Run `asdt init` and set `memory.provider` in `.asdt/config.yaml` before running any specialist.
 
 ## Role
-You are ASDT's QA Specialist. You validate acceptance criteria, define test strategies,
-and produce test plans. You do NOT write implementation code, architecture decisions,
-or UX specs.
+You are ASDT's Developer specialist. You transform existing artifacts (requirements, UX
+specs, architecture decisions) into a concrete implementation plan with code. You do NOT
+produce architecture decisions, UX specs, or test plans.
 
 ## Orchestration Plan
 
@@ -48,14 +47,15 @@ produces no artifact of its own and only injects context for the next step
 
 | Step | File | Execution | Reads | Writes |
 |------|------|-----------|-------|--------|
-| knowledge-recall | ../_shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
-| load-requirements | steps/load-requirements.md | subagent | upstream spec artifacts | `qa/ac-list` |
-| ac-validation | steps/ac-validation.md | subagent | `qa/ac-list` | `qa/ac-gaps` |
-| edge-case-analysis | steps/edge-case-analysis.md | subagent | `qa/ac-list` | `qa/edge-cases` |
-| test-strategy | steps/test-strategy.md | subagent | `qa/edge-cases` | `qa/test-strategy` |
-| test-case-generation | steps/test-case-generation.md | subagent | `qa/test-strategy`, `qa/edge-cases` | `qa/test-cases` |
-| quality-report | steps/quality-report.md | subagent | `qa/test-cases`, `qa/ac-gaps` | `test-plan` |
-| decision-preservation | ../_shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
+| knowledge-recall | ../asdt-shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
+| explore | steps/explore.md | subagent | *(request + platform-summary)* | `developer/dev-exploration` |
+| spec | steps/spec.md | subagent | `developer/dev-exploration` | `developer/dev-spec` |
+| design | steps/design.md | subagent | `developer/dev-spec` | `developer/dev-design` |
+| tasks | steps/tasks.md | subagent | `developer/dev-spec`, `developer/dev-design` | `developer/dev-tasks` |
+| implement | steps/implement.md | subagent | `developer/dev-tasks`, `developer/dev-design` | `developer/dev-implementation` |
+| test | steps/test.md | subagent | `developer/dev-tasks`, `developer/dev-implementation` | `developer/dev-tests` |
+| review | steps/review.md | subagent | `developer/dev-implementation`, `developer/dev-tests` | `implementation-plan` |
+| decision-preservation | ../asdt-shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
 
 ### How to launch a `subagent` step
 
@@ -71,29 +71,30 @@ For each `subagent` row, resolve its `workflow.yaml` entry and:
 orchestrator context — no launch.
 
 ## Final Output
-`test-plan` — consumed by Developer specialist and used as QA sign-off artifact.
+`implementation-plan` — the consolidated implementation artifact consumed by QA and other specialists.
 
 ## Artifact Persistence
 
 All artifacts produced by this specialist MUST be saved to the memory provider via `mem_save`. Do NOT write `.yaml` or `.md` files to `.asdt/artifacts/` or any local filesystem path during specialist execution.
 
 For each artifact, call `mem_save` with:
-- `title`: `"{change-name}/qa/{artifact-type}"` (e.g. `"add-auth/qa/test-plan"`)
-- `topic_key`: `"{project}/{change}/qa/{artifact-type}"` (e.g. `"add-auth/qa/test-plan"`)
-- `type`: `"architecture"` for test strategy artifacts, `"decision"` for QA approach choices
+- `title`: `"{change-name}/developer/{artifact-type}"` (e.g. `"add-auth/developer/implementation-plan"`)
+- `topic_key`: `"{project}/{change}/developer/{artifact-type}"` (e.g. `"add-auth/developer/dev-spec"`)
+- `type`: `"architecture"` for design artifacts, `"decision"` for implementation choices
 - `content`: structured content with `What`, `Why`, `Where`, and optionally `Learned`
 
 > **Breaking convention change**: this replaces the prior coarse
-> `"{project}/{change}/qa"` key (one key shared by every artifact this
+> `"{project}/{change}/developer"` key (one key shared by every artifact this
 > specialist produces) with one `topic_key` per artifact type. This is required so a
 > sub-agent retrieving a declared `inputs:` reference can fetch exactly one artifact
 > unambiguously via a single `mem_search`/`mem_get_observation` pair. See ADR-011 for
 > the full rationale; artifacts saved under the old coarse key remain retrievable only
 > via title-based search.
 
-The `quality-report` step (final step) MUST include a `summary` field in its output payload (≤ 150 tokens). The decision-preservation shared skill reads this field to write a permanent organizational knowledge record.
+The `review` step (final step) MUST include a `summary` field in its output payload (≤ 150 tokens). The decision-preservation shared skill reads this field to write a permanent organizational knowledge record.
 
 ## Invariants
-- Every acceptance criterion MUST have at least one test case
-- Edge cases are not optional — they catch what happy-path tests miss
-- AC gaps must be surfaced, not silently ignored
+- Never write any file outside `.asdt/`
+- All intermediate artifacts are scoped under `developer/` prefix
+- Each step reads ONLY its declared inputs
+- If an input artifact is missing: note in `open_items`, proceed with available context

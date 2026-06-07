@@ -18,7 +18,11 @@ type AssistantDescriptor struct {
 	ID         AssistantID
 	Name       string
 	BinaryName string
-	SkillsDir  string
+	// SkillsDir is the assistant's skills ROOT directory (e.g. ~/.claude/skills).
+	// The installer maps each top-level entry of the embedded skill tree to its
+	// own sibling directory directly under this root — it does NOT nest the
+	// whole tree under a single "asdt" subdirectory.
+	SkillsDir string
 }
 
 // Descriptors lists all known AI assistants.
@@ -39,13 +43,13 @@ var Descriptors = []AssistantDescriptor{
 
 func claudeSkillsDir() string {
 	home, _ := os.UserHomeDir()
-	return home + "/.claude/skills/asdt"
+	return home + "/.claude/skills"
 }
 
 func openCodeSkillsDir() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return xdg + "/opencode/skills/asdt"
+		return xdg + "/opencode/skills"
 	}
 	home, _ := os.UserHomeDir()
-	return home + "/.config/opencode/skills/asdt"
+	return home + "/.config/opencode/skills"
 }

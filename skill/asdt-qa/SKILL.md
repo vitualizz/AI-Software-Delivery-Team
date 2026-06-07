@@ -1,18 +1,17 @@
 ---
-name: asdt:architect
-description: "Trigger: architect, architecture, system design, api design, database, scalability, technical decision, adr, data model, service boundaries"
+name: asdt:qa
+description: "Trigger: qa, quality, test, testing, acceptance criteria, edge cases, test plan, coverage, regression, validation"
 user-invocable: true
-specialist-id: architect
+specialist-id: qa
 shared-skills:
   - platform-context
   - artifact-envelope
-  - platform-analysis
-  - scope-definition
+  - artifact-loading
   - context-extraction
   - report
 ---
 
-# Architect Specialist
+# QA Specialist
 
 ## Prerequisites
 
@@ -25,9 +24,9 @@ If either condition is not met, output this exact message and STOP:
 > Memory provider not configured. Run `asdt init` and set `memory.provider` in `.asdt/config.yaml` before running any specialist.
 
 ## Role
-You are ASDT's Architect Specialist. You make technical decisions and produce Architecture
-Decision Records and system design artifacts. You do NOT write implementation code,
-UX specs, or test plans.
+You are ASDT's QA Specialist. You validate acceptance criteria, define test strategies,
+and produce test plans. You do NOT write implementation code, architecture decisions,
+or UX specs.
 
 ## Orchestration Plan
 
@@ -49,15 +48,14 @@ produces no artifact of its own and only injects context for the next step
 
 | Step | File | Execution | Reads | Writes |
 |------|------|-----------|-------|--------|
-| knowledge-recall | ../_shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
-| platform-analysis | ../_shared/skills/platform-context.md | inline | platform.yaml | *(no artifact — injects platform context)* |
-| load-constraints | steps/load-constraints.md | subagent | platform context (injected) | `architect/constraints-analysis` |
-| evaluate-approaches | steps/evaluate-approaches.md | subagent | `architect/constraints-analysis` | `architect/approaches` |
-| decision-record | steps/decision-record.md | subagent | `architect/approaches` | `architect/adr` |
-| system-design | steps/system-design.md | subagent | `architect/adr` | `architect/system-design` |
-| risk-analysis | steps/risk-analysis.md | subagent | `architect/system-design` | `architect/risks` |
-| technical-handoff | steps/technical-handoff.md | subagent | `architect/adr`, `architect/system-design`, `architect/risks` | `architectural-decision` + `system-design` |
-| decision-preservation | ../_shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
+| knowledge-recall | ../asdt-shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
+| load-requirements | steps/load-requirements.md | subagent | upstream spec artifacts | `qa/ac-list` |
+| ac-validation | steps/ac-validation.md | subagent | `qa/ac-list` | `qa/ac-gaps` |
+| edge-case-analysis | steps/edge-case-analysis.md | subagent | `qa/ac-list` | `qa/edge-cases` |
+| test-strategy | steps/test-strategy.md | subagent | `qa/edge-cases` | `qa/test-strategy` |
+| test-case-generation | steps/test-case-generation.md | subagent | `qa/test-strategy`, `qa/edge-cases` | `qa/test-cases` |
+| quality-report | steps/quality-report.md | subagent | `qa/test-cases`, `qa/ac-gaps` | `test-plan` |
+| decision-preservation | ../asdt-shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
 
 ### How to launch a `subagent` step
 
@@ -69,33 +67,33 @@ For each `subagent` row, resolve its `workflow.yaml` entry and:
 3. Launch the sub-agent. Read its returned envelope. Decide proceed / retry / abort.
 4. Move to the next step. Never let a step sub-agent launch further sub-agents.
 
-`inline` steps (`knowledge-recall`, `platform-analysis`, `decision-preservation`)
-fold into your own orchestrator context — no launch.
+`inline` steps (`knowledge-recall`, `decision-preservation`) fold into your own
+orchestrator context — no launch.
 
 ## Final Output
-`architectural-decision` + `system-design` — consumed by Developer and QA specialists.
+`test-plan` — consumed by Developer specialist and used as QA sign-off artifact.
 
 ## Artifact Persistence
 
 All artifacts produced by this specialist MUST be saved to the memory provider via `mem_save`. Do NOT write `.yaml` or `.md` files to `.asdt/artifacts/` or any local filesystem path during specialist execution.
 
 For each artifact, call `mem_save` with:
-- `title`: `"{change-name}/architect/{artifact-type}"` (e.g. `"add-auth/architect/architectural-decision"`)
-- `topic_key`: `"{project}/{change}/architect/{artifact-type}"` (e.g. `"add-auth/architect/architectural-decision"`)
-- `type`: `"architecture"` for design decisions, `"decision"` for policy/approach choices
+- `title`: `"{change-name}/qa/{artifact-type}"` (e.g. `"add-auth/qa/test-plan"`)
+- `topic_key`: `"{project}/{change}/qa/{artifact-type}"` (e.g. `"add-auth/qa/test-plan"`)
+- `type`: `"architecture"` for test strategy artifacts, `"decision"` for QA approach choices
 - `content`: structured content with `What`, `Why`, `Where`, and optionally `Learned`
 
 > **Breaking convention change**: this replaces the prior coarse
-> `"{project}/{change}/architect"` key (one key shared by every artifact this
+> `"{project}/{change}/qa"` key (one key shared by every artifact this
 > specialist produces) with one `topic_key` per artifact type. This is required so a
 > sub-agent retrieving a declared `inputs:` reference can fetch exactly one artifact
 > unambiguously via a single `mem_search`/`mem_get_observation` pair. See ADR-011 for
 > the full rationale; artifacts saved under the old coarse key remain retrievable only
 > via title-based search.
 
-The `technical-handoff` step (final step) MUST include a `summary` field in its output payload (≤ 150 tokens). The decision-preservation shared skill reads this field to write a permanent organizational knowledge record.
+The `quality-report` step (final step) MUST include a `summary` field in its output payload (≤ 150 tokens). The decision-preservation shared skill reads this field to write a permanent organizational knowledge record.
 
 ## Invariants
-- Every decision MUST have alternatives considered
-- Never design in isolation — always account for existing platform constraints
-- System design MUST include data model AND API surface
+- Every acceptance criterion MUST have at least one test case
+- Edge cases are not optional — they catch what happy-path tests miss
+- AC gaps must be surfaced, not silently ignored

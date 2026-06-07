@@ -1,7 +1,7 @@
 specialist: qa
 steps:
   - name: knowledge-recall
-    skill: ../_shared/skills/knowledge-recall.md
+    skill: ../asdt-shared/skills/knowledge-recall.md
     description: Query organizational memory for prior QA decisions, known edge cases, and test strategies relevant to this change before acting
     execution: inline
 
@@ -12,7 +12,7 @@ steps:
     inputs: []
     output_topic_key: "{project}/{change}/qa/ac-list"
     reference_skills:
-      - ../_shared/skills/artifact-loading.md
+      - ../asdt-shared/skills/artifact-loading.md
 
   - name: ac-validation
     skill: steps/ac-validation.md
@@ -63,10 +63,10 @@ steps:
       - "{project}/{change}/qa/ac-gaps"
     output_topic_key: "{project}/{change}/qa/test-plan"
     reference_skills:
-      - ../_shared/skills/context-extraction.md
-      - ../_shared/skills/report.md
+      - ../asdt-shared/skills/context-extraction.md
+      - ../asdt-shared/skills/report.md
 
   - name: decision-preservation
-    skill: ../_shared/skills/decision-preservation.md
+    skill: ../asdt-shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of QA decisions made during this run
     execution: inline

@@ -8,11 +8,11 @@ import (
 	"io/fs"
 )
 
-//go:embed SKILL.md _shared developer ux-ui architect qa security
+//go:embed SKILL.md asdt-shared asdt-developer asdt-ux-ui asdt-architect asdt-qa asdt-security asdt-init
 var skillFS embed.FS
 
 // FS returns the full embedded skill tree rooted at skill/.
-// Paths: "developer/SKILL.md", "_shared/skills/platform-context.md", etc.
+// Paths: "asdt-developer/SKILL.md", "asdt-shared/skills/platform-context.md", etc.
 // This is the production FS injected into prompt.EmbeddedRegistry.
 func FS() fs.FS {
 	return skillFS

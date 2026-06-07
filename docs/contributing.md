@@ -75,7 +75,7 @@ Create `skill/{name}/skills/*.md` for capability fragments specific to this spec
 
 ### 6. Add shared skills if the capability is reusable
 
-If a fragment is useful across multiple specialists, create `skill/_shared/skills/{name}.md` instead and reference it in the `shared-skills` frontmatter of any specialist that needs it.
+If a fragment is useful across multiple specialists, create `skill/asdt-shared/skills/{name}.md` instead and reference it in the `shared-skills` frontmatter of any specialist that needs it.
 
 ### 7. Update README.md
 
@@ -87,7 +87,7 @@ No Go code changes are needed to add a specialist.
 
 ## How to add a shared skill (no Go needed)
 
-1. Create `skill/_shared/skills/{name}.md` with the capability instructions.
+1. Create `skill/asdt-shared/skills/{name}.md` with the capability instructions.
 2. Reference it in the `shared-skills` frontmatter of any specialist SKILL.md that needs it.
 3. Open a PR.
 

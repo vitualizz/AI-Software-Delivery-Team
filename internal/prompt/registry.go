@@ -19,7 +19,7 @@ type SkillRegistry interface {
 	Role(name string) (Fragment, error)
 
 	// Skill returns a shared capability fragment by name.
-	// Resolves from _shared/skills/{name}.md (specialist layout) or
+	// Resolves from asdt-shared/skills/{name}.md (specialist layout) or
 	// skills/{name}.md (legacy layout).
 	Skill(name string) (Fragment, error)
 
@@ -39,7 +39,7 @@ type SkillRegistry interface {
 //
 //	{id}/SKILL.md          — role fragments (frontmatter stripped)
 //	{id}/skills/{name}.md  — scoped specialist skills
-//	_shared/skills/{name}.md — shared skills
+//	asdt-shared/skills/{name}.md — shared skills
 //
 // Legacy layout (backward compat):
 //
@@ -54,12 +54,37 @@ func NewEmbeddedRegistry(fsys fs.FS) *EmbeddedRegistry {
 	return &EmbeddedRegistry{fsys: fsys}
 }
 
+// embeddedSpecialistDir maps a bare specialist ID (as carried in SKILL.md
+// frontmatter, e.g. "developer", "security", "asdt-init") to the top-level
+// directory name used in the embedded skill tree.
+//
+// The embedded tree's specialist directories are installed-name siblings
+// (asdt-architect, asdt-developer, asdt-qa, asdt-security, asdt-ux-ui,
+// asdt-init, ...) while the canonical specialist ID stays bare (the
+// frontmatter "specialist-id" field, used throughout the pipeline/state
+// machine). This mapping bridges the two:
+//
+//   - IDs already prefixed with "asdt-" (e.g. "asdt-init") map verbatim —
+//     no double-prefixing.
+//   - Every other bare ID is prefixed with "asdt-" to reach its embedded
+//     directory (e.g. "developer" -> "asdt-developer").
+//
+// This is purely an embedded-FS path concern — it does not change the
+// specialist ID surface used elsewhere (pipeline state, frontmatter, etc.).
+func embeddedSpecialistDir(specialistID string) string {
+	if strings.HasPrefix(specialistID, "asdt-") {
+		return specialistID
+	}
+	return "asdt-" + specialistID
+}
+
 // Role resolves the role fragment. Resolution order:
-//  1. {name}/SKILL.md  (specialist layout — body only, frontmatter stripped)
+//  1. {embeddedSpecialistDir(name)}/SKILL.md  (specialist layout — body only, frontmatter stripped)
 //  2. roles/{name}/role.md  (legacy layout — full content)
 func (r *EmbeddedRegistry) Role(name string) (Fragment, error) {
-	// Try specialist layout first.
-	specialist := path.Join(name, "SKILL.md")
+	// Try specialist layout first, mapping the bare specialist ID to its
+	// embedded sibling directory name.
+	specialist := path.Join(embeddedSpecialistDir(name), "SKILL.md")
 	if content, err := fs.ReadFile(r.fsys, specialist); err == nil {
 		return NewFragment(name, stripFrontmatter(string(content)), SourcePackaged), nil
 	}
@@ -74,11 +99,11 @@ func (r *EmbeddedRegistry) Role(name string) (Fragment, error) {
 }
 
 // Skill resolves a shared skill by name. Resolution order:
-//  1. _shared/skills/{name}.md  (specialist layout)
-//  2. skills/{name}.md          (legacy layout)
+//  1. asdt-shared/skills/{name}.md  (specialist layout)
+//  2. skills/{name}.md              (legacy layout)
 func (r *EmbeddedRegistry) Skill(name string) (Fragment, error) {
-	// Try specialist _shared layout first.
-	shared := path.Join("_shared", "skills", name+".md")
+	// Try specialist asdt-shared layout first.
+	shared := path.Join("asdt-shared", "skills", name+".md")
 	if content, err := fs.ReadFile(r.fsys, shared); err == nil {
 		return NewFragment(name, string(content), SourcePackaged), nil
 	}
@@ -93,10 +118,10 @@ func (r *EmbeddedRegistry) Skill(name string) (Fragment, error) {
 }
 
 // ScopedSkill resolves a skill scoped to a specific specialist. Resolution order:
-//  1. {specialistID}/skills/{skillName}.md  (specialist-specific)
-//  2. Skill(skillName)                      (shared fallback)
+//  1. {embeddedSpecialistDir(specialistID)}/skills/{skillName}.md  (specialist-specific)
+//  2. Skill(skillName)                                             (shared fallback)
 func (r *EmbeddedRegistry) ScopedSkill(specialistID, skillName string) (Fragment, error) {
-	p := path.Join(specialistID, "skills", skillName+".md")
+	p := path.Join(embeddedSpecialistDir(specialistID), "skills", skillName+".md")
 	if content, err := fs.ReadFile(r.fsys, p); err == nil {
 		return NewFragment(skillName, string(content), SourcePackaged), nil
 	}

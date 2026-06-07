@@ -378,7 +378,7 @@ func TestNewRegistry_ScopedSkillSecurity(t *testing.T) {
 }
 
 // TestNewRegistry_SharedSkillPlatformContext verifies Skill("platform-context")
-// resolves from _shared/skills/ in the production embedded FS.
+// resolves from asdt-shared/skills/ in the production embedded FS.
 func TestNewRegistry_SharedSkillPlatformContext(t *testing.T) {
 	reg := prompt.DefaultEmbeddedRegistry()
 	frag, err := reg.Skill("platform-context")
@@ -404,6 +404,31 @@ func TestNewRegistry_RoleDeveloperSpecialist(t *testing.T) {
 	// Frontmatter must be stripped — the body must not start with "---".
 	if strings.HasPrefix(strings.TrimSpace(frag.Content), "---") {
 		t.Error("Role(developer): frontmatter was not stripped from SKILL.md")
+	}
+}
+
+// TestDefaultEmbeddedRegistry_RoleResolvesAllSpecialistIDs is a regression
+// guard for the bare-specialist-ID -> embedded-sibling-directory mapping.
+// Production specialist IDs (frontmatter "specialist-id") stay bare
+// (e.g. "developer", "security"), but the embedded tree's directories carry
+// the installed "asdt-" prefix (e.g. "asdt-developer", "asdt-security").
+// Role(id) must resolve correctly for every such ID — including "asdt-init",
+// whose ID is ALREADY prefixed and must not be double-prefixed.
+func TestDefaultEmbeddedRegistry_RoleResolvesAllSpecialistIDs(t *testing.T) {
+	reg := prompt.DefaultEmbeddedRegistry()
+	ids := []string{"architect", "developer", "qa", "security", "ux-ui", "asdt-init"}
+	for _, id := range ids {
+		frag, err := reg.Role(id)
+		if err != nil {
+			t.Errorf("Role(%q): %v", id, err)
+			continue
+		}
+		if frag.Content == "" {
+			t.Errorf("Role(%q): content is empty", id)
+		}
+		if strings.HasPrefix(strings.TrimSpace(frag.Content), "---") {
+			t.Errorf("Role(%q): frontmatter was not stripped from SKILL.md", id)
+		}
 	}
 }
 

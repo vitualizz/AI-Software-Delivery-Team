@@ -1,12 +1,12 @@
 specialist: ux-ui
 steps:
   - name: knowledge-recall
-    skill: ../_shared/skills/knowledge-recall.md
+    skill: ../asdt-shared/skills/knowledge-recall.md
     description: Query organizational memory for prior UX decisions and component patterns relevant to this change before acting
     execution: inline
 
   - name: platform-analysis
-    skill: ../_shared/skills/platform-context.md
+    skill: ../asdt-shared/skills/platform-context.md
     description: Load and inject platform conventions and design system fingerprint from platform.yaml
     execution: inline
 
@@ -75,11 +75,11 @@ steps:
     # Mirrors architect's technical-handoff / security's hardening-checklist workaround.
     output_topic_key: "{project}/{change}/ux-ui/ux-brief"
     reference_skills:
-      - ../_shared/skills/report.md
-      - ../_shared/skills/context-extraction.md
+      - ../asdt-shared/skills/report.md
+      - ../asdt-shared/skills/context-extraction.md
       - skills/accessibility.md
 
   - name: decision-preservation
-    skill: ../_shared/skills/decision-preservation.md
+    skill: ../asdt-shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of UX decisions made during this run
     execution: inline

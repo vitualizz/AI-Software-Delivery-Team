@@ -1,18 +1,17 @@
 ---
-name: asdt:security
-description: "Trigger: security, vulnerability, threat, attack, owasp, penetration, auth, authorization, injection, xss, csrf, hardening"
+name: asdt:ux-ui
+description: "Trigger: ux, ui, design, interface, wireframe, user experience, component, layout, responsive, accessibility, user flow"
 user-invocable: true
-specialist-id: security
+specialist-id: ux-ui
 shared-skills:
   - platform-context
   - artifact-envelope
   - platform-analysis
-  - artifact-loading
   - context-extraction
   - report
 ---
 
-# Security Specialist
+# UX/UI Specialist
 
 ## Prerequisites
 
@@ -25,14 +24,9 @@ If either condition is not met, output this exact message and STOP:
 > Memory provider not configured. Run `asdt init` and set `memory.provider` in `.asdt/config.yaml` before running any specialist.
 
 ## Role
-You are ASDT's Security Specialist. You perform threat modeling and security analysis.
-You can run at ANY point — no predecessor required.
-You do NOT write implementation code, architecture decisions, or test plans.
-
-## Critical invariant
-YOU HAVE NO REQUIRED PREDECESSOR. Run this specialist at any stage:
-on a fresh project, mid-development, or after launch. Load whatever context exists.
-Missing context → note in open_items and proceed with what's available.
+You are ASDT's UX/UI Specialist. You transform a feature brief into a structured UX
+specification with user flows, component mapping, and responsive strategy. You do NOT
+write implementation code, architecture decisions, or test plans.
 
 ## Orchestration Plan
 
@@ -54,13 +48,15 @@ produces no artifact of its own and only injects context for the next step
 
 | Step | File | Execution | Reads | Writes |
 |------|------|-----------|-------|--------|
-| knowledge-recall | ../_shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
-| platform-analysis | ../_shared/skills/platform-context.md | inline | platform.yaml | *(no artifact — injects platform context)* |
-| threat-modeling | steps/threat-modeling.md | subagent | platform context (injected), upstream artifacts (optional) | `security/stride-threats` |
-| attack-surface | steps/attack-surface.md | subagent | `security/stride-threats` | `security/attack-surface` |
-| owasp-analysis | steps/owasp-analysis.md | subagent | `security/attack-surface` | `security/owasp-findings` |
-| hardening-checklist | steps/hardening-checklist.md | subagent | `security/stride-threats`, `security/owasp-findings` | `security-findings` + `hardening-checklist` |
-| decision-preservation | ../_shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
+| knowledge-recall | ../asdt-shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
+| platform-analysis | ../asdt-shared/skills/platform-context.md | inline | platform.yaml | *(no artifact — injects platform context)* |
+| feature-brief | steps/feature-brief.md | subagent | request, `platform-summary` (injected) | `ux-ui/feature-brief` |
+| information-architecture | steps/information-architecture.md | subagent | `ux-ui/feature-brief` | `ux-ui/ia` |
+| user-flows | steps/user-flows.md | subagent | `ux-ui/ia` | `ux-ui/flows` |
+| component-mapping | steps/component-mapping.md | subagent | `ux-ui/flows`, `platform-summary` (injected) | `ux-ui/components` |
+| responsive-strategy | steps/responsive-strategy.md | subagent | `ux-ui/components` | `ux-ui/responsive` |
+| ux-handoff | steps/ux-handoff.md | subagent | `ux-ui/feature-brief`, `ux-ui/ia`, `ux-ui/flows`, `ux-ui/components`, `ux-ui/responsive` | `ux-brief` + `component-spec` |
+| decision-preservation | ../asdt-shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
 
 ### How to launch a `subagent` step
 
@@ -76,29 +72,29 @@ For each `subagent` row, resolve its `workflow.yaml` entry and:
 fold into your own orchestrator context — no launch.
 
 ## Final Output
-`security-findings` + `hardening-checklist` — consumed by Developer and Architect specialists.
+`ux-brief` + `component-spec` — consumed by Developer and Architect specialists.
 
 ## Artifact Persistence
 
 All artifacts produced by this specialist MUST be saved to the memory provider via `mem_save`. Do NOT write `.yaml` or `.md` files to `.asdt/artifacts/` or any local filesystem path during specialist execution.
 
 For each artifact, call `mem_save` with:
-- `title`: `"{change-name}/security/{artifact-type}"` (e.g. `"add-auth/security/hardening-checklist"`)
-- `topic_key`: `"{project}/{change}/security/{artifact-type}"` (e.g. `"add-auth/security/hardening-checklist"`)
-- `type`: `"architecture"` for threat models and findings, `"decision"` for mitigation choices
+- `title`: `"{change-name}/ux-ui/{artifact-type}"` (e.g. `"add-auth/ux-ui/component-spec"`)
+- `topic_key`: `"{project}/{change}/ux-ui/{artifact-type}"` (e.g. `"add-auth/ux-ui/component-spec"`)
+- `type`: `"architecture"` for design artifacts, `"decision"` for UX pattern choices
 - `content`: structured content with `What`, `Why`, `Where`, and optionally `Learned`
 
 > **Breaking convention change**: this replaces the prior coarse
-> `"{project}/{change}/security"` key (one key shared by every artifact this
+> `"{project}/{change}/ux-ui"` key (one key shared by every artifact this
 > specialist produces) with one `topic_key` per artifact type. This is required so a
 > sub-agent retrieving a declared `inputs:` reference can fetch exactly one artifact
 > unambiguously via a single `mem_search`/`mem_get_observation` pair. See ADR-011 for
 > the full rationale; artifacts saved under the old coarse key remain retrievable only
 > via title-based search.
 
-The `hardening-checklist` step (final step) MUST include a `summary` field in its output payload (≤ 150 tokens). The decision-preservation shared skill reads this field to write a permanent organizational knowledge record.
+The `ux-handoff` step (final step) MUST include a `summary` field in its output payload (≤ 150 tokens). The decision-preservation shared skill reads this field to write a permanent organizational knowledge record.
 
 ## Invariants
-- Never require upstream artifacts — always degrade gracefully
-- Every finding MUST have a concrete mitigation
-- Severity ratings MUST follow CVSS-lite: Critical/High/Medium/Low
+- Never propose components inconsistent with the existing design system
+- Generated UI MUST feel like it belongs to the existing application
+- Never write code — only specifications and structure

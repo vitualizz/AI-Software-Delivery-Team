@@ -1,12 +1,12 @@
 specialist: architect
 steps:
   - name: knowledge-recall
-    skill: ../_shared/skills/knowledge-recall.md
+    skill: ../asdt-shared/skills/knowledge-recall.md
     description: Query organizational memory for prior architectural decisions relevant to this change before acting
     execution: inline
 
   - name: platform-analysis
-    skill: ../_shared/skills/platform-context.md
+    skill: ../asdt-shared/skills/platform-context.md
     description: Load and inject platform conventions and design fingerprint from platform.yaml
     execution: inline
 
@@ -18,7 +18,7 @@ steps:
     output_topic_key: "{project}/{change}/architect/constraints-analysis"
     reference_skills:
       - skills/architecture-review.md
-      - ../_shared/skills/artifact-loading.md
+      - ../asdt-shared/skills/artifact-loading.md
 
   - name: evaluate-approaches
     skill: steps/evaluate-approaches.md
@@ -46,8 +46,8 @@ steps:
       - "{project}/{change}/architect/adr"
     output_topic_key: "{project}/{change}/architect/system-design"
     reference_skills:
-      - ../_shared/skills/platform-context.md
-      - ../_shared/skills/scope-definition.md
+      - ../asdt-shared/skills/platform-context.md
+      - ../asdt-shared/skills/scope-definition.md
       - skills/api-design.md
       - skills/scalability-analysis.md
 
@@ -77,10 +77,10 @@ steps:
     # unambiguous per-type key distinct from the intermediate
     # `architect/system-design` produced earlier by the system-design step).
     reference_skills:
-      - ../_shared/skills/report.md
-      - ../_shared/skills/context-extraction.md
+      - ../asdt-shared/skills/report.md
+      - ../asdt-shared/skills/context-extraction.md
 
   - name: decision-preservation
-    skill: ../_shared/skills/decision-preservation.md
+    skill: ../asdt-shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of the architectural decision made during this run
     execution: inline
