@@ -1,5 +1,13 @@
 # Feature Brief — UX/UI Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Extract the core user problem, primary actor, and success criteria from the feature request.
 Establish what "done" looks like from the user's perspective before designing anything.
@@ -7,6 +15,10 @@ Establish what "done" looks like from the user's perspective before designing an
 ## Inputs
 - Request: the feature description from the user
 - `platform-summary`: existing design system, component library, CSS approach
+
+Retrieve via mem_search + mem_get_observation by topic_key (the request and the
+inline-injected `platform-summary` are provided directly by the orchestrator;
+this is the first generative step and reads no upstream specialist artifact).
 
 Extract from platform-summary: component_library, css_approach.
 
@@ -24,6 +36,8 @@ Do NOT jump to solutions. Do NOT sketch layouts. Understand the problem first.
 
 ## Output
 Produces: `ux-ui/feature-brief`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

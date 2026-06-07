@@ -1,5 +1,13 @@
 # Component Mapping — UX/UI Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Identify which existing components to reuse, which to extend, and which must be created.
 Maximize reuse. Justify every new component.
@@ -7,6 +15,10 @@ Maximize reuse. Justify every new component.
 ## Inputs
 - `ux-ui/flows`: interaction sequences, state changes
 - `platform-summary`: component_library, existing patterns
+
+Retrieve `ux-ui/flows` via mem_search + mem_get_observation by topic_key
+(`platform-summary` is provided directly by the orchestrator's inline
+`platform-analysis` step).
 
 Extract from flows: all unique UI states and interactions.
 Extract from platform-summary: component_library name and approach.
@@ -32,6 +44,8 @@ existing ones can be extended instead.
 
 ## Output
 Produces: `ux-ui/components`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

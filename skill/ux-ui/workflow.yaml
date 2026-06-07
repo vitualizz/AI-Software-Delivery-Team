@@ -3,35 +3,83 @@ steps:
   - name: knowledge-recall
     skill: ../_shared/skills/knowledge-recall.md
     description: Query organizational memory for prior UX decisions and component patterns relevant to this change before acting
+    execution: inline
 
   - name: platform-analysis
     skill: ../_shared/skills/platform-context.md
     description: Load and inject platform conventions and design system fingerprint from platform.yaml
+    execution: inline
 
   - name: feature-brief
     skill: steps/feature-brief.md
     description: Transform the user request and platform summary into a structured feature brief
+    execution: subagent
+    inputs: []
+    output_topic_key: "{project}/{change}/ux-ui/feature-brief"
+    reference_skills: []
 
   - name: information-architecture
     skill: steps/information-architecture.md
     description: Define the information architecture (navigation, hierarchy, content model) from the feature brief
+    execution: subagent
+    inputs:
+      - "{project}/{change}/ux-ui/feature-brief"
+    output_topic_key: "{project}/{change}/ux-ui/ia"
+    reference_skills:
+      - skills/information-architecture.md
 
   - name: user-flows
     skill: steps/user-flows.md
     description: Map user flows from the information architecture artifact
+    execution: subagent
+    inputs:
+      - "{project}/{change}/ux-ui/ia"
+    output_topic_key: "{project}/{change}/ux-ui/flows"
+    reference_skills: []
 
   - name: component-mapping
     skill: steps/component-mapping.md
     description: Map user flows to design system components and identify gaps
+    execution: subagent
+    inputs:
+      - "{project}/{change}/ux-ui/flows"
+    output_topic_key: "{project}/{change}/ux-ui/components"
+    reference_skills: []
 
   - name: responsive-strategy
     skill: steps/responsive-strategy.md
     description: Define the responsive layout strategy for the mapped components
+    execution: subagent
+    inputs:
+      - "{project}/{change}/ux-ui/components"
+    output_topic_key: "{project}/{change}/ux-ui/responsive"
+    reference_skills:
+      - skills/responsive-design.md
 
   - name: ux-handoff
     skill: steps/ux-handoff.md
     description: Consolidate feature-brief, IA, flows, components, and responsive into the final ux-brief + component-spec artifacts
+    execution: subagent
+    inputs:
+      - "{project}/{change}/ux-ui/feature-brief"
+      - "{project}/{change}/ux-ui/ia"
+      - "{project}/{change}/ux-ui/flows"
+      - "{project}/{change}/ux-ui/components"
+      - "{project}/{change}/ux-ui/responsive"
+    # NOTE: this step produces TWO final artifacts (`ux-brief` + `component-spec`)
+    # but `output_topic_key` is contractually a single string. output_topic_key
+    # below names the PRIMARY artifact; persist the SECOND under its own distinct
+    # per-type key "{project}/{change}/ux-ui/component-spec" (no suffix needed —
+    # neither name collides with any intermediate artifact produced earlier in
+    # this specialist's chain: feature-brief, ia, flows, components, responsive).
+    # Mirrors architect's technical-handoff / security's hardening-checklist workaround.
+    output_topic_key: "{project}/{change}/ux-ui/ux-brief"
+    reference_skills:
+      - ../_shared/skills/report.md
+      - ../_shared/skills/context-extraction.md
+      - skills/accessibility.md
 
   - name: decision-preservation
     skill: ../_shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of UX decisions made during this run
+    execution: inline

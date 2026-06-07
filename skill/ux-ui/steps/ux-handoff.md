@@ -1,5 +1,15 @@
 # UX Handoff — UX/UI Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your output(s) via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`
+> (this step produces TWO final artifacts — see the `## Output` note below for the
+> second persistence key), then return a structured summary envelope (status,
+> summary, output topic_key(s), open_items).
+
 ## Purpose
 Consolidate all UX work into two final artifacts: ux-brief (for Developer context) and
 component-spec (for implementation). Apply the report shared skill.
@@ -10,6 +20,8 @@ component-spec (for implementation). Apply the report shared skill.
 - `ux-ui/flows`: interaction sequences
 - `ux-ui/components`: component inventory
 - `ux-ui/responsive`: breakpoint behavior
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Apply context-extraction to each: keep only fields relevant to implementation handoff.
 
@@ -27,6 +39,24 @@ Apply the `report` shared skill:
 
 ## Output
 Produces: `ux-brief` (final) and `component-spec` (final)
+
+This step produces TWO final artifacts — a genuine dual-artifact shape (two fully
+separate schema blocks below), structurally identical to architect's
+`technical-handoff` (`architectural-decision` + `system-design`) and security's
+`hardening-checklist` (`security-findings` + `hardening-checklist`); NOT a
+single-cohesive-payload shape like qa's `quality-report`. Confirmed by reading
+this section directly, not inferred from the compound-looking step/artifact names
+(per the explicit caution forwarded from PR3/PR4: similarly-shaped compound names
+have landed on opposite answers — qa's was single-artifact, security's was dual).
+
+Persist `ux-brief` via `mem_save` under this step's `output_topic_key` in
+`workflow.yaml` (`{project}/{change}/ux-ui/ux-brief`); persist the second final
+artifact `component-spec` under its own distinct per-type topic_key
+`{project}/{change}/ux-ui/component-spec` (see the inline YAML comment on this
+step's `workflow.yaml` entry — no suffix needed, this name collides with neither
+the primary key nor any intermediate artifact produced earlier in this
+specialist's chain: `feature-brief`, `ia`, `flows`, `components`, `responsive`).
+Return an envelope covering both persisted keys.
 
 ux-brief schema:
 ```yaml
