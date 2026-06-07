@@ -9,9 +9,10 @@ import (
 
 // InstallResult holds the outcome of installing skills for one assistant.
 type InstallResult struct {
-	AssistantID AssistantID
-	Written     []string
-	Err         error
+	AssistantID     AssistantID
+	Written         []string
+	WrittenCommands []string
+	Err             error
 }
 
 // Install copies skill files from skillsFS into each assistant's SkillsDir,
@@ -96,7 +97,36 @@ func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skil
 		result.Written = append(result.Written, written...)
 	}
 
+	generateCommands(assistant, skillsFS, &result)
+
 	return result
+}
+
+func generateCommands(assistant AssistantDescriptor, skillsFS fs.FS, result *InstallResult) {
+	adapter, ok := adapterFor(assistant.ID)
+	if !ok {
+		return
+	}
+
+	commandRoot := commandRootFor(assistant.ID)
+	if commandRoot == "" {
+		return
+	}
+
+	written, genErr := adapter.Generate(skillsFS, commandRoot)
+	result.WrittenCommands = append(result.WrittenCommands, written...)
+	if genErr != nil {
+		result.Err = genErr
+	}
+}
+
+func commandRootFor(id AssistantID) string {
+	switch id {
+	case AssistantOpenCode:
+		return openCodeCommandRoot()
+	default:
+		return ""
+	}
 }
 
 // copyEntry copies a single top-level entry (file or directory) from skillsFS

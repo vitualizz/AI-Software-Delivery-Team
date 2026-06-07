@@ -49,3 +49,78 @@ inter-agent contract.
 - The Go binary can be adopted incrementally without blocking the skill from
   shipping.
 - Prompt improvements are first-class contributions, as valuable as code changes.
+
+## Addendum: Command-Palette Discoverability (2026-06-07)
+
+Status: Accepted (addendum to the original decision above)
+
+### Context
+
+OpenCode surfaces a "/" command palette backed by Markdown files under a
+dedicated `commands/` directory; Claude Code discovers specialists
+directly from the copied skill tree and needs no equivalent file. This
+difference was not anticipated by the original two-primitives framing:
+it is not a new CAPABILITY one runtime has and the other lacks (both
+runtimes still only need completion and file I/O), but a difference in
+the FILE LAYOUT each runtime expects in order to make an installed
+specialist discoverable through its native UI.
+
+### Decision
+
+Command-palette discoverability is handled as an ADDITIVE, per-assistant
+`CommandAdapter` registry (`internal/installer/adapters.go`), mirroring
+the existing `Providers` flat-registry idiom. For each assistant that
+needs extra discoverability artifacts, the adapter generates them by
+reading the SAME embedded `SKILL.md` frontmatter already used to install
+the skill tree — writing one deterministic wrapper file per specialist,
+purely via file I/O, with zero hardcoded per-specialist tables. An
+assistant absent from the registry (Claude Code) gets no extra
+artifacts; absence IS the no-op, exactly as `Providers` carries no
+placeholder entry for "no provider".
+
+This is a REFINEMENT of the original decision, not a departure from it:
+the two primitives — completion and file I/O — remain the complete and
+sufficient basis for the entire pipeline. What this addendum recognizes
+is that "file I/O" includes writing runtime-specific DISCOVERABILITY
+artifacts, not just the specialist content itself.
+
+### Alternatives Considered
+
+**A third "registration" primitive** — rejected. Generating a
+command-palette wrapper is still pure file I/O (read frontmatter, write
+a `.md` file); inventing a primitive for it would imply a capability
+neither runtime actually requires beyond what ADR-001 already grants,
+and would invite scope creep toward runtime-specific APIs the original
+decision explicitly rejects.
+
+**A new companion ADR** — rejected. A new ADR would wrongly imply a new
+architectural pillar sitting alongside the skill-first decision, when in
+fact this is a narrow, additive refinement of HOW file I/O is applied
+for one runtime's UI. Amending ADR-001 keeps the "exactly two
+primitives" thesis as the single source of truth and records this as
+what it is: a clarification, not a new pillar.
+
+**A no-op `CommandAdapter` entry for Claude Code** — rejected, for the
+same reason `Providers` carries no "null provider": an entry that exists
+solely to do nothing contradicts this codebase's zero-special-casing,
+absence-is-the-no-op idiom.
+
+### Consequences
+
+- The "exactly two primitives" thesis from the original decision stands
+  unchanged — this addendum documents a file-layout NUANCE within file
+  I/O, not a new capability.
+- New assistants that need their own discoverability artifacts are
+  supported by appending ONE entry to `CommandAdapters` — zero edits to
+  `Install`, `installOne`, `copyEntry`, `writeSkillFile`, or any existing
+  registry entry.
+- Generated wrapper content derives 100% structurally from each
+  specialist's own `SKILL.md` frontmatter (`description`, `name`,
+  `specialist-id`); there are no hardcoded per-specialist tables to keep
+  in sync.
+- **Test limitation**: there is no live OpenCode runtime in this
+  repository or its CI. Correctness of the generated wrappers (frontmatter
+  shape, `agent: build`, `subtask: false`, deterministic content, and
+  idempotent re-writes) is validated STRUCTURALLY — by asserting on the
+  generated file paths and content byte-for-byte — not by exercising
+  OpenCode's actual command-palette UI end to end.
