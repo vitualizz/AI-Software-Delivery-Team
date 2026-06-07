@@ -83,3 +83,38 @@ func TestErrorHasRedForeground(t *testing.T) {
 		t.Errorf("Error foreground = %v, want %v", got, expected)
 	}
 }
+
+// TestBoxHasRoundedBorderAndPadding verifies that the Box style wraps content
+// in a rounded border using an existing Catppuccin hex color, with Padding(1, 2).
+func TestBoxHasRoundedBorderAndPadding(t *testing.T) {
+	b := styles.Default.Box
+
+	if b.GetBorderStyle() != lipgloss.RoundedBorder() {
+		t.Errorf("Box border style = %v, want lipgloss.RoundedBorder()", b.GetBorderStyle())
+	}
+
+	expectedBorderFg := lipgloss.Color("#cba6f7")
+	if got := b.GetBorderTopForeground(); !reflect.DeepEqual(got, expectedBorderFg) {
+		t.Errorf("Box border foreground = %v, want %v", got, expectedBorderFg)
+	}
+
+	if top, right, bottom, left := b.GetPadding(); top != 1 || right != 2 || bottom != 1 || left != 2 {
+		t.Errorf("Box padding = (%d,%d,%d,%d), want (1,2,1,2)", top, right, bottom, left)
+	}
+}
+
+// TestStatusBarHasForegroundAndBackground verifies that StatusBar carries both
+// a foreground and a background color drawn from the existing palette hexes.
+func TestStatusBarHasForegroundAndBackground(t *testing.T) {
+	sb := styles.Default.StatusBar
+
+	expectedFg := lipgloss.Color("#cba6f7")
+	if got := sb.GetForeground(); !reflect.DeepEqual(got, expectedFg) {
+		t.Errorf("StatusBar foreground = %v, want %v", got, expectedFg)
+	}
+
+	expectedBg := lipgloss.Color("#6c7086")
+	if got := sb.GetBackground(); !reflect.DeepEqual(got, expectedBg) {
+		t.Errorf("StatusBar background = %v, want %v", got, expectedBg)
+	}
+}

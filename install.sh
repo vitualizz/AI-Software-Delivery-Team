@@ -82,7 +82,7 @@ ensure_path() {
 
 main() {
   echo ""
-  echo "  ASDT Installer"
+  echo "  asdt-tui"
   echo "  ─────────────────────────────────────────"
   echo ""
 

@@ -1,6 +1,6 @@
 ---
 name: asdt
-description: "ASDT — AI Software Delivery Team meta-orchestrator. Trigger: asdt, delivery team, which specialist, who should work on"
+description: "ASDT — AI Software Delivery Team meta-orchestrator. Use to coordinate the whole delivery team or to route a request across multiple specialists when you are unsure which one to pick. Trigger: asdt, delivery team, route the team, coordinate specialists, full team"
 user-invocable: true
 ---
 

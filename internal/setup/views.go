@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
 )
@@ -31,19 +32,29 @@ func renderState(m Model) string {
 	}
 }
 
+// frame composes a screen from a title, a body block, and a footer hint,
+// wrapping the title+body in the bordered Box and rendering the footer
+// through StatusBar, joined vertically. Single source of the visual chrome.
+func frame(title, body, footer string) string {
+	header := styles.Default.Header.Render(title)
+	inner := lipgloss.JoinVertical(lipgloss.Left, header, "", body)
+	boxed := styles.Default.Box.Render(inner)
+	bar := styles.Default.StatusBar.
+		Width(lipgloss.Width(boxed)).
+		Render(footer)
+	return lipgloss.JoinVertical(lipgloss.Left, boxed, bar)
+}
+
 func renderEngramMissing() string {
 	var b strings.Builder
-	b.WriteString(styles.Default.Header.Render("Engram Required") + "\n\n")
 	b.WriteString("ASDT requires the Engram MCP server to manage cross-session memory.\n")
 	b.WriteString("Please install it before continuing.\n\n")
-	b.WriteString("  " + styles.Default.Success.Render("https://github.com/Gentleman-Programming/engram") + "\n\n")
-	b.WriteString("[q] quit")
-	return b.String()
+	b.WriteString("  " + styles.Default.Success.Render("https://github.com/Gentleman-Programming/engram"))
+	return frame("Engram Required", b.String(), "[q] quit")
 }
 
 func renderMainMenu(m Model) string {
 	var b strings.Builder
-	b.WriteString(styles.Default.Header.Render("ASDT Installer") + "\n\n")
 
 	items := []string{"Install / Update Skills", "Quit"}
 	for i, item := range items {
@@ -53,13 +64,18 @@ func renderMainMenu(m Model) string {
 			fmt.Fprintf(&b, "    %s\n", styles.Default.Dim.Render(item))
 		}
 	}
-	b.WriteString("\n[q] quit")
-	return b.String()
+
+	if m.updateAvailable {
+		fmt.Fprintf(&b, "\n%s\n",
+			styles.Default.Cursor.Render(
+				fmt.Sprintf("↑ asdt-tui %s available — https://github.com/vitualizz/ai-software-delivery-team/releases", m.latestVersion)))
+	}
+
+	return frame("asdt-tui", strings.TrimRight(b.String(), "\n"), "[q] quit")
 }
 
 func renderAssistantList(m Model) string {
 	var b strings.Builder
-	b.WriteString(styles.Default.Header.Render("Installed Assistants") + "\n\n")
 
 	for i, d := range installer.Descriptors {
 		bp, sp, _ := installer.Detect(d)
@@ -84,13 +100,11 @@ func renderAssistantList(m Model) string {
 		fmt.Fprintf(&b, "  %s%s [%s]\n", cursor, nameStr, label)
 	}
 
-	b.WriteString("\n[enter] continue  [esc] back  [q] quit")
-	return b.String()
+	return frame("Installed Assistants", strings.TrimRight(b.String(), "\n"), "[enter] continue  [esc] back  [q] quit")
 }
 
 func renderSelectAssistants(m Model) string {
 	var b strings.Builder
-	b.WriteString(styles.Default.Header.Render("Select Assistants to Install") + "\n\n")
 
 	for i, d := range installer.Descriptors {
 		check := "[ ]"
@@ -110,13 +124,11 @@ func renderSelectAssistants(m Model) string {
 		fmt.Fprintf(&b, "  %s%s %s\n", cursor, check, nameStr)
 	}
 
-	b.WriteString("\n[space] toggle  [enter] confirm  [esc] back  [q] quit")
-	return b.String()
+	return frame("Select Assistants to Install", strings.TrimRight(b.String(), "\n"), "[space] toggle  [enter] confirm  [esc] back  [q] quit")
 }
 
 func renderSelectProvider(m Model) string {
 	var b strings.Builder
-	b.WriteString(styles.Default.Header.Render("Select Memory Provider") + "\n\n")
 
 	for i, p := range installer.Providers {
 		cursor := "  "
@@ -131,17 +143,15 @@ func renderSelectProvider(m Model) string {
 		fmt.Fprintf(&b, "  %s%s — %s\n", cursor, nameStr, p.Description)
 	}
 
-	b.WriteString("\n[enter] install  [esc] back  [q] quit")
-	return b.String()
+	return frame("Select Memory Provider", strings.TrimRight(b.String(), "\n"), "[enter] install  [esc] back  [q] quit")
 }
 
 func renderInstalling() string {
-	return styles.Default.Bold.Render("Installing...") + "\n"
+	return frame("Installing...", "", "[q] quit")
 }
 
 func renderDone(m Model) string {
 	var b strings.Builder
-	b.WriteString(styles.Default.Header.Render("Installation Complete") + "\n\n")
 
 	nameFor := make(map[installer.AssistantID]string, len(installer.Descriptors))
 	for _, d := range installer.Descriptors {
@@ -160,6 +170,5 @@ func renderDone(m Model) string {
 		}
 	}
 
-	b.WriteString("\n[enter/esc] back to menu  [q] quit")
-	return b.String()
+	return frame("Installation Complete", strings.TrimRight(b.String(), "\n"), "[enter/esc] back to menu  [q] quit")
 }

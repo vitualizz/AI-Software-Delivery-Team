@@ -36,3 +36,10 @@ func TestEngramCheckCmd_ReturnsNonNilCmd(t *testing.T) {
 		t.Error("EngramCheckCmd returned nil tea.Cmd")
 	}
 }
+
+func TestUpdateCheckCmd_ReturnsNonNilCmd(t *testing.T) {
+	cmd := setup.UpdateCheckCmd("dev")
+	if cmd == nil {
+		t.Error("UpdateCheckCmd returned nil tea.Cmd")
+	}
+}

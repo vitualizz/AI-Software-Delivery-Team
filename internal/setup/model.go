@@ -30,28 +30,36 @@ const (
 
 // Model is the root Bubbletea model for the installer TUI.
 type Model struct {
-	state    ViewState
-	cursor   int
-	selected map[int]bool
-	provider int
-	results  []installer.InstallResult
-	skillsFS fs.FS
+	state           ViewState
+	cursor          int
+	selected        map[int]bool
+	provider        int
+	results         []installer.InstallResult
+	skillsFS        fs.FS
+	currentVersion  string
+	latestVersion   string
+	updateAvailable bool
 }
 
-// New constructs an initial Model. Init() fires EngramCheckCmd to determine
-// whether to transition to StateMainMenu or remain at StateEngramMissing.
-func New(skillsFS fs.FS) Model {
+// New constructs an initial Model with the running binary version. Init()
+// fires EngramCheckCmd to determine whether to transition to StateMainMenu or
+// remain at StateEngramMissing, and UpdateCheckCmd to passively detect newer
+// releases.
+func New(skillsFS fs.FS, version string) Model {
 	return Model{
-		selected: make(map[int]bool),
-		skillsFS: skillsFS,
+		selected:       make(map[int]bool),
+		skillsFS:       skillsFS,
+		currentVersion: version,
 	}
 }
 
 // State returns the current ViewState. Exported for tests.
 func (m Model) State() ViewState { return m.state }
 
-// Init implements tea.Model. Fires an async engram PATH check.
-func (m Model) Init() tea.Cmd { return EngramCheckCmd() }
+// Init implements tea.Model. Fires async engram PATH and update checks.
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(EngramCheckCmd(), UpdateCheckCmd(m.currentVersion))
+}
 
 // Update handles all messages and key events.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -61,6 +69,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = StateMainMenu
 		} else {
 			m.state = StateEngramMissing
+		}
+		return m, nil
+
+	case UpdateCheckMsg:
+		if msg.Err != nil {
+			return m, nil // silent: no banner on any error/timeout/rate-limit
+		}
+		if newerAvailable(msg.Current, msg.Latest) {
+			m.latestVersion = msg.Latest
+			m.updateAvailable = true
 		}
 		return m, nil
 

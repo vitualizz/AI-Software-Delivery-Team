@@ -25,6 +25,10 @@ type Palette struct {
 	Dim lipgloss.Style
 	// Bold emphasizes text.
 	Bold lipgloss.Style
+	// Box wraps a screen body in a rounded border (Catppuccin Mauve) with padding.
+	Box lipgloss.Style
+	// StatusBar renders the per-screen key-hint footer with fg/bg colors.
+	StatusBar lipgloss.Style
 }
 
 // Default is the package-level palette used by views.go.
@@ -39,4 +43,11 @@ var Default = Palette{
 	Description: lipgloss.NewStyle().Faint(true).Foreground(lipgloss.Color("#6c7086")),
 	Dim:         lipgloss.NewStyle().Faint(true),
 	Bold:        lipgloss.NewStyle().Bold(true),
+	Box: lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.Color("#cba6f7")).
+		Padding(1, 2),
+	StatusBar: lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#cba6f7")).
+		Background(lipgloss.Color("#6c7086")),
 }
