@@ -59,8 +59,36 @@ memory:
   provider: engram
 ```
 
-Create `.asdt/knowledge/platform.yaml` with detected stack information.
-Create `.asdt/knowledge/platform-summary.yaml` with a brief summary.
+Create `.asdt/knowledge/platform.yaml`. Populate only what a single bounded command can determine deterministically — deeper analysis (naming conventions, architectural patterns) needs to sample file contents and is a different cost profile; it belongs to a dedicated future step, not to init:
+
+```yaml
+schema_version: "1"
+scanned_at: {current UTC timestamp, ISO 8601}
+detected_stack: {list from Step 1}
+conventions:
+  file_structure: {one-line description, derived below}
+design_fingerprint: {}
+```
+
+To derive `conventions.file_structure`, run ONE bounded command checking for well-known top-level directories — never walk the full tree, that breaks the "same output size regardless of repo size" guarantee:
+
+```
+fd -d 1 -t d -H '^(cmd|internal|pkg|src|app|lib|components|pages|tests|spec|crates|scripts)$' .
+```
+
+Compose one short, factual sentence from the matches (e.g. `"cmd/ for binaries, internal/ for private packages"`). No matches → leave it `""` — don't invent a convention.
+
+Leave `design_fingerprint: {}`. Identifying architectural patterns means sampling file contents, not checking presence — out of scope for init.
+
+Create `.asdt/knowledge/platform-summary.yaml` — derived FROM the data above, never re-analyzed from scratch:
+
+```yaml
+schema_version: "1"
+stack: {detected_stack}
+file_structure: {conventions.file_structure}
+```
+
+Both files stay small and bounded: their size grows with the number of detected stacks, never with repo size.
 
 ### Step 4 — Confirm
 Tell the user:
