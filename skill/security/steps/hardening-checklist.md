@@ -1,5 +1,13 @@
 # Hardening Checklist — Security Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Produce actionable recommendations from all security findings.
 Apply the report shared skill. Every finding becomes a concrete action item.
@@ -7,6 +15,8 @@ Apply the report shared skill. Every finding becomes a concrete action item.
 ## Inputs
 - `security/stride-threats`: STRIDE threats with severity
 - `security/owasp-findings`: OWASP findings with recommendations
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Apply context-extraction: from stride-threats keep Critical + High severity only.
 From owasp-findings keep all findings sorted by severity.
@@ -27,6 +37,15 @@ Apply the `report` shared skill:
 
 ## Output
 Produces: `security-findings` (final) and `hardening-checklist` (final)
+
+This step produces TWO final artifacts (single-artifact shape, unlike qa's
+`quality-report` which only LOOKS compound — confirmed by reading this section
+directly). Persist `security-findings` via mem_save under this step's
+`output_topic_key` in workflow.yaml; persist the second final artifact
+`hardening-checklist` under its own distinct per-type topic_key (see the NOTE
+on this step's workflow.yaml entry — `{project}/{change}/security/hardening-checklist`,
+which collides with neither the primary key nor any intermediate artifact name);
+return envelope covering both persisted keys.
 
 security-findings schema:
 ```yaml

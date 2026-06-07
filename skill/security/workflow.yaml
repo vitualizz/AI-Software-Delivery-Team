@@ -3,27 +3,62 @@ steps:
   - name: knowledge-recall
     skill: ../_shared/skills/knowledge-recall.md
     description: Query organizational memory for prior security findings, threat models, and mitigations relevant to this change before acting
+    execution: inline
 
   - name: platform-analysis
     skill: ../_shared/skills/platform-context.md
     description: Load and inject platform conventions and architectural fingerprint from platform.yaml
+    execution: inline
 
   - name: threat-modeling
     skill: steps/threat-modeling.md
     description: Apply STRIDE threat modeling using platform summary and any available upstream artifacts
+    execution: subagent
+    inputs: []
+    output_topic_key: "{project}/{change}/security/stride-threats"
+    reference_skills:
+      - skills/threat-modeling.md
+      - ../_shared/skills/artifact-loading.md
 
   - name: attack-surface
     skill: steps/attack-surface.md
     description: Map the attack surface from the identified STRIDE threats
+    execution: subagent
+    inputs:
+      - "{project}/{change}/security/stride-threats"
+    output_topic_key: "{project}/{change}/security/attack-surface"
+    reference_skills: []
 
   - name: owasp-analysis
     skill: steps/owasp-analysis.md
     description: Analyze the attack surface against OWASP Top 10 and applicable vulnerability classes
+    execution: subagent
+    inputs:
+      - "{project}/{change}/security/attack-surface"
+    output_topic_key: "{project}/{change}/security/owasp-findings"
+    reference_skills:
+      - skills/owasp-review.md
 
   - name: hardening-checklist
     skill: steps/hardening-checklist.md
     description: Produce the final security-findings + hardening-checklist artifacts with CVSS-lite severity ratings
+    execution: subagent
+    inputs:
+      - "{project}/{change}/security/stride-threats"
+      - "{project}/{change}/security/owasp-findings"
+    output_topic_key: "{project}/{change}/security/security-findings"
+    # NOTE: this step produces TWO final artifacts (security-findings AND
+    # hardening-checklist, per its `## Output` section and this specialist's
+    # "Final Output" line). `output_topic_key` declares only the primary one per
+    # the single-string field contract; persist the second under
+    # "{project}/{change}/security/hardening-checklist" (an equally unambiguous
+    # per-type key, distinct from the primary `security-findings` key — no
+    # collision risk since neither name is produced by an earlier step).
+    reference_skills:
+      - ../_shared/skills/report.md
+      - ../_shared/skills/context-extraction.md
 
   - name: decision-preservation
     skill: ../_shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of security findings and mitigations from this run
+    execution: inline

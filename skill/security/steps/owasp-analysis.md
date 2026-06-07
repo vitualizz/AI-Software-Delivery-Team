@@ -1,11 +1,21 @@
 # OWASP Analysis — Security Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Check the attack surface against the OWASP Top 10 (2021).
 Systematic coverage prevents the "I forgot to check X" failure mode.
 
 ## Inputs
 - `security/attack-surface`: entry points, trust boundaries, data flows
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Extract: entry_points[], data_flows[].vulnerabilities_noted.
 
@@ -50,6 +60,8 @@ A10 — SSRF
 
 ## Output
 Produces: `security/owasp-findings`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

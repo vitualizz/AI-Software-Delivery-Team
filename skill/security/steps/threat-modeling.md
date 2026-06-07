@@ -1,5 +1,13 @@
 # Threat Modeling — Security Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Identify threats using the STRIDE methodology. STRIDE is systematic —
 it catches threats that intuition misses.
@@ -10,6 +18,8 @@ it catches threats that intuition misses.
   - `system-design`: API surface, service boundaries
   - `architectural-decision`: chosen approach and consequences
   - `implementation-plan`: what code is being written
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Extract only: API surface entries, service boundaries, data model entities.
 If no upstream artifacts: derive from platform-summary and the request.
@@ -43,6 +53,8 @@ If a category has no relevant threats, state "No applicable threats identified" 
 
 ## Output
 Produces: `security/stride-threats`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml
