@@ -36,33 +36,23 @@ A project can match more than one stack (e.g. a Go backend with a Node frontend)
 
 List the detected technologies to the user.
 
-### Step 2 — Detect the memory provider, then ask for the change name
+### Step 2 — Detect the memory provider
 
 **Detect Engram yourself — do not ask the user to confirm something you can observe directly.** Check your own current tool list for Engram's memory tools (`mem_save`, `mem_search`, `mem_context`, etc. — Claude Code exposes them prefixed as `mcp__plugin_engram_engram__mem_*`; other host assistants may expose the same tools under a different prefix or none).
 
 - If they're present → Engram is installed and reachable. Tell the user so and continue.
 - If they're absent → tell the user Engram is required for ASDT's cross-session memory and is not reachable in this session, explain how to install/connect it, and STOP. Do not write `.asdt/config.yaml` with `provider: engram` when the provider isn't actually present — that would silently point every future specialist at a memory backend that doesn't exist.
 
-Once the provider is confirmed present, infer a default change name from the current git branch — don't make the user retype something you can read yourself:
-
-```
-git branch --show-current
-```
-
-Strip a conventional prefix if present (`feat/`, `feature/`, `fix/`, `chore/`, `refactor/` — e.g. `feat/add-user-auth` → `add-user-auth`). If the branch is `main`, `master`, `develop`, has no prefix, or the command returns nothing (detached HEAD), there's no usable default.
-
-Ask the user only this — offering the inferred name as a default when you have one:
-1. What is the name of the first change you want to work on? (e.g. `add-user-auth`{— press enter to use `{inferred-name}` from your current branch, or type a different name, when a default was inferred})
-
 ### Step 3 — Write configuration files
 
+`.asdt/` holds static reference data — bootstrapped once and refreshed only on a deliberate recalibration, never per-change. It is not where in-progress work state lives.
+
 **Check for an existing setup first — never overwrite silently.** Look for `.asdt/config.yaml`:
-- Absent → proceed to create the files below.
-- Present → read it and show the user its current `active_change`. Ask explicitly whether to keep it (skip writing `config.yaml`) or replace `active_change` with the new value from Step 2. Re-running init on an already-initialized project must never silently discard a change someone is mid-way through.
+- Absent → this is a first-time setup. Proceed to create the files below.
+- Present → this project was already initialized. List what already exists under `.asdt/` (`config.yaml`, and any of `platform.yaml` / `platform-summary.yaml` found under `.asdt/knowledge/`) and ask whether the user wants to recalibrate — re-scan and overwrite — or leave it as-is. Re-running init is for refreshing stale base info, not for silently discarding a working setup.
 
 Create `.asdt/config.yaml`:
 ```yaml
-active_change: {user-provided-change-name}
 memory:
   provider: engram
 ```
@@ -101,5 +91,5 @@ Both files stay small and bounded: their size grows with the number of detected 
 ### Step 4 — Confirm
 Tell the user:
 - Configuration written to `.asdt/config.yaml`
-- Active change set to `{change-name}`
+- Detected stack and platform info written to `.asdt/knowledge/`
 - They can now use `/asdt:architect`, `/asdt:developer`, etc.
