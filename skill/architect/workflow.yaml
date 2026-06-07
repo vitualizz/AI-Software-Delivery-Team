@@ -3,35 +3,84 @@ steps:
   - name: knowledge-recall
     skill: ../_shared/skills/knowledge-recall.md
     description: Query organizational memory for prior architectural decisions relevant to this change before acting
+    execution: inline
 
   - name: platform-analysis
     skill: ../_shared/skills/platform-context.md
     description: Load and inject platform conventions and design fingerprint from platform.yaml
+    execution: inline
 
   - name: load-constraints
     skill: steps/load-constraints.md
     description: Load architectural constraints from platform context into the constraints artifact
+    execution: subagent
+    inputs: []
+    output_topic_key: "{project}/{change}/architect/constraints-analysis"
+    reference_skills:
+      - skills/architecture-review.md
+      - ../_shared/skills/artifact-loading.md
 
   - name: evaluate-approaches
     skill: steps/evaluate-approaches.md
     description: Evaluate candidate architectural approaches against the loaded constraints
+    execution: subagent
+    inputs:
+      - "{project}/{change}/architect/constraints-analysis"
+    output_topic_key: "{project}/{change}/architect/approaches"
+    reference_skills: []
 
   - name: decision-record
     skill: steps/decision-record.md
     description: Select the winning approach and produce an Architecture Decision Record
+    execution: subagent
+    inputs:
+      - "{project}/{change}/architect/approaches"
+    output_topic_key: "{project}/{change}/architect/adr"
+    reference_skills: []
 
   - name: system-design
     skill: steps/system-design.md
     description: Produce the full system design artifact (data model + API surface) from the ADR
+    execution: subagent
+    inputs:
+      - "{project}/{change}/architect/adr"
+    output_topic_key: "{project}/{change}/architect/system-design"
+    reference_skills:
+      - ../_shared/skills/platform-context.md
+      - ../_shared/skills/scope-definition.md
+      - skills/api-design.md
+      - skills/scalability-analysis.md
 
   - name: risk-analysis
     skill: steps/risk-analysis.md
     description: Identify risks introduced by the system design and rate them by severity
+    execution: subagent
+    inputs:
+      - "{project}/{change}/architect/system-design"
+    output_topic_key: "{project}/{change}/architect/risks"
+    reference_skills: []
 
   - name: technical-handoff
     skill: steps/technical-handoff.md
     description: Consolidate ADR, system-design, and risks into the final architectural-decision + system-design artifacts
+    execution: subagent
+    inputs:
+      - "{project}/{change}/architect/adr"
+      - "{project}/{change}/architect/system-design"
+      - "{project}/{change}/architect/risks"
+    output_topic_key: "{project}/{change}/architect/architectural-decision"
+    # NOTE: this step produces TWO final artifacts (architectural-decision AND
+    # system-design, per its `## Output` section and this specialist's "Final
+    # Output" line). `output_topic_key` declares only the primary one per the
+    # single-string field contract; persist the second under
+    # "{project}/{change}/architect/system-design-final" (or an equally
+    # unambiguous per-type key distinct from the intermediate
+    # `architect/system-design` produced earlier by the system-design step).
+    reference_skills:
+      - ../_shared/skills/report.md
+      - ../_shared/skills/context-extraction.md
 
   - name: decision-preservation
     skill: ../_shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of the architectural decision made during this run
+    execution: inline

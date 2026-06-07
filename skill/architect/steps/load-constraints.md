@@ -1,14 +1,24 @@
 # Load Constraints — Architect Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Gather all architectural constraints that MUST be respected before evaluating approaches.
 Constraints come from: the existing platform, upstream specialist artifacts, and non-negotiable requirements.
 
 ## Inputs
-- `architect/constraints`: platform analysis output (tech stack, existing patterns, service boundaries)
+- Platform context (tech stack, existing patterns, service boundaries) — injected inline by the `platform-analysis` step that runs immediately before this one in the orchestrator's context
 - Any upstream artifacts (ux-brief, requirements-spec) if present — use artifact-loading to check
 
-Extract from architect/constraints: stack, key_patterns, naming_conventions.
+Note: this step's `inputs:` list in `workflow.yaml` is empty by design — it has no prior `subagent`-produced artifact to retrieve; it consumes the inline-injected platform context plus any upstream artifacts. Retrieve any upstream artifacts via mem_search + mem_get_observation by topic_key.
+
+Extract from the injected platform context: stack, key_patterns, naming_conventions.
 Extract from upstream artifacts (if present): scope.in, scope.out, key technical requirements.
 
 ## Context budget
@@ -27,6 +37,8 @@ For each hard constraint, note: what it is, why it cannot change, and how it lim
 
 ## Output
 Produces: `architect/constraints-analysis` (constraint analysis — feeds into evaluate-approaches)
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

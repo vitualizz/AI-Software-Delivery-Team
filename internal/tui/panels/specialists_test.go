@@ -101,3 +101,29 @@ func TestSpecialistsPanelSelectedSpecialistReturnsCorrectID(t *testing.T) {
 		}
 	}
 }
+
+// TestSpecialistsPanelCompactMode verifies that at <=60 width the panel
+// renders all specialists in compact mode without errors.
+func TestSpecialistsPanelCompactMode(t *testing.T) {
+	p := panels.NewSpecialistsPanel()
+	p, _ = p.UpdateSize(50, 30)
+	view := p.View()
+
+	for _, name := range []string{"UX/UI", "Architect", "Developer", "QA", "Security"} {
+		if !strings.Contains(view, name) {
+			t.Errorf("expected %q in compact view, got: %q", name, view)
+		}
+	}
+}
+
+// TestSpecialistsPanelRendersHeader verifies that the PanelHeader decorator
+// appears in the specialists view.
+func TestSpecialistsPanelRendersHeader(t *testing.T) {
+	p := panels.NewSpecialistsPanel()
+	p, _ = p.UpdateSize(80, 30)
+	view := p.View()
+
+	if !strings.Contains(view, "Specialists") {
+		t.Errorf("expected 'Specialists' title in view, got: %q", view)
+	}
+}

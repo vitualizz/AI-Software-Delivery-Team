@@ -1,11 +1,21 @@
 # Evaluate Approaches — Architect Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Compare 2-3 viable technical approaches for the key architectural decision.
 Choose one with explicit reasoning. Document why alternatives were rejected.
 
 ## Inputs
 - `architect/constraints-analysis`: hard constraints, soft constraints, opportunities (produced by load-constraints)
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Extract: hard_constraints (limits approach space), opportunities (could favor one approach).
 
@@ -27,6 +37,8 @@ architect/constraints: max 1,200 tokens.
 
 ## Output
 Produces: `architect/approaches`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

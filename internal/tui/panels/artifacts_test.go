@@ -100,3 +100,46 @@ func TestArtifactPanelEnterLoadsContent(t *testing.T) {
 		t.Errorf("expected YAML content in view after enter, got: %q", view)
 	}
 }
+
+// TestArtifactPanelCompactMode verifies that at <=60 width the panel
+// renders without errors in compact mode.
+func TestArtifactPanelCompactMode(t *testing.T) {
+	p := panels.NewArtifactPanel()
+	p, _ = p.UpdateSize(50, 30)
+
+	// With no files set, should show placeholder.
+	view := p.View()
+
+	if !strings.Contains(view, "Artifacts") {
+		t.Errorf("expected Artifacts content in compact view, got: %q", view)
+	}
+}
+
+// TestArtifactPanelFileTreeIndent verifies that hierarchical file paths
+// render with tree indentation (box-drawing characters).
+func TestArtifactPanelFileTreeIndent(t *testing.T) {
+	p := panels.NewArtifactPanel()
+	p, _ = p.UpdateSize(80, 40)
+	p, _ = p.SetFiles([]string{
+		"/root/src/a/file1.yaml",
+		"/root/src/b/file2.yaml",
+	})
+	view := p.View()
+
+	if !strings.Contains(view, "└──") {
+		t.Errorf("expected tree indentation (├──/└──) for hierarchical paths, got: %q", view)
+	}
+}
+
+// TestArtifactPanelSeparatorUsesThinnerChar verifies the separator between
+// file list and content viewer uses the thinner '╌' character.
+func TestArtifactPanelSeparatorUsesThinnerChar(t *testing.T) {
+	p := panels.NewArtifactPanel()
+	p, _ = p.UpdateSize(80, 40)
+	p, _ = p.SetFiles([]string{"/tmp/test/file.yaml"})
+	view := p.View()
+
+	if !strings.Contains(view, "╌") {
+		t.Errorf("expected thinner separator '╌' character, got: %q", view)
+	}
+}

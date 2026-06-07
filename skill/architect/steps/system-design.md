@@ -1,10 +1,20 @@
 # System Design — Architect Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Define the concrete technical structure: data model, API surface, and service boundaries.
 
 ## Inputs
 - `architect/adr`: chosen approach, key constraints, consequences
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Extract: decision (the chosen approach), consequences.negative (constraints to design around).
 
@@ -27,6 +37,8 @@ architect/adr: max 1,200 tokens.
 
 ## Output
 Produces: `architect/system-design`
+
+Persist via mem_save under the output_topic_key in workflow.yaml; return envelope.
 
 Schema:
 ```yaml

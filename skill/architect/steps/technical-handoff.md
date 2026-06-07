@@ -1,5 +1,13 @@
 # Technical Handoff — Architect Specialist
 
+> **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
+> described here yourself and return. You are NOT the orchestrator: do NOT call
+> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
+> `## Inputs` via `mem_search` (by its topic_key) then `mem_get_observation` —
+> do not assume it is already in your context. Persist your one output via
+> `mem_save` under the `output_topic_key` declared for this step in `workflow.yaml`,
+> then return a structured summary envelope (status, summary, output topic_key, open_items).
+
 ## Purpose
 Consolidate all architectural work into final artifacts for Developer and QA specialists.
 Apply the report shared skill. Surface key constraints the Developer MUST respect.
@@ -8,6 +16,8 @@ Apply the report shared skill. Surface key constraints the Developer MUST respec
 - `architect/adr`: the decision and its consequences
 - `architect/system-design`: data model, API surface
 - `architect/risks`: top risks and mitigations
+
+Retrieve via mem_search + mem_get_observation by topic_key.
 
 Apply context-extraction: keep what Developer needs, discard architect-internal reasoning.
 
@@ -24,6 +34,8 @@ Apply the `report` shared skill:
 
 ## Output
 Produces: `architectural-decision` (final) and `system-design` (final)
+
+Persist `architectural-decision` via mem_save under this step's `output_topic_key` in workflow.yaml; persist the second final artifact `system-design` under its own distinct per-type topic_key (see the NOTE on this step's workflow.yaml entry — do not collide with the intermediate `architect/system-design` produced earlier by the system-design step); return envelope covering both persisted keys.
 
 architectural-decision schema:
 ```yaml
