@@ -50,13 +50,7 @@ write implementation code, architecture decisions, or test plans.
 > - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
 > - The tailored list overrides the default ordering.
 
-**Complexity-based step filtering**: Always invoked when routed; complexity gates depth.
-
-| Level | Behavior | Steps |
-|-------|----------|-------|
-| **simple** | Filtered workflow | feature-brief → user-flows → component-mapping → ux-handoff |
-| **moderate** | Filtered workflow | + information-architecture |
-| **complex** | Full workflow | All 6 (feature-brief → information-architecture → user-flows → component-mapping → responsive-strategy → ux-handoff) |
+**Complexity-based step filtering**: Always invoked when routed; complexity gates depth. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted, omitting `information-architecture` from the simple tier even though `user-flows` hard-depends on it). Read §9.2's UX/UI row for the current simple/moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, platform-analysis, feature-brief, information-architecture, user-flows, component-mapping, responsive-strategy, ux-handoff, decision-preservation`).
 
 Always invoked when routed; complexity gates depth. `ux-handoff` ALWAYS runs (consolidation → ux-brief/component-spec).
 

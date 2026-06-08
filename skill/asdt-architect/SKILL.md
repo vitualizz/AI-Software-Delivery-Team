@@ -51,13 +51,7 @@ UX specs, or test plans.
 > - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
 > - The tailored list overrides the default ordering.
 
-**Complexity-based step filtering**: The Architect specialist is only invoked for moderate and complex changes. When invoked, the complexity level determines which steps to execute:
-
-| Level | Behavior | Steps |
-|-------|----------|-------|
-| **simple** | Not called (architect not needed) | — |
-| **moderate** | Filtered workflow | explore → spec → evaluate-approaches → decision-record |
-| **complex** | Full workflow | All steps in the table below |
+**Complexity-based step filtering**: The Architect specialist is only invoked for moderate and complex changes. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted into phantom step names like `explore`/`spec`, which do not exist in `asdt-architect/workflow.yaml`). Read §9.2's Architect row for the current moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, platform-analysis, load-constraints, evaluate-approaches, decision-record, system-design, risk-analysis, technical-handoff, decision-preservation`).
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
 
