@@ -68,18 +68,6 @@ steps:
       - skills/test-generation.md
       - ../asdt-shared/skills/platform-context.md
 
-  - name: review
-    skill: steps/review.md
-    description: Review implementation and tests; produce the consolidated implementation-plan artifact
-    execution: subagent
-    inputs:
-      - "{project}/{change}/developer/dev-implementation"
-      - "{project}/{change}/developer/dev-tests"
-    output_topic_key: "{project}/{change}/developer/implementation-plan"
-    reference_skills:
-      - ../asdt-shared/skills/review.md
-      - ../asdt-shared/skills/context-extraction.md
-
   - name: decision-preservation
     skill: ../asdt-shared/skills/decision-preservation.md
     description: Save a permanent organizational knowledge record of decisions made during this run

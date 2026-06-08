@@ -50,13 +50,7 @@ or UX specs.
 > - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
 > - The tailored list overrides the default ordering.
 
-**Complexity-based step filtering**: QA is always invoked when routed to; complexity gates step DEPTH, not invocation.
-
-| Level | Behavior | Steps |
-|-------|----------|-------|
-| **simple** | Filtered workflow | load-requirements → ac-validation → test-case-generation → quality-report |
-| **moderate** | Filtered workflow | + edge-case-analysis |
-| **complex** | Full workflow | All 6 steps (load-requirements → ac-validation → edge-case-analysis → test-strategy → test-case-generation → quality-report) |
+**Complexity-based step filtering**: QA is always invoked when routed to; complexity gates step DEPTH, not invocation. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted, omitting `test-strategy` from the moderate tier even though `test-case-generation` hard-depends on it). Read §9.2's QA row for the current simple/moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, load-requirements, ac-validation, edge-case-analysis, test-strategy, test-case-generation, quality-report, decision-preservation`).
 
 QA is always invoked when routed to; complexity gates step DEPTH, not invocation. `ac-validation` ALWAYS runs (invariant: AC gaps must be surfaced).
 

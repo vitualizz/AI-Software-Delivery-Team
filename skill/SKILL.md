@@ -58,7 +58,7 @@ When you receive a feature request:
 3. **Determine execution order** based on artifact dependencies:
    - UX/UI produces a `ux-brief` → Architect and Developer can read it
    - Architect produces `system-design` → Developer can read it
-   - Developer produces `implementation-plan` → QA can read it
+   - Developer produces `dev-implementation` → QA can read it
    - Security can run at ANY point — it reads whatever exists, nothing is required
 
 ---
@@ -150,13 +150,13 @@ Run each specialist in order:
 1. /asdt-ux-ui "{change name or description}"
 
 ## Tailored Workflow
-steps: [explore, spec, design]
+steps: [feature-brief, information-architecture, user-flows, component-mapping, ux-handoff]
 complexity: moderate
 
 2. /asdt-architect "{change name or description}"
 
 ## Tailored Workflow
-steps: [explore, spec, evaluate-approaches, decision-record]
+steps: [knowledge-recall, load-constraints, evaluate-approaches, decision-record]
 complexity: moderate
 
 3. /asdt-developer "{change name or description}"
@@ -249,6 +249,8 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 
 **Per-specialist step mapping by complexity:**
 
+> **Single source of truth**: every step name below MUST exist verbatim as a `name:` field in that specialist's own `workflow.yaml` — that file is the canonical registry, not this table. Before emitting any `## Tailored Workflow` block, verify each name against the target specialist's `workflow.yaml`. The lists below are an EXPLICIT NAMED SUBSET (selection cannot be expressed without naming members), but they are not a second copy to maintain independently — if `workflow.yaml` renames or removes a step, this table's corresponding entry is stale and MUST be re-derived from the registry, never patched from memory or prose.
+
 Developer:
 | Level | Steps |
 |-------|-------|
@@ -256,25 +258,25 @@ Developer:
 | **moderate** | explore → spec → design → implement → test (if TDD) |
 | **complex** | explore → spec → design → tasks → implement → test (if TDD) |
 
-Architect:
+Architect — read `asdt-architect/workflow.yaml`; valid names are its `name:` values (`knowledge-recall, platform-analysis, load-constraints, evaluate-approaches, decision-record, system-design, risk-analysis, technical-handoff, decision-preservation`):
 | Level | Steps |
 |-------|-------|
 | **simple** | Not called (architect not needed) |
-| **moderate** | explore → spec → evaluate-approaches → decision-record |
+| **moderate** | knowledge-recall → load-constraints → evaluate-approaches → decision-record |
 | **complex** | Full workflow (all steps) |
 
-QA:
+QA — read `asdt-qa/workflow.yaml`; valid names are its `name:` values (`knowledge-recall, load-requirements, ac-validation, edge-case-analysis, test-strategy, test-case-generation, quality-report, decision-preservation`):
 | Level | Steps |
 |-------|-------|
 | **simple** | load-requirements → ac-validation → test-case-generation → quality-report |
-| **moderate** | + edge-case-analysis |
+| **moderate** | load-requirements → ac-validation → edge-case-analysis → test-strategy → test-case-generation → quality-report (`test-strategy` is a hard input of `test-case-generation` — never omit it) |
 | **complex** | Full workflow (load-requirements → ac-validation → edge-case-analysis → test-strategy → test-case-generation → quality-report) |
 
-UX/UI:
+UX/UI — read `asdt-ux-ui/workflow.yaml`; valid names are its `name:` values (`knowledge-recall, platform-analysis, feature-brief, information-architecture, user-flows, component-mapping, responsive-strategy, ux-handoff, decision-preservation`):
 | Level | Steps |
 |-------|-------|
-| **simple** | feature-brief → user-flows → component-mapping → ux-handoff |
-| **moderate** | + information-architecture |
+| **simple** | feature-brief → information-architecture → user-flows → component-mapping → ux-handoff (`information-architecture` is a hard input of `user-flows` — never omit it) |
+| **moderate** | feature-brief → information-architecture → user-flows → component-mapping → ux-handoff |
 | **complex** | Full workflow (feature-brief → information-architecture → user-flows → component-mapping → responsive-strategy → ux-handoff) |
 
 **Security step mapping by risk surface (STRUCTURALLY SEPARATE — risk-surface-gated, NEVER complexity-gated):**
