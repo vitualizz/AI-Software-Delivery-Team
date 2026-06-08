@@ -50,6 +50,24 @@ Missing context → note in open_items and proceed with what's available.
 > machine-readable launch spec (execution mode, input/output topic_keys, reference
 > skill paths per step). The table below is a human-readable summary.
 
+> **Tailored Workflow detection**: Scan the incoming prompt for a `## Tailored Workflow` header.
+> - If ABSENT: run the full default workflow defined in the step table below.
+> - If PRESENT: parse the `steps:` list. Execute ONLY those steps in the order specified.
+> - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
+> - The tailored list overrides the default ordering.
+
+**Risk-surface-based step filtering (NOT complexity-gated)**: Security's depth is gated by `risk_surface`, NEVER `complexity`. Do not copy the complexity-gated pattern used by other specialists onto Security.
+
+| Risk surface | Behavior | Steps |
+|-------|----------|-------|
+| **none** | Not auto-invoked (still user-invocable on demand — "no required predecessor" preserved) | — |
+| **moderate** | Lighter pass | threat-modeling → hardening-checklist |
+| **high** | Full STRIDE chain | All 4 (threat-modeling → attack-surface → owasp-analysis → hardening-checklist) |
+
+Security's depth is gated by `risk_surface`, NEVER `complexity`. Do not copy the complexity-gated pattern used by other specialists onto Security.
+
+When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the risk-surface-based defaults above.
+
 **Execution policy (the rule, not just the list)**: a step that produces its OWN
 persisted artifact (generative / decision-producing) is `subagent`; a step that
 produces no artifact of its own and only injects context for the next step

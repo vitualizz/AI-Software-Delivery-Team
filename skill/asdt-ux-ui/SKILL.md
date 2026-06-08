@@ -44,6 +44,24 @@ write implementation code, architecture decisions, or test plans.
 > machine-readable launch spec (execution mode, input/output topic_keys, reference
 > skill paths per step). The table below is a human-readable summary.
 
+> **Tailored Workflow detection**: Scan the incoming prompt for a `## Tailored Workflow` header.
+> - If ABSENT: run the full default workflow defined in the step table below.
+> - If PRESENT: parse the `steps:` list. Execute ONLY those steps in the order specified.
+> - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
+> - The tailored list overrides the default ordering.
+
+**Complexity-based step filtering**: Always invoked when routed; complexity gates depth.
+
+| Level | Behavior | Steps |
+|-------|----------|-------|
+| **simple** | Filtered workflow | feature-brief → user-flows → component-mapping → ux-handoff |
+| **moderate** | Filtered workflow | + information-architecture |
+| **complex** | Full workflow | All 6 (feature-brief → information-architecture → user-flows → component-mapping → responsive-strategy → ux-handoff) |
+
+Always invoked when routed; complexity gates depth. `ux-handoff` ALWAYS runs (consolidation → ux-brief/component-spec).
+
+When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
+
 **Execution policy (the rule, not just the list)**: a step that produces its OWN
 persisted artifact (generative / decision-producing) is `subagent`; a step that
 produces no artifact of its own and only injects context for the next step

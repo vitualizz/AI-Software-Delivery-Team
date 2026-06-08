@@ -1,0 +1,7 @@
+schema_version: "1"
+scanned_at: 2026-06-07T23:53:35Z
+detected_stack:
+  - Go
+conventions:
+  file_structure: "cmd/ for binaries, internal/ for private packages"
+design_fingerprint: {}

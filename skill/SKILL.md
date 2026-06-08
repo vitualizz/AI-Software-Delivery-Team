@@ -85,6 +85,9 @@ Feature: {the request, quoted verbatim}
 Complexity Assessment: {simple | moderate | complex}
 Reasoning: {one-line explanation of keyword-based complexity classification}
 
+Risk-Surface Assessment: {none | moderate | high}
+Reasoning: {one-line explanation of keyword-family risk-surface classification}
+
 Recommended specialists:
   {specialist name} — {one-line rationale}
     ## Tailored Workflow
@@ -96,6 +99,13 @@ Recommended specialists:
     steps: [{comma-separated step list}]
     complexity: {simple | moderate | complex}
 
+  Security — {one-line rationale}
+    ## Tailored Workflow
+    steps: [{comma-separated step list}]
+    risk_surface: {none | moderate | high}
+
+{If risk_surface == none: Security — risk_surface: none; not auto-invoked (available on demand via /asdt-security)}
+
 Suggested order:
   {specialist command} → {specialist command} → ...
 
@@ -106,19 +116,24 @@ Proceed with this plan? (yes / modify / no)
 
 If only one specialist is needed, the "Suggested order" line contains only that specialist's command.
 
+Security's per-specialist block carries `risk_surface: {tier}` in place of `complexity:` — it is gated by the independent risk-surface axis, never by complexity. When `risk_surface` is assessed as `none`, Security MUST NOT appear in the auto-invoked specialist list, but the routing plan MUST still explicitly surface the line `Security — risk_surface: none; not auto-invoked (available on demand via /asdt-security)` so it is never silently dropped.
+
 ---
 
 ## 7. Routing Examples
 
-| Request | Specialists | Order | Complexity |
-|---|---|---|---|
-| "add password reset" | Developer (Architect if token design is complex) | `/asdt-developer` | moderate |
-| "redesign the dashboard" | UX/UI, Developer | `/asdt-ux-ui` → `/asdt-developer` | moderate |
-| "review our auth for vulnerabilities" | Security | `/asdt-security` | moderate |
-| "build AI reports module from scratch" | UX/UI, Architect, Developer | `/asdt-ux-ui` → `/asdt-architect` → `/asdt-developer` | complex |
-| "is our API scalable?" | Architect | `/asdt-architect` | complex |
-| "add login feature with tests" | Developer, QA | `/asdt-developer` → `/asdt-qa` | moderate |
-| "refactor the payment service" | Architect, Developer | `/asdt-architect` → `/asdt-developer` | complex |
+| Request | Specialists | Order | Complexity | Risk Surface |
+|---|---|---|---|---|
+| "add password reset" | Developer (Architect if token design is complex) | `/asdt-developer` | moderate | high |
+| "redesign the dashboard" | UX/UI, Developer | `/asdt-ux-ui` → `/asdt-developer` | moderate | none |
+| "review our auth for vulnerabilities" | Security | `/asdt-security` | moderate | high |
+| "build AI reports module from scratch" | UX/UI, Architect, Developer | `/asdt-ux-ui` → `/asdt-architect` → `/asdt-developer` | complex | moderate |
+| "is our API scalable?" | Architect | `/asdt-architect` | complex | none |
+| "add login feature with tests" | Developer, QA | `/asdt-developer` → `/asdt-qa` | moderate | high |
+| "refactor the payment service" | Architect, Developer | `/asdt-architect` → `/asdt-developer` | complex | moderate |
+| "change password hashing MD5 → bcrypt" | Developer, Security | `/asdt-developer` → `/asdt-security` | simple | high |
+
+`complexity` and `risk_surface` are computed INDEPENDENTLY; a simple change can be high-risk — see the bcrypt row above: a one-line code change (`complexity: simple`) still triggers Security's full STRIDE chain (`risk_surface: high`) because it touches password hashing and secrets handling.
 
 ---
 
@@ -189,6 +204,32 @@ Which best describes this change? (simple / moderate / complex)
 
 Then stop and wait for the answer.
 
+### 9.1b Risk-Surface Assessment
+
+Independently of complexity, classify the feature request by risk surface using keyword-family heuristics. This assessment runs on EVERY request, in parallel with §9.1, and is never derived from or collapsed into the complexity assessment — a `simple` change can be `risk_surface: high`.
+
+| Family | Keywords | Tier contribution |
+|--------|----------|-------------------|
+| auth/authz | login, auth, session, token, permission, role, access, oauth, sso | moderate |
+| data-handling | pii, password, encrypt, hash, store, database, personal data | moderate |
+| external-integration | third-party, api, webhook, integration, sdk, external | moderate |
+| secrets/credentials | secret, key, credential, env-var, api-key, config | moderate |
+
+**Rules:**
+- Any single family present → at least `moderate`.
+- **Compounding rule: 2+ distinct families present → escalate to `high`.**
+- Single family with high-sensitivity keywords (password, credential, secret, or auth+data together) → `high`.
+- No family matched → `none`.
+
+If the request's keywords do not clearly map to one risk-surface tier, ask ONE clarifying question:
+
+```
+To assess risk surface for workflow generation, I need one piece of information:
+Does this change touch authentication, data handling, external integrations, or secrets/credentials? (none / moderate / high)
+```
+
+Then stop and wait for the answer.
+
 ### 9.2 Tailored Workflow Generation
 
 Once complexity is determined, generate a `## Tailored Workflow` block for each recommended specialist. The block defines which steps that specialist should execute.
@@ -222,12 +263,46 @@ Architect:
 | **moderate** | explore → spec → evaluate-approaches → decision-record |
 | **complex** | Full workflow (all steps) |
 
+QA:
+| Level | Steps |
+|-------|-------|
+| **simple** | load-requirements → ac-validation → test-case-generation → quality-report |
+| **moderate** | + edge-case-analysis |
+| **complex** | Full workflow (load-requirements → ac-validation → edge-case-analysis → test-strategy → test-case-generation → quality-report) |
+
+UX/UI:
+| Level | Steps |
+|-------|-------|
+| **simple** | feature-brief → user-flows → component-mapping → ux-handoff |
+| **moderate** | + information-architecture |
+| **complex** | Full workflow (feature-brief → information-architecture → user-flows → component-mapping → responsive-strategy → ux-handoff) |
+
+**Security step mapping by risk surface (STRUCTURALLY SEPARATE — risk-surface-gated, NEVER complexity-gated):**
+
+> **Caution**: Security is the ONLY specialist gated by `risk_surface` instead of `complexity`. Do not copy the complexity-gated pattern from Developer/Architect/QA/UX-UI onto Security — that is the exact regression this mechanism guards against.
+
+| Risk surface | Steps |
+|-------|-------|
+| **none** | Not auto-invoked — available on demand, "no required predecessor" preserved |
+| **moderate** | threat-modeling → hardening-checklist |
+| **high** | Full STRIDE chain (threat-modeling → attack-surface → owasp-analysis → hardening-checklist) |
+
 **Tailored Workflow block format:**
+
+For Developer, Architect, QA, and UX/UI (complexity-gated):
 
 ```yaml
 ## Tailored Workflow
 steps: [{comma-separated step names}]
 complexity: {simple | moderate | complex}
+```
+
+For Security ONLY (risk-surface-gated — carries `risk_surface:` INSTEAD OF `complexity:`, never both):
+
+```yaml
+## Tailored Workflow
+steps: [{comma-separated step names}]
+risk_surface: {none | moderate | high}
 ```
 
 The `steps` list overrides the specialist's default step order. Steps NOT in the list are skipped entirely. The specialist scans their prompt for `## Tailored Workflow` header — if absent, they run their full default workflow.
