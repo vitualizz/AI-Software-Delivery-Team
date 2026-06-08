@@ -1,5 +1,5 @@
 ---
-name: asdt:ux-ui
+name: asdt-ux-ui
 description: "Shapes how people actually experience the product — user flows, information architecture, component specs, responsive and accessibility strategy — the specialist to bring in before a single screen gets built."
 user-invocable: true
 specialist-id: ux-ui

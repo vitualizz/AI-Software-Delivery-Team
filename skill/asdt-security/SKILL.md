@@ -1,5 +1,5 @@
 ---
-name: asdt:security
+name: asdt-security
 description: "Hunts for the gaps an attacker would find first — threat models, OWASP reviews, hardening checklists — the specialist to bring in whenever auth, data handling, or external integrations are on the table, at any point in the pipeline."
 user-invocable: true
 specialist-id: security

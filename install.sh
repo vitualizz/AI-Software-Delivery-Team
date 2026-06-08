@@ -106,7 +106,7 @@ main() {
   echo "  Next steps:"
   echo "    1. Run:  asdt-tui"
   echo "    2. Select your AI assistant(s) and install ASDT skills"
-  echo "    3. In your AI assistant, run:  /asdt:init"
+  echo "    3. In your AI assistant, run:  /asdt-init"
   echo ""
 }
 

@@ -1,5 +1,5 @@
 ---
-name: asdt:qa
+name: asdt-qa
 description: "Builds the safety net before code ships — test plans, acceptance criteria validation, edge case analysis, and quality reports — the specialist to bring in when 'it works on my machine' isn't good enough."
 user-invocable: true
 specialist-id: qa
