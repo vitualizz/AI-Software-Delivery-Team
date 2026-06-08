@@ -18,10 +18,18 @@ type HintGroup struct {
 	Hints []Hint
 }
 
+// compactFooterWidthThreshold is the width at or below which the footer
+// renders in compact mode — key tokens only, no descriptions or labels.
+const compactFooterWidthThreshold = 50
+
 // RenderKeyboardFooter renders hint lines, scaled by terminal width.
 func RenderKeyboardFooter(groups []HintGroup, width int) string {
-	if width <= 50 || len(groups) == 0 {
+	if len(groups) == 0 {
 		return ""
+	}
+
+	if width <= compactFooterWidthThreshold {
+		return renderCompactFooter(groups)
 	}
 
 	keyStyle := lipgloss.NewStyle().Foreground(ColorMuted)
@@ -39,4 +47,21 @@ func RenderKeyboardFooter(groups []HintGroup, width int) string {
 	}
 
 	return strings.Join(parts, " | ")
+}
+
+// renderCompactFooter renders a narrow-width footer with only key tokens
+// (no labels or descriptions), joined by '|'. Used at width <=
+// compactFooterWidthThreshold so the footer still hints at available
+// shortcuts without consuming the limited horizontal space.
+func renderCompactFooter(groups []HintGroup) string {
+	keyStyle := lipgloss.NewStyle().Foreground(ColorMuted)
+
+	var parts []string
+	for _, g := range groups {
+		for _, h := range g.Hints {
+			parts = append(parts, keyStyle.Render(h.Key))
+		}
+	}
+
+	return strings.Join(parts, "|")
 }

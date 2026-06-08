@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
@@ -55,6 +56,7 @@ func (m Model) Init() tea.Cmd {
 		LoadSpecialistsCmd(m.deps.PipelineStore, change),
 		LoadArtifactsCmd(m.deps.ConfigRoot, change),
 		TickCmd(),
+		m.specialists.Init(),
 	)
 }
 
@@ -134,6 +136,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			LoadArtifactsCmd(m.deps.ConfigRoot, change),
 			TickCmd(),
 		)
+
+	case spinner.TickMsg:
+		// Cross-cutting: the indeterminate spinner must keep animating
+		// regardless of which panel currently holds keyboard focus, so route
+		// it to the specialists panel unconditionally rather than through the
+		// focused-panel delegation below. Distinct from TickMsg above (the
+		// root model's own poll/refresh loop, sourced from tui.TickCmd) —
+		// these are different message types from different sources.
+		var cmd tea.Cmd
+		m.specialists, cmd = m.specialists.Update(msg)
+		return m, cmd
 	}
 
 	// Delegate to focused panel.
@@ -208,6 +221,23 @@ func (m Model) View() string {
 	}
 	m.statusBar.SetChange(change)
 	m.statusBar.SetSpecialist(m.specialists.SelectedSpecialist())
+	m.statusBar.SetCompact(m.mode == modeCompact)
 
-	return lipgloss.JoinVertical(lipgloss.Left, body, m.statusBar.View())
+	footer := panels.RenderKeyboardFooter(keyboardHintGroups(), m.width)
+
+	return lipgloss.JoinVertical(lipgloss.Left, body, footer, m.statusBar.View())
+}
+
+// keyboardHintGroups describes the key bindings handled directly in Update —
+// tab to switch the focused panel, j/k to navigate the focused panel's rows,
+// enter to select/load the highlighted item, and q/ctrl+c to quit.
+func keyboardHintGroups() []panels.HintGroup {
+	return []panels.HintGroup{
+		{Hints: []panels.Hint{
+			{Key: "tab", Description: "switch panel"},
+			{Key: "j/k", Description: "navigate"},
+			{Key: "enter", Description: "select"},
+			{Key: "q", Description: "quit"},
+		}},
+	}
 }

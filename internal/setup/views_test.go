@@ -6,9 +6,13 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/muesli/termenv"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup"
+	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
 func TestView_EngramMissingScreenShowsTitle(t *testing.T) {
@@ -83,6 +87,34 @@ func TestView_AssistantListSelectedItemHasCursor(t *testing.T) {
 	view := m2.View()
 	if !strings.Contains(view, "►") {
 		t.Errorf("assistant list missing cursor ►, view:\n%s", view)
+	}
+}
+
+func TestView_AssistantListUsesBadgeForStatus(t *testing.T) {
+	// Force a color-capable profile: in Ascii (no-color) mode, the prior
+	// ad-hoc `fmt.Sprintf("[%s]", styles.Default.Success.Render("present"))`
+	// and panels.NewBadge(...).Render() both degrade to the same plain
+	// "[present]" string — the assertion would pass either way and prove
+	// nothing about which rendering path is actually used. With color
+	// enabled, panels.Badge styles the brackets *inside* the colored span
+	// ("\x1b[...][present]\x1b[0m"), while the old call site styled only the
+	// label and wrapped brackets outside ("[\x1b[...]present\x1b[0m]") — a
+	// real, observable difference that proves adoption (not duplication).
+	prev := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(prev)
+
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = sendEngramFound(t, m)
+	m = updateKey(t, m, tea.KeyDown)    // cursor → 1 (Install)
+	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList
+	view := m2.View()
+
+	wantPresent := panels.NewBadge("present", panels.ColorSuccess).Render()
+	wantMissing := panels.NewBadge("missing", panels.ColorError).Render()
+
+	if !strings.Contains(view, wantPresent) && !strings.Contains(view, wantMissing) {
+		t.Errorf("expected assistant list to render status via panels.Badge ([present]/[missing] in tone color), got: %q", view)
 	}
 }
 
@@ -242,5 +274,52 @@ func TestView_DashboardShowsComingSoon(t *testing.T) {
 	view := m.View()
 	if !strings.Contains(view, "Coming Soon") {
 		t.Errorf("Dashboard view missing 'Coming Soon', got:\n%s", view)
+	}
+}
+
+// TestView_InstallingShowsSpinner verifies that the StateInstalling screen
+// renders an indeterminate spinner.Dot frame glyph alongside the existing
+// progress indication — the visual cue that installation is actively running
+// (T-030..T-039).
+func TestView_InstallingShowsSpinner(t *testing.T) {
+	view := stateView(t, "Installing")
+
+	found := false
+	for _, frame := range spinner.Dot.Frames {
+		glyph := strings.TrimRight(frame, " ")
+		if glyph == "" {
+			continue
+		}
+		if strings.Contains(view, glyph) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected Installing view to contain a spinner.Dot frame glyph, got:\n%s", view)
+	}
+}
+
+// TestView_InstallingSpinnerTintedWithColorSecondary verifies that the
+// rendered spinner glyph is styled with panels.ColorSecondary — the same
+// cyan/sky pastel reserved for in-progress indicators across the dashboard
+// (mirrors panels.NewSpinner's tint, see specialists panel wiring).
+func TestView_InstallingSpinnerTintedWithColorSecondary(t *testing.T) {
+	prev := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	defer lipgloss.SetColorProfile(prev)
+
+	view := stateView(t, "Installing")
+
+	tinted := lipgloss.NewStyle().Foreground(panels.ColorSecondary)
+	found := false
+	for _, frame := range spinner.Dot.Frames {
+		if strings.Contains(view, tinted.Render(frame)) {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected Installing view to contain a spinner frame tinted with ColorSecondary, got:\n%s", view)
 	}
 }

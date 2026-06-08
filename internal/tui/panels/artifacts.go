@@ -89,7 +89,7 @@ func (p ArtifactPanel) UpdateSize(width, height int) (ArtifactPanel, tea.Cmd) {
 	return p, cmd
 }
 
-// SetFiles updates the artifact file list.
+// SetFiles updates the artifact file list and the header's displayed count.
 func (p ArtifactPanel) SetFiles(files []string) (ArtifactPanel, tea.Cmd) {
 	p.files = files
 	if p.selected >= len(files) {
@@ -99,6 +99,7 @@ func (p ArtifactPanel) SetFiles(files []string) (ArtifactPanel, tea.Cmd) {
 	if len(files) > 0 {
 		p.commonPrefix = commonPathPrefix(files)
 	}
+	p.header.SetCount(len(files))
 	return p, nil
 }
 
@@ -125,6 +126,8 @@ func (p ArtifactPanel) View() string {
 
 	if len(p.files) == 0 {
 		sb.WriteString(stylePending.Render("No artifacts found"))
+		sb.WriteString("\n")
+		sb.WriteString(stylePending.Render("Run /asdt \"<feature description>\" to generate artifacts"))
 		return sb.String()
 	}
 

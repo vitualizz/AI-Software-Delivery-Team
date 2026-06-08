@@ -21,6 +21,22 @@ func TestArtifactPanelEmptyFilesRendersPlaceholder(t *testing.T) {
 	}
 }
 
+// TestArtifactPanelEmptyStateShowsGuidanceLine verifies that the empty-files
+// placeholder is EXTENDED (not replaced) with a second muted guidance line
+// telling the user how to populate the panel by running a specialist via the
+// `/asdt` entry point.
+func TestArtifactPanelEmptyStateShowsGuidanceLine(t *testing.T) {
+	p := panels.NewArtifactPanel()
+	view := p.View()
+
+	if !strings.Contains(view, "No artifacts found") {
+		t.Errorf("expected original placeholder 'No artifacts found' to remain, got: %q", view)
+	}
+	if !strings.Contains(view, "/asdt") {
+		t.Errorf("expected guidance line referencing '/asdt' entry point, got: %q", view)
+	}
+}
+
 // TestArtifactPanelRendersAllFiles verifies that a panel with 3 files renders
 // all 3 file names in its view.
 func TestArtifactPanelRendersAllFiles(t *testing.T) {
@@ -141,5 +157,18 @@ func TestArtifactPanelSeparatorUsesThinnerChar(t *testing.T) {
 
 	if !strings.Contains(view, "╌") {
 		t.Errorf("expected thinner separator '╌' character, got: %q", view)
+	}
+}
+
+// TestArtifactsPanelHeaderShowsFileCount verifies that SetFiles surfaces the
+// loaded file count via the PanelHeader's "(N)" count suffix.
+func TestArtifactsPanelHeaderShowsFileCount(t *testing.T) {
+	p := panels.NewArtifactPanel()
+	p.SetSize(80, 24)
+	p, _ = p.SetFiles([]string{"a/x.yaml", "a/y.yaml", "a/z.yaml"})
+
+	out := p.View()
+	if !strings.Contains(out, "(3)") {
+		t.Errorf("expected header count '(3)' reflecting len(files), got: %q", out)
 	}
 }
