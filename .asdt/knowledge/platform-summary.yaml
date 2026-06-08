@@ -1,0 +1,4 @@
+schema_version: "1"
+stack:
+  - Go
+file_structure: "cmd/ for binaries, internal/ for private packages"

@@ -16,8 +16,8 @@ examples/
         ├── knowledge/
         │   └── platform.yaml            # loaded by every specialist
         └── artifacts/add-user-auth/
-            ├── ux-brief.yaml            # produced by: /asdt:ux-ui
-            ├── implementation-plan.yaml  # produced by: /asdt:developer
+            ├── ux-brief.yaml            # produced by: /asdt-ux-ui
+            ├── implementation-plan.yaml  # produced by: /asdt-developer
             └── pipeline-state.yaml      # updated automatically after each step
 ```
 
@@ -33,7 +33,7 @@ feels consistent with what already exists.
 ### `.asdt/artifacts/add-user-auth/ux-brief.yaml`
 
 ```bash
-/asdt:ux-ui "add user authentication"
+/asdt-ux-ui "add user authentication"
 ```
 
 The UX/UI specialist analyzed the platform context and the feature request,
@@ -45,7 +45,7 @@ before generating any code.
 ### `.asdt/artifacts/add-user-auth/implementation-plan.yaml`
 
 ```bash
-/asdt:developer "add user authentication"
+/asdt-developer "add user authentication"
 ```
 
 The developer specialist loaded `ux-brief.yaml` and `platform.yaml`, estimated
@@ -93,18 +93,18 @@ instructions. The snapshot in `examples/sample-project/.asdt/` is the direct
 output of running these commands:
 
 ```bash
-/asdt:ux-ui "add user authentication"
-/asdt:developer "add user authentication"
+/asdt-ux-ui "add user authentication"
+/asdt-developer "add user authentication"
 ```
 
 Or let the meta-orchestrator suggest the plan first:
 
 ```bash
 /asdt "add user authentication with email and password"
-# → confirms: /asdt:ux-ui → /asdt:developer
+# → confirms: /asdt-ux-ui → /asdt-developer
 ```
 
 Every file under `.asdt/` is human-readable, committable, and diff-able. You
 can review the UX brief in a PR before running the developer specialist, adjust
-user flows, re-run `/asdt:ux-ui`, and the updated brief will be in place for
-the next `/asdt:developer` run.
+user flows, re-run `/asdt-ux-ui`, and the updated brief will be in place for
+the next `/asdt-developer` run.

@@ -22,7 +22,7 @@ skill/{name}/
 
 ```markdown
 ---
-name: asdt:{name}
+name: asdt-{name}
 description: "One sentence: what this specialist produces and when to reach for it."
 user-invocable: true
 specialist-id: {name}

@@ -51,3 +51,21 @@ ASDT's core thesis is that artifacts are durable records, not ephemeral context.
 - The TUI has exactly one place to look for all state.
 - All paths in artifact envelopes are `.asdt/`-relative, making them portable
   across machines and clones.
+
+## Addendum (2026-06-07): Scope clarification — bookkeeping vs. host-source writes
+
+This ADR's "nothing is ever written outside `.asdt/`" invariant governs ASDT's OWN tool
+bookkeeping: config, knowledge cache, pipeline state, prompt overrides, and artifact handoff
+(the last now superseded by Engram per ADR-011). Its purpose is uninstallability
+(`rm -rf .asdt/` leaves the project untouched) for ASDT's state — NOT a prohibition on a
+specialist whose declared role is to modify the host source tree.
+
+The `asdt-developer` specialist, in writing mode, writes real code to the host project's
+source tree. Those writes are NOT governed by this ADR; they are governed by `asdt-developer`'s
+own write-scope contract (declared edit roots resolved from `dev-tasks`/`dev-design`, validated
+before writing, STOP-on-out-of-scope — the sdd-apply model). Such host-source writes are a
+deliberate, scoped product of an approved task, not ASDT bookkeeping, and are reversible via
+normal version control rather than via `.asdt/` removal.
+
+In short: `.asdt/`-only = ASDT's tool state. Declared edit roots = a code-producing specialist's
+host writes. These are two distinct write surfaces; this ADR governs only the first.

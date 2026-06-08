@@ -1,5 +1,5 @@
 ---
-name: asdt:init
+name: asdt-init
 description: "Sets up the ground ASDT stands on — initializes .asdt/config.yaml and wires the memory provider so every other specialist has somewhere to read from and write to."
 user-invocable: true
 specialist-id: asdt-init
@@ -106,4 +106,4 @@ Both files stay small and bounded: their size grows with the number of detected 
 Tell the user:
 - Configuration written to `.asdt/config.yaml`
 - Detected stack and platform info written to `.asdt/knowledge/`
-- They can now use `/asdt:architect`, `/asdt:developer`, etc.
+- They can now use `/asdt-architect`, `/asdt-developer`, etc.

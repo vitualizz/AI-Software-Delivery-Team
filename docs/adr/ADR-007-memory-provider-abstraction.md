@@ -9,7 +9,7 @@ The MVP has no cross-session memory. Each specialist invocation starts from a cl
 slate: no recall of previous decisions, no awareness of prior architectural tradeoffs,
 no continuity across a multi-day change. This is acceptable for short tasks but
 limits the system's usefulness on long-running changes where a developer might run
-`/asdt:developer` on Monday and again on Thursday.
+`/asdt-developer` on Monday and again on Thursday.
 
 Engram is an obvious integration target for cross-session memory. However,
 hard-coding Engram as a dependency in the core would:
@@ -88,7 +88,7 @@ Positive:
 
 Negative:
 - `NullProvider` means no cross-session specialist context by default. A user running
-  `/asdt:developer` twice on the same change will not benefit from memory of the first
+  `/asdt-developer` twice on the same change will not benefit from memory of the first
   run unless they explicitly configure a provider.
 - The `EngramProvider` stub returns `ErrNotImplemented` until the MCP integration
   is completed. If a user configures `memory.provider: engram` before that

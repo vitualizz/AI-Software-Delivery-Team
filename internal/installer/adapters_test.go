@@ -10,7 +10,7 @@ import (
 
 var realisticSpecialistFS = fstest.MapFS{
 	"asdt-developer/SKILL.md": &fstest.MapFile{Data: []byte(`---
-name: asdt:developer
+name: asdt-developer
 description: "Turns specs and designs into working code — implementation plans, production code, and test suites."
 user-invocable: true
 specialist-id: developer
@@ -25,7 +25,7 @@ metadata:
 # Developer specialist
 `)},
 	"asdt-architect/SKILL.md": &fstest.MapFile{Data: []byte(`---
-name: asdt:architect
+name: asdt-architect
 description: "Makes architecture decisions and produces ADRs, system design, and API design artifacts."
 user-invocable: true
 specialist-id: architect
@@ -44,7 +44,7 @@ metadata:
 
 var malformedFrontmatterFS = fstest.MapFS{
 	"asdt-developer/SKILL.md": &fstest.MapFile{Data: []byte(`---
-name: asdt:developer
+name: asdt-developer
 description: "Turns specs and designs into working code — implementation plans, production code, and test suites."
 user-invocable: true
 specialist-id: developer
@@ -56,7 +56,7 @@ metadata:
 # Developer specialist
 `)},
 	"asdt-broken/SKILL.md": &fstest.MapFile{Data: []byte(`---
-name: asdt:broken
+name: asdt-broken
 description: "A specialist with a missing required frontmatter field."
 user-invocable: true
 metadata:
@@ -70,7 +70,7 @@ metadata:
 
 var prefixedSpecialistIDFS = fstest.MapFS{
 	"asdt-init/SKILL.md": &fstest.MapFile{Data: []byte(`---
-name: asdt:init
+name: asdt-init
 description: "Sets up the ground ASDT stands on."
 user-invocable: true
 specialist-id: asdt-init
@@ -104,8 +104,8 @@ func TestGenerateOpenCodeCommands_ProducesCorrectlyDerivedWrappers(t *testing.T)
 		wantNameInBody string
 		wantIDInBody   string
 	}{
-		{name: "developer", wantFile: "asdt-developer.md", wantDescr: "Turns specs and designs into working code — implementation plans, production code, and test suites.", wantNameInBody: "asdt:developer", wantIDInBody: "developer"},
-		{name: "architect", wantFile: "asdt-architect.md", wantDescr: "Makes architecture decisions and produces ADRs, system design, and API design artifacts.", wantNameInBody: "asdt:architect", wantIDInBody: "architect"},
+		{name: "developer", wantFile: "asdt-developer.md", wantDescr: "Turns specs and designs into working code — implementation plans, production code, and test suites.", wantNameInBody: "asdt-developer", wantIDInBody: "developer"},
+		{name: "architect", wantFile: "asdt-architect.md", wantDescr: "Makes architecture decisions and produces ADRs, system design, and API design artifacts.", wantNameInBody: "asdt-architect", wantIDInBody: "architect"},
 	}
 	dir := t.TempDir()
 	commandRoot := filepath.Join(dir, "commands")

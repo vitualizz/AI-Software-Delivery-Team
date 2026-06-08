@@ -72,7 +72,7 @@ reconstruction complexity without adding value here.
 
 Positive:
 - Contributors can add specialists via prompt files alone — no Go expertise required for new roles.
-- Each specialist is independently invocable (`/asdt:developer`, `/asdt:security`, etc.) without requiring a predecessor to run first.
+- Each specialist is independently invocable (`/asdt-developer`, `/asdt-security`, etc.) without requiring a predecessor to run first.
 - Specialist coupling is structurally impossible: specialists communicate only through artifact files under `.asdt/artifacts/{change}/`, never via Go imports.
 - The meta-orchestrator (`skill/SKILL.md`) routes requests to specialists rather than executing any discipline-specific logic itself.
 

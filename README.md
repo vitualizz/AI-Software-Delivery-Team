@@ -26,14 +26,14 @@ Downloads the pre-built binary for your platform (Linux/macOS, x86_64/arm64) and
 asdt-tui
 ```
 
-Interactive TUI that checks Engram is installed, lets you choose which AI assistant(s) to target, and copies the ASDT skills into them. Each skill (the `asdt` consultant, every specialist, and the shared fragment library) is installed as its own top-level sibling directory directly under `~/.claude/skills/` (Claude Code) or `~/.config/opencode/skills/` (OpenCode) — e.g. `~/.claude/skills/asdt-architect/`, `~/.claude/skills/asdt-shared/` — so each specialist is independently invocable (`asdt:architect`, `asdt:developer`, …) alongside `/asdt`.
+Interactive TUI that checks Engram is installed, lets you choose which AI assistant(s) to target, and copies the ASDT skills into them. Each skill (the `asdt` consultant, every specialist, and the shared fragment library) is installed as its own top-level sibling directory directly under `~/.claude/skills/` (Claude Code) or `~/.config/opencode/skills/` (OpenCode) — e.g. `~/.claude/skills/asdt-architect/`, `~/.claude/skills/asdt-shared/` — so each specialist is independently invocable (`asdt-architect`, `asdt-developer`, …) alongside `/asdt`.
 
 **2. Initialize your project**
 
 Open your AI assistant in the project directory and run:
 
 ```
-/asdt:init
+/asdt-init
 ```
 
 The assistant will detect your project stack, ask a few configuration questions, and write `.asdt/config.yaml` and `.asdt/knowledge/platform.yaml`.
@@ -47,12 +47,12 @@ Invoke from inside your AI assistant:
 | Command | What it does | Produces |
 |---|---|---|
 | `/asdt` | Meta-orchestrator — analyzes your request, recommends which specialists to run and in what order | — |
-| `/asdt:init` | Initialize ASDT for the project — detects stack, writes config | `.asdt/config.yaml`, `platform.yaml` |
-| `/asdt:architect` | ADRs, system design, risk analysis | `architectural-decision.yaml`, `system-design.yaml` |
-| `/asdt:developer` | Implementation plan with code | `implementation-plan.yaml` |
-| `/asdt:qa` | Test plan | `test-plan.yaml` |
-| `/asdt:security` | Threat model and hardening checklist | `security-findings.yaml`, `hardening-checklist.yaml` |
-| `/asdt:ux-ui` | UX brief and component specs | `ux-brief.yaml`, `component-spec.yaml` |
+| `/asdt-init` | Initialize ASDT for the project — detects stack, writes config | `.asdt/config.yaml`, `platform.yaml` |
+| `/asdt-architect` | ADRs, system design, risk analysis | `architectural-decision.yaml`, `system-design.yaml` |
+| `/asdt-developer` | Implementation plan with code | `implementation-plan.yaml` |
+| `/asdt-qa` | Test plan | `test-plan.yaml` |
+| `/asdt-security` | Threat model and hardening checklist | `security-findings.yaml`, `hardening-checklist.yaml` |
+| `/asdt-ux-ui` | UX brief and component specs | `ux-brief.yaml`, `component-spec.yaml` |
 
 Each specialist reads prior decisions from Engram memory, analyzes the current context, produces its artifacts, and saves the decision back to memory for the next specialist to build on.
 
