@@ -90,7 +90,7 @@ For each `subagent` row, resolve its `workflow.yaml` entry and:
 orchestrator context — no launch.
 
 ## Final Output
-`developer/dev-implementation` — the consolidated implementation artifact produced by the final generative step. Consumed by QA and other specialists.
+`developer/dev-implementation` — the consolidated implementation artifact produced by the `implement` step. Consumed by QA and other specialists.
 
 ## Artifact Persistence
 
@@ -102,7 +102,7 @@ All artifacts produced by this specialist MUST be saved to the memory provider v
 > invariant above and are scoped to declared edit roots.
 
 For each artifact, call `mem_save` with:
-- `title`: `"{change-name}/developer/{artifact-type}"` (e.g. `"add-auth/developer/implementation-plan"`)
+- `title`: `"{change-name}/developer/{artifact-type}"` (e.g. `"add-auth/developer/dev-implementation"`)
 - `topic_key`: `"{project}/{change}/developer/{artifact-type}"` (e.g. `"add-auth/developer/dev-spec"`)
 - `type`: `"architecture"` for design artifacts, `"decision"` for implementation choices
 - `content`: structured content with `What`, `Why`, `Where`, and optionally `Learned`

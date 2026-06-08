@@ -12,7 +12,7 @@ system that accumulates domain expertise over time.
 Any step that produces a **final decision artifact**:
 
 - Architect: `decision-record` → `architectural-decision`
-- Developer: `review` → `implementation-plan`
+- Developer: `implement` → `dev-implementation`
 - Security: `hardening-checklist` → `hardening-checklist`
 - QA: `quality-report` → `quality-report`
 - Any specialist's **last step** that produces a recommendations artifact
