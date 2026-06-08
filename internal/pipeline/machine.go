@@ -1,3 +1,6 @@
+// Package pipeline implements the sequential FSM for ASDT change delivery.
+// Valid transitions are enforced by the specialist model (StateV2 / AdvanceStep).
+// The Phase type and constants are kept for backward compatibility with v1 state files.
 package pipeline
 
 import (
