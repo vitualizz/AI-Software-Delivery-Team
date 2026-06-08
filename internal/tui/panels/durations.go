@@ -7,9 +7,9 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
 )
 
-// stepDuration is a pure, presentation-only value pairing two consecutive
+// StepDuration is a pure, presentation-only value pairing two consecutive
 // StepRecord entries with the elapsed time between them.
-type stepDuration struct {
+type StepDuration struct {
 	From    pipeline.StepRecord
 	To      pipeline.StepRecord
 	Elapsed time.Duration
@@ -19,16 +19,16 @@ type stepDuration struct {
 // chronological append-order per the append-only steps_completed log
 // convention) and returns the pairwise elapsed durations. Returns an empty
 // slice for 0 or 1 steps — there are no pairs to compute.
-func ComputeStepDurations(steps []pipeline.StepRecord) []stepDuration {
+func ComputeStepDurations(steps []pipeline.StepRecord) []StepDuration {
 	if len(steps) < 2 {
-		return []stepDuration{}
+		return []StepDuration{}
 	}
 
-	durations := make([]stepDuration, 0, len(steps)-1)
+	durations := make([]StepDuration, 0, len(steps)-1)
 	for i := 1; i < len(steps); i++ {
 		from := steps[i-1]
 		to := steps[i]
-		durations = append(durations, stepDuration{
+		durations = append(durations, StepDuration{
 			From:    from,
 			To:      to,
 			Elapsed: to.Timestamp.Sub(from.Timestamp),
