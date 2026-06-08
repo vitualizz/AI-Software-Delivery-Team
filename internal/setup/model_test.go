@@ -6,6 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup"
@@ -205,6 +206,67 @@ func TestUpdate_UpdateCheckMsg_DevBuild_NoBanner(t *testing.T) {
 	view := m2.View()
 	if strings.Contains(view, "/releases") {
 		t.Errorf("expected no banner on dev build, got:\n%s", view)
+	}
+}
+
+// toInstalling drives the model from StateEngramMissing through the menu
+// flow to StateInstalling — the same Update transitions the real TUI uses
+// (mirrors views_test.go's stateView helper, but returns setup.Model so
+// callers can keep driving Update directly).
+func toInstalling(t *testing.T, m setup.Model) setup.Model {
+	t.Helper()
+	m = sendEngramFound(t, m)
+	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Install)
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → AssistantList
+	m = updateKey(t, m, tea.KeyEnter) // AssistantList → SelectAssistants
+	m = updateKey(t, m, tea.KeyEnter) // SelectAssistants → SelectProvider
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → Installing
+	if m.State() != setup.StateInstalling {
+		t.Fatalf("toInstalling: state = %v, want StateInstalling", m.State())
+	}
+	return m
+}
+
+// TestUpdate_SpinnerTickAdvancesWhileInstalling verifies that a
+// spinner.TickMsg received while in StateInstalling is routed to the
+// embedded spinner and produces a re-tick command — keeping the
+// indeterminate spinner animating for the duration of the install.
+func TestUpdate_SpinnerTickAdvancesWhileInstalling(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = toInstalling(t, m)
+
+	next, cmd := m.Update(spinner.TickMsg{})
+	if cmd == nil {
+		t.Fatal("expected a re-tick command while StateInstalling, got nil")
+	}
+	msg := cmd()
+	if _, ok := msg.(spinner.TickMsg); !ok {
+		t.Errorf("expected re-emitted command to produce spinner.TickMsg, got %T", msg)
+	}
+
+	m2, ok := next.(setup.Model)
+	if !ok {
+		t.Fatalf("Update returned %T, want setup.Model", next)
+	}
+	if m2.State() != setup.StateInstalling {
+		t.Errorf("expected state to remain StateInstalling after spinner tick, got %v", m2.State())
+	}
+}
+
+// TestUpdate_SpinnerTickIgnoredOutsideInstalling verifies that a
+// spinner.TickMsg received OUTSIDE StateInstalling is gated off — it must not
+// produce a re-tick command, so the spinner loop does not run (and animate)
+// in screens where it has no visual representation.
+func TestUpdate_SpinnerTickIgnoredOutsideInstalling(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = sendEngramFound(t, m) // → StateMainMenu (not Installing)
+
+	_, cmd := m.Update(spinner.TickMsg{})
+	if cmd != nil {
+		msg := cmd()
+		if _, ok := msg.(spinner.TickMsg); ok {
+			t.Error("expected no spinner re-tick command outside StateInstalling, but got one")
+		}
 	}
 }
 

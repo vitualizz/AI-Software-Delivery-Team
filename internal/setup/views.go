@@ -27,7 +27,7 @@ func renderState(m Model) string {
 	case StateSelectProvider:
 		return renderSelectProvider(m)
 	case StateInstalling:
-		return renderInstalling(m.width)
+		return renderInstalling(m)
 	case StateDone:
 		return renderDone(m)
 	default:
@@ -99,11 +99,11 @@ func renderAssistantList(m Model) string {
 		bp, sp, _ := installer.Detect(d)
 		present := bp && sp
 
-		var label string
+		var badge panels.Badge
 		if present {
-			label = styles.Default.Success.Render("present")
+			badge = panels.NewBadge("present", panels.ColorSuccess)
 		} else {
-			label = styles.Default.Error.Render("missing")
+			badge = panels.NewBadge("missing", panels.ColorError)
 		}
 
 		cursor := "  "
@@ -115,7 +115,7 @@ func renderAssistantList(m Model) string {
 			nameStr = styles.Default.Dim.Render(d.Name)
 		}
 
-		fmt.Fprintf(&b, "  %s%s [%s]\n", cursor, nameStr, label)
+		fmt.Fprintf(&b, "  %s%s %s\n", cursor, nameStr, badge.Render())
 	}
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
@@ -173,11 +173,13 @@ func renderSelectProvider(m Model) string {
 	return frame("Select Memory Provider", strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
-func renderInstalling(width int) string {
+func renderInstalling(m Model) string {
+	body := m.spinner.View() + " " + styles.Default.Dim.Render("Installing assistants and skills...")
+
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
 		{Label: "Actions", Hints: []panels.Hint{{Key: "q", Description: "quit"}}},
-	}, width)
-	return frame("Installing...", "", footer, true)
+	}, m.width)
+	return frame("Installing...", body, footer, true)
 }
 
 func renderDashboard(width int) string {

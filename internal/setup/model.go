@@ -3,8 +3,10 @@ package setup
 import (
 	"io/fs"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
 // ViewState represents the current screen shown by the TUI.
@@ -42,18 +44,25 @@ type Model struct {
 	latestVersion   string
 	updateAvailable bool
 	width           int
+	spinner         spinner.Model
 }
 
 // New constructs an initial Model with the running binary version. Init()
 // fires EngramCheckCmd to determine whether to transition to StateMainMenu or
 // remain at StateEngramMissing, and UpdateCheckCmd to passively detect newer
 // releases.
+//
+// The spinner is built via panels.NewSpinner — exported from the panels
+// package specifically so this installer TUI and the dashboard TUI share one
+// indeterminate-spinner construction (Dot frames, ColorSecondary tint)
+// instead of each hand-rolling its own and risking drift.
 func New(skillsFS fs.FS, version string) Model {
 	return Model{
 		selected:       make(map[int]bool),
 		skillsFS:       skillsFS,
 		currentVersion: version,
 		width:          80,
+		spinner:        panels.NewSpinner(),
 	}
 }
 
@@ -94,6 +103,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		return m, nil
+
+	case spinner.TickMsg:
+		// Gated to StateInstalling: the spinner has no visual representation
+		// in any other screen, so letting it keep ticking elsewhere would
+		// just spin a goroutine loop for nothing. Distinct from this model's
+		// other message types — spinner.TickMsg only ever drives the
+		// indeterminate animation frame.
+		if m.state != StateInstalling {
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
@@ -242,7 +264,7 @@ func (m Model) handleSelectProvider(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.provider = m.cursor
 		m.state = StateInstalling
 		m.cursor = 0
-		return m, m.buildInstallCmd()
+		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
 	case tea.KeyEsc:
 		m.state = StateSelectAssistants
 		m.cursor = 0

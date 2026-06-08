@@ -12,6 +12,7 @@ type StatusBar struct {
 	change     string
 	specialist string
 	width      int
+	compact    bool
 }
 
 // NewStatusBar returns a zero-value StatusBar.
@@ -37,10 +38,13 @@ func (sb StatusBar) View() string {
 		line = fmt.Sprintf(" change: %s  specialist: %s", sb.change, sb.specialist)
 	default:
 		line = fmt.Sprintf(" change: %s", sb.change)
+		if sb.compact {
+			line += "  (more available — widen window)"
+		}
 	}
 
 	style := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("15")).
+		Foreground(ColorOnInactive).
 		Background(ColorInactive).
 		Width(sb.width)
 	return style.Render(line)
@@ -57,3 +61,9 @@ func (sb *StatusBar) SetChange(c string) { sb.change = c }
 
 // SetSpecialist updates the selected specialist name.
 func (sb *StatusBar) SetSpecialist(s string) { sb.specialist = s }
+
+// SetCompact marks whether the dashboard is in compact layout mode (<50
+// cols, where the artifacts panel is hidden entirely). When true, the
+// narrowest status-bar tier surfaces an inline "more available" cue so the
+// user knows there's hidden content beyond the visible specialists panel.
+func (sb *StatusBar) SetCompact(c bool) { sb.compact = c }
