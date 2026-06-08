@@ -2,10 +2,11 @@
 
 > **EXECUTOR**: You are the sub-agent assigned this single step. Do the work
 > described here yourself and return. You are NOT the orchestrator: do NOT call
-> Agent/Task/delegate, do NOT run other steps. Retrieve every input named under
-> `## Inputs` per the parallel-retrieval mandate at
-> `../asdt-shared/skills/parallel-retrieval.md`. If any input fails to resolve,
-> note it in `open_items` and proceed with available context. Persist your one
+> Agent/Task/delegate, do NOT run other steps. Your inputs are INJECTED in
+> this prompt by the orchestrator — do NOT fetch them. See
+> `../asdt-shared/skills/parallel-retrieval.md` for the injected-input
+> contract; if an input is marked UNRESOLVED, record it in `open_items` and
+> proceed. Persist your one
 > output via `mem_save` under the `output_topic_key` declared for this step in
 > `workflow.yaml`, then return a structured summary envelope (status, summary,
 > output topic_key, open_items).
@@ -18,7 +19,7 @@ Understand the area of the codebase that will change before writing a single lin
 - `platform-summary`: stack, naming conventions, key patterns
 
 Note: This step has no prior step artifacts. It operates purely on the request and platform context.
-Retrieve via mem_search + mem_get_observation by topic_key (this step's `inputs:` list in `workflow.yaml` is empty — it reads only the raw request and platform-summary, not a prior artifact).
+Both the request and `platform-summary` arrive INJECTED in this prompt (this step's `inputs:` list in `workflow.yaml` is empty — it reads only the raw request and platform-summary, not a prior artifact). Do NOT fetch either yourself; if `platform-summary` is marked UNRESOLVED, record it in `open_items` and proceed.
 
 ## Context budget
 Request text + platform-summary: max 1,000 tokens combined.
