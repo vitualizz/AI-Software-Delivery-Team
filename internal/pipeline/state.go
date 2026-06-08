@@ -2,6 +2,25 @@ package pipeline
 
 import "time"
 
+// Phase represents a pipeline stage as a string enum.
+// Kept for backward compatibility with v1 pipeline-state.yaml files.
+// New code should use the specialist model (StateV2 / AdvanceStep).
+type Phase string
+
+const (
+	// PhaseRequirements is the initial phase after /asdt requirements runs.
+	PhaseRequirements Phase = "requirements"
+
+	// PhasePlan is set after /asdt develop produces an implementation plan.
+	PhasePlan Phase = "plan"
+
+	// PhaseImplement is set after the implementation phase completes.
+	PhaseImplement Phase = "implement"
+
+	// PhaseReview is the terminal phase before merging.
+	PhaseReview Phase = "review"
+)
+
 // State is the v1 pipeline-state.yaml document (linear FSM).
 // It matches the pipeline-state.schema.yaml contract exactly.
 // Kept for backward compatibility — new code should use StateV2.

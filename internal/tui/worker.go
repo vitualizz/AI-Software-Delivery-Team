@@ -14,23 +14,6 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
 )
 
-// LoadPipelineCmd reads pipeline-state.yaml via the given Store and returns
-// a PipelineLoadedMsg on success or an ErrorMsg on failure.
-// Kept for backward compatibility with v1 pipeline state.
-// It is a proper tea.Cmd — it does not block the Update loop.
-func LoadPipelineCmd(store artifact.Store, change string) tea.Cmd {
-	return func() tea.Msg {
-		if store == nil {
-			return ErrorMsg{Err: fmt.Errorf("pipeline store not configured")}
-		}
-		var state pipeline.State
-		if err := store.Read(context.Background(), change, "pipeline-state", &state); err != nil {
-			return ErrorMsg{Err: err}
-		}
-		return PipelineLoadedMsg{State: state}
-	}
-}
-
 // LoadSpecialistsCmd reads pipeline-state.yaml as a StateV2 document
 // and returns a SpecialistsLoadedMsg on success. If the file is absent or cannot
 // be decoded as v2, it returns SpecialistsLoadedMsg with a nil State so the panel

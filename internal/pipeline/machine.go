@@ -53,10 +53,6 @@ func (m *FSMachine) Current(ctx context.Context, change string) (State, error) {
 	return s, nil
 }
 
-// ErrIllegalTransition is returned when an advance attempt violates the FSM edges.
-// Kept for backward compatibility; no longer used internally.
-var ErrIllegalTransition = fmt.Errorf("illegal pipeline transition")
-
 // ArtifactTypeV2 is the artifact type key for the specialist-scoped pipeline state.
 const ArtifactTypeV2 = "pipeline-state-v2"
 

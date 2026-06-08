@@ -1,66 +1,15 @@
 package tui_test
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
 	"github.com/vitualizz/ai-software-delivery-team/internal/config"
-	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui"
 	"gopkg.in/yaml.v3"
 )
-
-// TestLoadPipelineCmdSuccess verifies that LoadPipelineCmd returns PipelineLoadedMsg
-// when a valid pipeline-state.yaml exists via the Store.
-func TestLoadPipelineCmdSuccess(t *testing.T) {
-	dir := t.TempDir()
-	store := artifact.NewFSStore(dir)
-
-	// Write a fixture pipeline state.
-	state := pipeline.State{
-		SchemaVersion: "1",
-		ChangeID:      "test-change",
-		CurrentState:  pipeline.PhasePlan,
-	}
-	if err := store.Write(context.Background(), "test-change", "pipeline-state", state); err != nil {
-		t.Fatal(err)
-	}
-
-	cmd := tui.LoadPipelineCmd(store, "test-change")
-	if cmd == nil {
-		t.Fatal("LoadPipelineCmd returned nil")
-	}
-
-	msg := cmd()
-	loaded, ok := msg.(tui.PipelineLoadedMsg)
-	if !ok {
-		t.Fatalf("expected PipelineLoadedMsg, got %T: %v", msg, msg)
-	}
-	if loaded.State.ChangeID != "test-change" {
-		t.Errorf("expected ChangeID 'test-change', got %q", loaded.State.ChangeID)
-	}
-	if loaded.State.CurrentState != pipeline.PhasePlan {
-		t.Errorf("expected CurrentState 'plan', got %q", loaded.State.CurrentState)
-	}
-}
-
-// TestLoadPipelineCmdErrorOnMissing verifies that LoadPipelineCmd returns
-// ErrorMsg when the artifact does not exist.
-func TestLoadPipelineCmdErrorOnMissing(t *testing.T) {
-	dir := t.TempDir()
-	store := artifact.NewFSStore(dir)
-
-	cmd := tui.LoadPipelineCmd(store, "nonexistent")
-	msg := cmd()
-
-	if _, ok := msg.(tui.ErrorMsg); !ok {
-		t.Fatalf("expected ErrorMsg for missing artifact, got %T", msg)
-	}
-}
 
 // TestLoadArtifactsCmdSuccess verifies that LoadArtifactsCmd returns an
 // ArtifactListMsg with the correct file count from a fixture directory.
