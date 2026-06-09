@@ -19,7 +19,7 @@ it catches threats that intuition misses.
 - Any available upstream artifacts (artifact-loading — all optional):
   - `system-design`: API surface, service boundaries
   - `architectural-decision`: chosen approach and consequences
-  - `implementation-plan`: what code is being written
+  - `dev-implementation`: what code is being written
 
 Retrieve via mem_search + mem_get_observation by topic_key.
 

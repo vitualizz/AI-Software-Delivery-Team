@@ -20,7 +20,7 @@ QA starts from the deliverables of other specialists — not from the raw reques
   - `requirements-spec` (if Requirements specialist ran)
   - `ux-brief` (if UX/UI specialist ran)
   - `architectural-decision` (if Architect specialist ran)
-  - `implementation-plan` (if Developer specialist ran)
+  - `dev-implementation` (if Developer specialist ran)
   - Raw request (fallback if no upstream artifacts)
 
 Note: this step's `inputs:` list in `workflow.yaml` is empty by design — it has
