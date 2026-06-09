@@ -17,8 +17,6 @@ Mobile-first: start with the smallest viewport, expand up.
 ## Inputs
 - `ux-ui/components`: component inventory (reused, extended, new)
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: new_components and extended_components (these need explicit responsive specs).
 Reused components already have responsive behavior — note their breakpoint behavior only if the
 feature requires overriding it.

@@ -17,8 +17,6 @@ A smaller attack surface = fewer vulnerabilities.
 ## Inputs
 - `security/stride-threats`: identified threats with components
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: threats[].affected_components, threats[].stride_category.
 
 ## Context budget

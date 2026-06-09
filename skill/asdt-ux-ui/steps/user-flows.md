@@ -17,8 +17,6 @@ Include the happy path and the most critical edge cases.
 ## Inputs
 - `ux-ui/ia`: sections, navigation, data relationships
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: navigation.entry_point, navigation.primary_actions, sections[].
 
 ## Context budget

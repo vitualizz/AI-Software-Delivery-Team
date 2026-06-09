@@ -18,8 +18,6 @@ Generate implementation code for each task, respecting existing conventions.
 - `developer/dev-tasks`: ordered task list with files and dependencies
 - `developer/dev-design`: technical approach, key constraints
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract from dev-tasks: `tasks` list.
 Extract from dev-design: `key_constraints`, `data_model` field shapes.
 

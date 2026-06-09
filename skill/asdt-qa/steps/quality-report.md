@@ -19,8 +19,6 @@ test cases and AC validation into a coherent quality document.
 - `qa/test-cases`: all test cases
 - `qa/ac-gaps`: AC validation results
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Apply context-extraction: from test-cases keep counts + critical cases only.
 From ac-gaps keep gap_count + open_items only.
 

@@ -23,8 +23,6 @@ component-spec (for implementation). Apply the report shared skill.
 - `ux-ui/components`: component inventory
 - `ux-ui/responsive`: breakpoint behavior
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Apply context-extraction to each: keep only fields relevant to implementation handoff.
 
 ## Context budget

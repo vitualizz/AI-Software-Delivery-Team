@@ -18,8 +18,6 @@ Bad ACs produce bad tests — fix the AC first.
 ## Inputs
 - `qa/ac-list`: normalized acceptance criteria
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: acceptance_criteria[].
 
 ## Context budget

@@ -18,8 +18,6 @@ Choose one with explicit reasoning. Document why alternatives were rejected.
 ## Inputs
 - `architect/constraints-analysis`: hard constraints, soft constraints, opportunities (produced by load-constraints)
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: hard_constraints (limits approach space), opportunities (could favor one approach).
 
 ## Context budget

@@ -19,8 +19,6 @@ understand the context, not just the outcome.
 ## Inputs
 - `architect/approaches`: chosen approach, alternatives, rationale
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: central_question, chosen, chosen_rationale, rejected[].
 
 ## Context budget

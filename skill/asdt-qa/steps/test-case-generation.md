@@ -18,8 +18,6 @@ Write structured test cases for the happy path, validated ACs, and critical edge
 - `qa/test-strategy`: which level each behavior is tested at
 - `qa/edge-cases`: edge case inventory (critical + high priority only)
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract from test-strategy: unit.what, integration.what, e2e.what.
 Extract from edge-cases: edge_cases where priority="critical" or "high".
 

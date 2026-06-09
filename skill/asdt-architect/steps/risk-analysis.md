@@ -17,8 +17,6 @@ Identify the top risks introduced by this architectural decision and propose mit
 ## Inputs
 - `architect/system-design`: data model, API surface, service boundaries
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: service_boundaries.touched_modules, api_surface[].error_cases, data_model[].relationships.
 
 ## Context budget

@@ -21,8 +21,6 @@ it catches threats that intuition misses.
   - `architectural-decision`: chosen approach and consequences
   - `dev-implementation`: what code is being written
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract only: API surface entries, service boundaries, data model entities.
 If no upstream artifacts: derive from platform-summary and the request.
 

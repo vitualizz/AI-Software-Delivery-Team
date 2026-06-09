@@ -6,7 +6,7 @@ steps:
     execution: inline
 
   - name: platform-analysis
-    skill: ../asdt-shared/skills/platform-context.md
+    skill: ../asdt-shared/skills/platform-analysis.md
     description: Load and inject platform conventions and design fingerprint from platform.yaml
     execution: inline
 

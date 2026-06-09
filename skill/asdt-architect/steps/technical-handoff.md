@@ -20,8 +20,6 @@ Apply the report shared skill. Surface key constraints the Developer MUST respec
 - `architect/system-design`: data model, API surface
 - `architect/risks`: top risks and mitigations
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Apply context-extraction: keep what Developer needs, discard architect-internal reasoning.
 
 ## Context budget
