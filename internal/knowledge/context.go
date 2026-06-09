@@ -53,18 +53,11 @@ type ContextDetection struct {
 // ProjectContext is the top-level structure written to
 // {root}/knowledge/project-context.yaml by asdt init Step 4.
 type ProjectContext struct {
-	SchemaVersion     string           `yaml:"schema_version"`
-	DetectedAt        time.Time        `yaml:"detected_at"`
-	IsMonorepo        ContextDetection `yaml:"is_monorepo"`
-	TestRunner        ContextDetection `yaml:"test_runner"`
-	NamingStyle       ContextDetection `yaml:"naming_style"`
+	SchemaVersion      string           `yaml:"schema_version"`
+	DetectedAt         time.Time        `yaml:"detected_at"`
+	IsMonorepo         ContextDetection `yaml:"is_monorepo"`
+	TestRunner         ContextDetection `yaml:"test_runner"`
+	NamingStyle        ContextDetection `yaml:"naming_style"`
 	ArchitecturalStyle ContextDetection `yaml:"architectural_style"`
 }
 
-// DetectConfig carries parameters for a context detection run.
-// PrimaryLanguage is passed to TestRunnerProbe and NamingStyleDetector.
-// NamingSampleN overrides the sample size; 0 means use NamingStyleSampleSize.
-type DetectConfig struct {
-	PrimaryLanguage string
-	NamingSampleN   int
-}
