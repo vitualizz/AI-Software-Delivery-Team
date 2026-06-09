@@ -14,6 +14,8 @@ type Palette struct {
 	Success lipgloss.Style
 	// Error indicates a failure (red).
 	Error lipgloss.Style
+	// Warning indicates a cautionary condition (amber).
+	Warning lipgloss.Style
 	// Dim reduces visual prominence of secondary elements.
 	Dim lipgloss.Style
 	// Box wraps a screen body in a rounded border with padding.
@@ -27,6 +29,7 @@ var Default = Palette{
 	Cursor:  lipgloss.NewStyle().Bold(true).Foreground(panels.ColorSecondary),
 	Success: lipgloss.NewStyle().Foreground(panels.ColorSuccess),
 	Error:   lipgloss.NewStyle().Foreground(panels.ColorError),
+	Warning: lipgloss.NewStyle().Bold(true).Foreground(panels.ColorWarning),
 	Dim:     lipgloss.NewStyle().Faint(true),
 	Box: panels.FocusBorderStyle(true).
 		Padding(1, 2),

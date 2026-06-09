@@ -26,6 +26,8 @@ func renderState(m Model) string {
 		return renderSelectAssistants(m)
 	case StateSelectProvider:
 		return renderSelectProvider(m)
+	case StateAgentSetup:
+		return renderAgentSetup(m)
 	case StateInstalling:
 		return renderInstalling(m)
 	case StateDone:
@@ -165,6 +167,52 @@ func renderSelectProvider(m Model) string {
 	return frame("Select Memory Provider", strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
+func renderAgentSetup(m Model) string {
+	var b strings.Builder
+
+	// Always show a notice that this writes to global assistant config.
+	if len(m.agentConflicts) > 0 {
+		fmt.Fprintf(&b, "  %s\n",
+			styles.Default.Warning.Render("⚠  Existing global agent config detected — will be overwritten."))
+		fmt.Fprintf(&b, "  %s\n\n",
+			styles.Default.Dim.Render("   Proceed at your own risk."))
+	} else {
+		fmt.Fprintf(&b, "  %s\n\n",
+			styles.Default.Dim.Render("This will write to your global AI assistant config."))
+	}
+
+	// 4 presets + Skip.
+	type option struct {
+		name        string
+		description string
+	}
+	options := make([]option, 0, len(installer.PersonaPresets)+1)
+	for _, p := range installer.PersonaPresets {
+		options = append(options, option{name: p.Name, description: p.Description})
+	}
+	options = append(options, option{name: "Skip", description: "Continue without configuring agent persona."})
+
+	for i, opt := range options {
+		cursor := "  "
+		var nameStr string
+		if i == m.cursor {
+			cursor = cursorChar + " "
+			nameStr = styles.Default.Cursor.Render(opt.name)
+		} else {
+			nameStr = styles.Default.Dim.Render(opt.name)
+		}
+		fmt.Fprintf(&b, "  %s%s — %s\n", cursor, nameStr, opt.description)
+	}
+
+	subtitle := styles.Default.Dim.Render("Configure how AI assistants behave across all tools")
+	body := lipgloss.JoinVertical(lipgloss.Left, subtitle, "", strings.TrimRight(b.String(), "\n"))
+
+	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
+		{Label: "Actions", Hints: []panels.Hint{{Key: "↑↓", Description: "navigate"}, {Key: "enter", Description: "select"}, {Key: "esc", Description: "back"}, {Key: "q", Description: "quit"}}},
+	}, m.width)
+	return frame("Agent Persona", body, footer, true)
+}
+
 func renderInstalling(m Model) string {
 	body := m.spinner.View() + " " + styles.Default.Dim.Render("Installing assistants and skills...")
 
@@ -223,6 +271,28 @@ func renderDone(m Model) string {
 			fmt.Fprintf(&b, "  %s\n", styles.Default.Success.Render("✓ "+name))
 		} else {
 			fmt.Fprintf(&b, "  %s\n", styles.Default.Error.Render(fmt.Sprintf("✗ %s: %v", name, r.Err)))
+		}
+	}
+
+	if len(m.agentResults) > 0 {
+		fmt.Fprintf(&b, "\n  %s\n", styles.Default.Dim.Render("Agent Config:"))
+		for _, r := range m.agentResults {
+			name := nameFor[r.AssistantID]
+			if name == "" {
+				name = string(r.AssistantID)
+			}
+			switch {
+			case r.Err != nil:
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Error.Render(fmt.Sprintf("✗ %s: %v", name, r.Err)))
+			case r.Skipped:
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render("– "+name+": skipped (existing config kept)"))
+			default:
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Success.Render("✓ "+name+" agent config written"))
+			}
+			// Note about OpenCode override behavior.
+			if r.AssistantID == installer.AssistantOpenCode && r.Err == nil && !r.Skipped {
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render("  Note: OpenCode reads this as a global override for all projects."))
+			}
 		}
 	}
 

@@ -22,6 +22,11 @@ type InstallDoneMsg struct {
 	Results []installer.InstallResult
 }
 
+// AgentInstallDoneMsg is sent when agent config installation completes.
+type AgentInstallDoneMsg struct {
+	Results []installer.AgentConfigResult
+}
+
 // EnvironmentCheckProgressMsg is sent by each probe in EnvironmentCheckCmd
 // as soon as it resolves. One message per row — carries the row label so
 // Update() can locate and update the correct CheckRow in preflightSections.
@@ -103,6 +108,15 @@ func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.P
 	return func() tea.Msg {
 		results := installer.Install(assistants, provider, skillsFS)
 		return InstallDoneMsg{Results: results}
+	}
+}
+
+// AgentInstallCmd runs installer.InstallAgentConfig in a goroutine and sends
+// AgentInstallDoneMsg when it completes.
+func AgentInstallCmd(assistants []installer.AssistantDescriptor, preset installer.PersonaPreset, overwrite bool, skillsFS fs.FS) tea.Cmd {
+	return func() tea.Msg {
+		results := installer.InstallAgentConfig(assistants, preset, overwrite, skillsFS)
+		return AgentInstallDoneMsg{Results: results}
 	}
 }
 

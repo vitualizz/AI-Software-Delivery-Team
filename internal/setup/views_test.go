@@ -160,7 +160,12 @@ func stateView(t *testing.T, target string) string {
 		return m.View()
 	}
 
-	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → Installing
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	if target == "AgentSetup" {
+		return m.View()
+	}
+
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Installing
 	if target == "Installing" {
 		return m.View()
 	}
@@ -179,6 +184,7 @@ func TestView_AllStatesHaveBorder(t *testing.T) {
 		"AssistantList",
 		"SelectAssistants",
 		"SelectProvider",
+		"AgentSetup",
 		"Installing",
 	}
 

@@ -18,4 +18,5 @@ var (
 	ColorInactive   = lipgloss.AdaptiveColor{Light: "#C4B5BD", Dark: "#6B6470"}
 	ColorMuted      = lipgloss.AdaptiveColor{Light: "#E7DDE3", Dark: "#9B8E97"}
 	ColorOnInactive = lipgloss.AdaptiveColor{Light: "#1F2937", Dark: "#F9FAFB"}
+	ColorWarning    = lipgloss.AdaptiveColor{Light: "#92400E", Dark: "#FCD34D"}
 )

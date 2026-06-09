@@ -30,6 +30,8 @@ const (
 	StateSelectAssistants
 	// StateSelectProvider allows the user to choose a memory provider.
 	StateSelectProvider
+	// StateAgentSetup shows the persona selection step (optional).
+	StateAgentSetup
 	// StateInstalling shows installation progress.
 	StateInstalling
 	// StateDone is the terminal state shown after installation completes.
@@ -43,6 +45,7 @@ type Model struct {
 	selected          map[int]bool
 	provider          int
 	results           []installer.InstallResult
+	agentResults      []installer.AgentConfigResult
 	skillsFS          fs.FS
 	currentVersion    string
 	latestVersion     string
@@ -52,6 +55,11 @@ type Model struct {
 	preflightSections []components.SectionGroup
 	preflightDone     bool
 	engramMissing     bool
+	selectedPersona   int  // index into installer.PersonaPresets (0=Axiom,1=Sage,2=Forge,3=Lee Palacios)
+	agentSetupSkip    bool // user chose to skip agent config entirely
+	agentOverwrite    bool // user confirmed overwriting an existing config
+	agentConflicts    []string // target paths that already have AGENTS.md
+	agentConfigExists map[string]bool // assistantID → whether global config already exists
 }
 
 // New constructs an initial Model with the running binary version. Init()
@@ -124,6 +132,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = StateDone
 		return m, nil
 
+	case AgentInstallDoneMsg:
+		m.agentResults = msg.Results
+		return m, nil
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		return m, nil
@@ -180,6 +192,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSelectAssistants(msg)
 	case StateSelectProvider:
 		return m.handleSelectProvider(msg)
+	case StateAgentSetup:
+		return m.handleAgentSetup(msg)
 	case StateDone:
 		return m.handleDone(msg)
 	}
@@ -309,11 +323,76 @@ func (m Model) handleSelectProvider(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		m.provider = m.cursor
+		m.state = StateAgentSetup
+		m.cursor = 0
+		m.agentConflicts = m.detectAgentConflicts()
+		return m, nil
+	case tea.KeyEsc:
+		m.state = StateSelectAssistants
+		m.cursor = 0
+	}
+	return m, nil
+}
+
+// detectAgentConflicts checks which selected assistants already have an AGENTS.md
+// at their global config location.
+func (m Model) detectAgentConflicts() []string {
+	var conflicts []string
+	assistants := m.selectedAssistants()
+	for _, a := range assistants {
+		adapter, ok := installer.AgentConfigAdapterFor(a.ID)
+		if !ok {
+			continue
+		}
+		if adapter.AgentConfigExists() {
+			conflicts = append(conflicts, a.ID)
+		}
+	}
+	return conflicts
+}
+
+// selectedAssistants returns the list of assistants selected by the user (or all
+// if none were explicitly selected, mirroring buildInstallCmd).
+func (m Model) selectedAssistants() []installer.AssistantDescriptor {
+	var assistants []installer.AssistantDescriptor
+	for i, d := range installer.Descriptors {
+		if m.selected[i] {
+			assistants = append(assistants, d)
+		}
+	}
+	if len(assistants) == 0 {
+		assistants = installer.Descriptors
+	}
+	return assistants
+}
+
+func (m Model) handleAgentSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// 5 options: 4 presets + Skip
+	const optionCount = 5
+	switch msg.Type {
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyDown:
+		if m.cursor < optionCount-1 {
+			m.cursor++
+		}
+	case tea.KeyEnter:
+		if m.cursor < len(installer.PersonaPresets) {
+			// User selected a preset.
+			m.selectedPersona = m.cursor
+			m.agentSetupSkip = false
+		} else {
+			// User selected Skip.
+			m.agentSetupSkip = true
+		}
+		m.agentOverwrite = len(m.agentConflicts) == 0 // no conflicts means overwrite is moot; conflicts default to overwrite
 		m.state = StateInstalling
 		m.cursor = 0
 		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
 	case tea.KeyEsc:
-		m.state = StateSelectAssistants
+		m.state = StateSelectProvider
 		m.cursor = 0
 	}
 	return m, nil
@@ -331,17 +410,15 @@ func (m Model) handleDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) buildInstallCmd() tea.Cmd {
-	var assistants []installer.AssistantDescriptor
-	for i, d := range installer.Descriptors {
-		if m.selected[i] {
-			assistants = append(assistants, d)
-		}
-	}
-	if len(assistants) == 0 {
-		assistants = installer.Descriptors
-	}
+	assistants := m.selectedAssistants()
 	provider := installer.Providers[m.provider]
-	return InstallCmd(assistants, provider, m.skillsFS)
+	installCmd := InstallCmd(assistants, provider, m.skillsFS)
+	if m.agentSetupSkip {
+		return installCmd
+	}
+	preset := installer.PersonaPresets[m.selectedPersona]
+	agentCmd := AgentInstallCmd(assistants, preset, m.agentOverwrite, m.skillsFS)
+	return tea.Batch(installCmd, agentCmd)
 }
 
 // View renders the current state.

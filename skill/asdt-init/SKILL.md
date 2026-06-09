@@ -27,7 +27,7 @@ This is a light, mostly-mechanical flow — but it has one gate only the orchest
   - Stack detection (Step 1)
   - The idempotency check and file writes (Step 3)
   - Project context detection (Step 4)
-  - The confirmation message (Step 5)
+  - The confirmation message (Step 6)
 
 It returns a short summary of what it found and wrote — keeping the bash output, file reads, and intermediate reasoning out of your main context, which is the whole point of routing work through ASDT specialists in the first place.
 
@@ -203,9 +203,9 @@ Confidence thresholds are assigned by each probe's algorithm (see §4.2 rules). 
 
 - `{root}/knowledge/project-context.yaml` written (fresh) or confirmed/updated (recalibration).
 - Orchestrator receives a `DetectionSummary` for display to the user.
-- Proceed to Step 5.
+- Proceed to Step 6.
 
-### Step 5 — Confirm
+### Step 6 — Confirm
 Tell the user:
 - Configuration written to `.asdt/config.yaml`
 - Detected stack and platform info written to `.asdt/knowledge/`

@@ -230,7 +230,8 @@ func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	m2 = updateKey(t, m2, tea.KeyEnter) // preflightDone → StateAssistantList
 	m2 = updateKey(t, m2, tea.KeyEnter) // AssistantList → SelectAssistants
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
-	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → Installing
+	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup
+	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → Installing
 	if m2.State() != setup.StateInstalling {
 		t.Fatalf("toInstalling: state = %v, want StateInstalling", m2.State())
 	}
@@ -277,6 +278,76 @@ func TestUpdate_SpinnerTickIgnoredOutsideInstalling(t *testing.T) {
 			t.Error("expected no spinner re-tick command outside StateInstalling, but got one")
 		}
 	}
+}
+
+// --- StateAgentSetup transition tests ---
+
+func TestUpdate_SelectProvider_EnterGoesToAgentSetup(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateAgentSetup {
+		t.Errorf("Enter at SelectProvider: state = %v, want StateAgentSetup", m2.State())
+	}
+}
+
+func TestUpdate_AgentSetup_EnterPreset_GoesToInstalling(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	if m.State() != setup.StateAgentSetup {
+		t.Fatalf("expected StateAgentSetup, got %v", m.State())
+	}
+	// Enter on cursor=0 (Axiom preset) → StateInstalling.
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateInstalling {
+		t.Errorf("Enter on preset at AgentSetup: state = %v, want StateInstalling", m2.State())
+	}
+}
+
+func TestUpdate_AgentSetup_EnterSkip_GoesToInstalling(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+
+	// Navigate to Skip (cursor=4 = 4 presets).
+	m = updateKey(t, m, tea.KeyDown)
+	m = updateKey(t, m, tea.KeyDown)
+	m = updateKey(t, m, tea.KeyDown)
+	m = updateKey(t, m, tea.KeyDown)
+
+	m2 := updateKey(t, m, tea.KeyEnter) // Skip → Installing
+	if m2.State() != setup.StateInstalling {
+		t.Errorf("Enter on Skip: state = %v, want StateInstalling", m2.State())
+	}
+}
+
+func TestUpdate_AgentSetup_Esc_ReturnsToSelectProvider(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	if m.State() != setup.StateAgentSetup {
+		t.Fatalf("expected StateAgentSetup, got %v", m.State())
+	}
+	m2 := updateKey(t, m, tea.KeyEsc)
+	if m2.State() != setup.StateSelectProvider {
+		t.Errorf("Esc at AgentSetup: state = %v, want StateSelectProvider", m2.State())
+	}
+}
+
+// advanceToSelectProvider drives the model to StateSelectProvider.
+func advanceToSelectProvider(t *testing.T, m setup.Model) setup.Model {
+	t.Helper()
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → EnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → AssistantList
+	m = updateKey(t, m, tea.KeyEnter) // AssistantList → SelectAssistants
+	m = updateKey(t, m, tea.KeyEnter) // SelectAssistants → SelectProvider
+	if m.State() != setup.StateSelectProvider {
+		t.Fatalf("advanceToSelectProvider: state = %v, want StateSelectProvider", m.State())
+	}
+	return m
 }
 
 // advanceToMainMenu is a no-op helper kept for caller compatibility.
