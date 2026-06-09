@@ -2,20 +2,27 @@
 
 ## Purpose
 
-Guide the Developer specialist through scanning `.asdt/artifacts/{change}/` for existing upstream artifacts, extracting relevant fields from each artifact type, and recording absent artifacts in `open_items[]`.
+Guide the Developer specialist through retrieving existing upstream artifacts from Engram, extracting relevant fields from each artifact type, and recording absent artifacts in `open_items[]`.
 
 This skill is invoked at Step 1 (Artifact Loading) of the Developer workflow.
 
 ---
 
-## Scanning the Artifacts Directory
+## Retrieving Artifacts
 
-1. Resolve the ASDT root (walk up from CWD to find `.asdt/`).
-2. Look for files at `.asdt/artifacts/{change}/`.
-3. List every `.yaml` file found. If the directory does not exist or is empty, record in `open_items[]`:
+1. Retrieve the upstream artifacts for this change from Engram:
+   - Call `mem_search(query: "{project}/{change}", project: "{project}")` to list all available artifacts for the change.
+   - For each result that matches an expected artifact type (requirements-spec, system-design, ux-brief), call `mem_get_observation(id: {id})` to retrieve the full content.
+2. Apply the extraction rules by artifact type (see below).
+3. If no results are returned by `mem_search`, record in `open_items[]`:
    ```
-   "No artifacts found under .asdt/artifacts/{change}/ — proceeding with feature description only"
+   "No artifacts found in Engram for change '{change}' — proceeding with feature description only"
    ```
+4. **Filesystem fallback (Engram outage only)**: If the Engram MCP server is unreachable, fall back to scanning `.asdt/artifacts/{change}/` for `.yaml` files. Treat any file found there as a best-effort substitute. Record in `open_items[]`:
+   ```
+   "Engram unavailable — loaded artifacts from filesystem fallback at .asdt/artifacts/{change}/; data may be stale"
+   ```
+   Do NOT use the filesystem path as a primary lookup strategy — Engram is authoritative.
 
 ---
 

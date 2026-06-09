@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
@@ -13,13 +14,16 @@ import (
 type ViewState int
 
 const (
-	// StateEngramMissing is the zero-value state; the TUI starts here until
-	// EngramCheckCmd reports whether the engram binary is on PATH.
-	StateEngramMissing ViewState = iota
-	// StateDashboard shows the dashboard overview (Coming Soon).
+	// StateMainMenu is the zero-value state; the TUI starts here showing the
+	// top-level menu. The user chooses between installing/updating skills,
+	// viewing the dashboard, or quitting.
+	StateMainMenu ViewState = iota
+	// StateEnvironmentCheck is shown after the user selects "Install / Update
+	// Skills". It fans out three environment probes (OS, Engram, Codegraph)
+	// concurrently; Continue is gated until all probes resolve and engram is found.
+	StateEnvironmentCheck
+	// StateDashboard shows the dashboard overview with per-assistant status.
 	StateDashboard
-	// StateMainMenu is the main menu screen.
-	StateMainMenu
 	// StateAssistantList displays the list of available assistants.
 	StateAssistantList
 	// StateSelectAssistants allows the user to choose assistants to install.
@@ -34,23 +38,26 @@ const (
 
 // Model is the root Bubbletea model for the installer TUI.
 type Model struct {
-	state           ViewState
-	cursor          int
-	selected        map[int]bool
-	provider        int
-	results         []installer.InstallResult
-	skillsFS        fs.FS
-	currentVersion  string
-	latestVersion   string
-	updateAvailable bool
-	width           int
-	spinner         spinner.Model
+	state             ViewState
+	cursor            int
+	selected          map[int]bool
+	provider          int
+	results           []installer.InstallResult
+	skillsFS          fs.FS
+	currentVersion    string
+	latestVersion     string
+	updateAvailable   bool
+	width             int
+	spinner           spinner.Model
+	preflightSections []components.SectionGroup
+	preflightDone     bool
+	engramMissing     bool
 }
 
 // New constructs an initial Model with the running binary version. Init()
-// fires EngramCheckCmd to determine whether to transition to StateMainMenu or
-// remain at StateEngramMissing, and UpdateCheckCmd to passively detect newer
-// releases.
+// fires UpdateCheckCmd to passively detect newer releases and starts the
+// spinner tick. EnvironmentCheckCmd is NOT fired in Init() — it is triggered
+// on demand when the user selects "Install / Update Skills" from StateMainMenu.
 //
 // The spinner is built via panels.NewSpinner — exported from the panels
 // package specifically so this installer TUI and the dashboard TUI share one
@@ -58,31 +65,48 @@ type Model struct {
 // instead of each hand-rolling its own and risking drift.
 func New(skillsFS fs.FS, version string) Model {
 	return Model{
-		selected:       make(map[int]bool),
-		skillsFS:       skillsFS,
-		currentVersion: version,
-		width:          80,
-		spinner:        panels.NewSpinner(),
+		selected:          make(map[int]bool),
+		skillsFS:          skillsFS,
+		currentVersion:    version,
+		width:             80,
+		spinner:           panels.NewSpinner(),
+		preflightSections: initialPreflightSections(),
 	}
 }
 
 // State returns the current ViewState. Exported for tests.
 func (m Model) State() ViewState { return m.state }
 
-// Init implements tea.Model. Fires async engram PATH and update checks.
+// Init implements tea.Model. Fires the update check and starts the spinner tick.
+// EnvironmentCheckCmd is NOT fired here — it is triggered on demand when the
+// user selects "Install / Update Skills" from the main menu.
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(EngramCheckCmd(), UpdateCheckCmd(m.currentVersion))
+	return tea.Batch(UpdateCheckCmd(m.currentVersion), m.spinner.Tick)
 }
 
 // Update handles all messages and key events.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-	case EngramCheckMsg:
-		if msg.Found {
-			m.state = StateMainMenu
-		} else {
-			m.state = StateEngramMissing
+	case EnvironmentCheckProgressMsg:
+		progress := components.CheckResult{
+			Label:    msg.RowLabel,
+			Status:   msg.Status,
+			Detail:   msg.Detail,
+			SoftWarn: msg.SoftWarn,
 		}
+		m.preflightSections = components.UpdateRow(m.preflightSections, msg.RowLabel, progress)
+		if allProbesDone(m.preflightSections) {
+			engramFound := !rowHasStatus(m.preflightSections, "Engram", components.CheckStatusError)
+			codegraphFound := !rowHasStatus(m.preflightSections, "Codegraph", components.CheckStatusWarning)
+			return m, func() tea.Msg {
+				return EnvironmentCheckMsg{EngramFound: engramFound, CodegraphFound: codegraphFound}
+			}
+		}
+		return m, nil
+
+	case EnvironmentCheckMsg:
+		m.preflightDone = true
+		m.engramMissing = !msg.EngramFound
 		return m, nil
 
 	case UpdateCheckMsg:
@@ -105,16 +129,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case spinner.TickMsg:
-		// Gated to StateInstalling: the spinner has no visual representation
-		// in any other screen, so letting it keep ticking elsewhere would
-		// just spin a goroutine loop for nothing. Distinct from this model's
-		// other message types — spinner.TickMsg only ever drives the
-		// indeterminate animation frame.
-		if m.state != StateInstalling {
+		// Gated to StateInstalling and StateEnvironmentCheck: the spinner has
+		// no visual representation in any other screen.
+		if m.state != StateInstalling && m.state != StateEnvironmentCheck {
 			return m, nil
 		}
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
+		if m.state == StateEnvironmentCheck {
+			// Advance per-row spinner frames for still-pending rows.
+			frame := m.spinner.View()
+			for i := range m.preflightSections {
+				for j := range m.preflightSections[i].Rows {
+					m.preflightSections[i].Rows[j].TickSpinner(frame)
+				}
+			}
+		}
 		return m, cmd
 
 	case tea.KeyMsg:
@@ -124,9 +154,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// StateEngramMissing handles its own keys exclusively.
-	if m.state == StateEngramMissing {
-		return m.handleEngramMissing(msg)
+	// StateEnvironmentCheck handles its own keys exclusively.
+	if m.state == StateEnvironmentCheck {
+		return m.handleEnvironmentCheck(msg)
 	}
 
 	switch msg.Type {
@@ -156,11 +186,24 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// handleEngramMissing only allows q and ctrl+c; all other keys are no-ops.
-func (m Model) handleEngramMissing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+// handleEnvironmentCheck handles keys for the pre-flight check screen.
+// Enter proceeds to StateAssistantList only when preflight is done and engram was found.
+// Esc returns to StateMainMenu at any point.
+// q and ctrl+c always quit.
+func (m Model) handleEnvironmentCheck(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyCtrlC:
 		return m, tea.Quit
+	case tea.KeyEnter:
+		if m.preflightDone && !m.engramMissing {
+			m.state = StateAssistantList
+			m.cursor = 0
+			return m, nil
+		}
+	case tea.KeyEsc:
+		m.state = StateMainMenu
+		m.cursor = 0
+		return m, nil
 	case tea.KeyRunes:
 		if string(msg.Runes) == "q" {
 			return m, tea.Quit
@@ -181,13 +224,17 @@ func (m Model) handleMainMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		switch m.cursor {
-		case 0:
+		case 0: // Install / Update Skills → trigger preflight
+			m.preflightSections = initialPreflightSections()
+			m.preflightDone = false
+			m.engramMissing = false
+			m.state = StateEnvironmentCheck
+			m.cursor = 0
+			return m, tea.Batch(EnvironmentCheckCmd(), m.spinner.Tick)
+		case 1: // Dashboard
 			m.state = StateDashboard
 			m.cursor = 0
-		case 1:
-			m.state = StateAssistantList
-			m.cursor = 0
-		default:
+		default: // Quit
 			return m, tea.Quit
 		}
 	case tea.KeyEsc:
@@ -300,4 +347,26 @@ func (m Model) buildInstallCmd() tea.Cmd {
 // View renders the current state.
 func (m Model) View() string {
 	return renderState(m)
+}
+
+func allProbesDone(sections []components.SectionGroup) bool {
+	for _, sg := range sections {
+		for _, row := range sg.Rows {
+			if row.Status == components.CheckStatusPending {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func rowHasStatus(sections []components.SectionGroup, label string, status components.CheckStatus) bool {
+	for _, sg := range sections {
+		for _, row := range sg.Rows {
+			if row.Label == label {
+				return row.Status == status
+			}
+		}
+	}
+	return false
 }

@@ -4,6 +4,7 @@ description: "Hunts for the gaps an attacker would find first — threat models,
 user-invocable: true
 specialist-id: security
 shared-skills:
+  - specialist-header
   - platform-context
   - artifact-envelope
   - platform-analysis
@@ -15,17 +16,9 @@ metadata:
   version: "1.0"
 ---
 
+> **Fallback guard**: If `specialist-header` was not loaded before this file, abort immediately and notify the orchestrator: "specialist-header.md failed to load — cannot proceed without Prerequisites and gate logic."
+
 # Security Specialist
-
-## Prerequisites
-
-Before starting any step, verify:
-1. `.asdt/config.yaml` exists with `memory.provider` set
-2. The memory provider is reachable (Engram MCP server is running)
-
-If either condition is not met, output this exact message and STOP:
-
-> Memory provider not configured. Run `asdt init` and set `memory.provider` in `.asdt/config.yaml` before running any specialist.
 
 ## Role
 You are ASDT's Security Specialist. You perform threat modeling and security analysis.
@@ -39,23 +32,6 @@ Missing context → note in open_items and proceed with what's available.
 
 ## Orchestration Plan
 
-> **ORCHESTRATOR GATE**: This file is a PLAN, not an executable pipeline. The
-> calling assistant (Claude Code / OpenCode) is the SOLE orchestrator. For every
-> step marked `subagent` below you MUST launch a dedicated sub-agent via your
-> native delegation primitive (Agent/Task) — do NOT run subagent steps inline in
-> this thread. Steps marked `inline` run in your own context. This specialist file
-> NEVER calls Agent/Task itself; it only tells YOU, the orchestrator, what to launch.
-
-> **Before driving**: read `workflow.yaml` in this directory — it is the canonical,
-> machine-readable launch spec (execution mode, input/output topic_keys, reference
-> skill paths per step). The table below is a human-readable summary.
-
-> **Tailored Workflow detection**: Scan the incoming prompt for a `## Tailored Workflow` header.
-> - If ABSENT: run the full default workflow defined in the step table below.
-> - If PRESENT: parse the `steps:` list. Execute ONLY those steps in the order specified.
-> - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
-> - The tailored list overrides the default ordering.
-
 **Risk-surface-based step filtering (NOT complexity-gated)**: Security's depth is gated by `risk_surface`, NEVER `complexity`. Do not copy the complexity-gated pattern used by other specialists onto Security.
 
 | Risk surface | Behavior | Steps |
@@ -68,11 +44,6 @@ Security's depth is gated by `risk_surface`, NEVER `complexity`. Do not copy the
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the risk-surface-based defaults above.
 
-**Execution policy (the rule, not just the list)**: a step that produces its OWN
-persisted artifact (generative / decision-producing) is `subagent`; a step that
-produces no artifact of its own and only injects context for the next step
-(recall / wrapper) is `inline`. If steps change later, re-apply this rule.
-
 | Step | File | Execution | Reads | Writes |
 |------|------|-----------|-------|--------|
 | knowledge-recall | ../asdt-shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |
@@ -82,12 +53,6 @@ produces no artifact of its own and only injects context for the next step
 | owasp-analysis | steps/owasp-analysis.md | subagent | `security/attack-surface` | `security/owasp-findings` |
 | hardening-checklist | steps/hardening-checklist.md | subagent | `security/stride-threats`, `security/owasp-findings` | `security-findings` + `hardening-checklist` |
 | decision-preservation | ../asdt-shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
-
-### How to launch a `subagent` step
-
-> Canonical protocol: `asdt-shared/skills/parallel-retrieval.md` — Cache Ledger Rule, Injection Format, UNRESOLVED degradation. Do not restate it here.
-
-`inline` steps fold into your own orchestrator context — no launch.
 
 ## Final Output
 `security-findings` + `hardening-checklist` — consumed by Developer and Architect specialists.

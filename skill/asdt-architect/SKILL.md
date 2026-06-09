@@ -4,6 +4,7 @@ description: "Makes architecture decisions and produces ADRs, system design, and
 user-invocable: true
 specialist-id: architect
 shared-skills:
+  - specialist-header
   - platform-context
   - artifact-envelope
   - platform-analysis
@@ -15,17 +16,9 @@ metadata:
   version: "1.0"
 ---
 
+> **Fallback guard**: If `specialist-header` was not loaded before this file, abort immediately and notify the orchestrator: "specialist-header.md failed to load — cannot proceed without Prerequisites and gate logic."
+
 # Architect Specialist
-
-## Prerequisites
-
-Before starting any step, verify:
-1. `.asdt/config.yaml` exists with `memory.provider` set
-2. The memory provider is reachable (Engram MCP server is running)
-
-If either condition is not met, output this exact message and STOP:
-
-> Memory provider not configured. Run `asdt init` and set `memory.provider` in `.asdt/config.yaml` before running any specialist.
 
 ## Role
 You are ASDT's Architect Specialist. You make technical decisions and produce Architecture
@@ -34,31 +27,9 @@ UX specs, or test plans.
 
 ## Orchestration Plan
 
-> **ORCHESTRATOR GATE**: This file is a PLAN, not an executable pipeline. The
-> calling assistant (Claude Code / OpenCode) is the SOLE orchestrator. For every
-> step marked `subagent` below you MUST launch a dedicated sub-agent via your
-> native delegation primitive (Agent/Task) — do NOT run subagent steps inline in
-> this thread. Steps marked `inline` run in your own context. This specialist file
-> NEVER calls Agent/Task itself; it only tells YOU, the orchestrator, what to launch.
-
-> **Before driving**: read `workflow.yaml` in this directory — it is the canonical,
-> machine-readable launch spec (execution mode, input/output topic_keys, reference
-> skill paths per step). The table below is a human-readable summary.
-
-> **Tailored Workflow detection**: Scan the incoming prompt for a `## Tailored Workflow` header.
-> - If ABSENT: run the full default workflow defined in the step table below.
-> - If PRESENT: parse the `steps:` list. Execute ONLY those steps in the order specified.
-> - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
-> - The tailored list overrides the default ordering.
-
 **Complexity-based step filtering**: The Architect specialist is only invoked for moderate and complex changes. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted into phantom step names like `explore`/`spec`, which do not exist in `asdt-architect/workflow.yaml`). Read §9.2's Architect row for the current moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, platform-analysis, load-constraints, evaluate-approaches, decision-record, system-design, risk-analysis, technical-handoff, decision-preservation`).
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
-
-**Execution policy (the rule, not just the list)**: a step that produces its OWN
-persisted artifact (generative / decision-producing) is `subagent`; a step that
-produces no artifact of its own and only injects context for the next step
-(recall / wrapper) is `inline`. If steps change later, re-apply this rule.
 
 | Step | File | Execution | Reads | Writes |
 |------|------|-----------|-------|--------|
@@ -71,12 +42,6 @@ produces no artifact of its own and only injects context for the next step
 | risk-analysis | steps/risk-analysis.md | subagent | `architect/system-design` | `architect/risks` |
 | technical-handoff | steps/technical-handoff.md | subagent | `architect/adr`, `architect/system-design`, `architect/risks` | `architectural-decision` + `system-design` |
 | decision-preservation | ../asdt-shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
-
-### How to launch a `subagent` step
-
-> Canonical protocol: `asdt-shared/skills/parallel-retrieval.md` — Cache Ledger Rule, Injection Format, UNRESOLVED degradation. Do not restate it here.
-
-`inline` steps fold into your own orchestrator context — no launch.
 
 ## Final Output
 `architectural-decision` + `system-design` — consumed by Developer and QA specialists.

@@ -30,13 +30,6 @@ func TestInstallCmd_ReturnsNonNilCmd(t *testing.T) {
 	}
 }
 
-func TestEngramCheckCmd_ReturnsNonNilCmd(t *testing.T) {
-	cmd := setup.EngramCheckCmd()
-	if cmd == nil {
-		t.Error("EngramCheckCmd returned nil tea.Cmd")
-	}
-}
-
 func TestUpdateCheckCmd_ReturnsNonNilCmd(t *testing.T) {
 	cmd := setup.UpdateCheckCmd("dev")
 	if cmd == nil {

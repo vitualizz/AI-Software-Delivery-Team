@@ -4,6 +4,7 @@ description: "Shapes how people actually experience the product — user flows, 
 user-invocable: true
 specialist-id: ux-ui
 shared-skills:
+  - specialist-header
   - platform-context
   - artifact-envelope
   - platform-analysis
@@ -14,17 +15,9 @@ metadata:
   version: "1.0"
 ---
 
+> **Fallback guard**: If `specialist-header` was not loaded before this file, abort immediately and notify the orchestrator: "specialist-header.md failed to load — cannot proceed without Prerequisites and gate logic."
+
 # UX/UI Specialist
-
-## Prerequisites
-
-Before starting any step, verify:
-1. `.asdt/config.yaml` exists with `memory.provider` set
-2. The memory provider is reachable (Engram MCP server is running)
-
-If either condition is not met, output this exact message and STOP:
-
-> Memory provider not configured. Run `asdt init` and set `memory.provider` in `.asdt/config.yaml` before running any specialist.
 
 ## Role
 You are ASDT's UX/UI Specialist. You transform a feature brief into a structured UX
@@ -33,33 +26,11 @@ write implementation code, architecture decisions, or test plans.
 
 ## Orchestration Plan
 
-> **ORCHESTRATOR GATE**: This file is a PLAN, not an executable pipeline. The
-> calling assistant (Claude Code / OpenCode) is the SOLE orchestrator. For every
-> step marked `subagent` below you MUST launch a dedicated sub-agent via your
-> native delegation primitive (Agent/Task) — do NOT run subagent steps inline in
-> this thread. Steps marked `inline` run in your own context. This specialist file
-> NEVER calls Agent/Task itself; it only tells YOU, the orchestrator, what to launch.
-
-> **Before driving**: read `workflow.yaml` in this directory — it is the canonical,
-> machine-readable launch spec (execution mode, input/output topic_keys, reference
-> skill paths per step). The table below is a human-readable summary.
-
-> **Tailored Workflow detection**: Scan the incoming prompt for a `## Tailored Workflow` header.
-> - If ABSENT: run the full default workflow defined in the step table below.
-> - If PRESENT: parse the `steps:` list. Execute ONLY those steps in the order specified.
-> - Steps NOT in the tailored list → skip entirely (log annotation that the step was skipped by workflow tailoring).
-> - The tailored list overrides the default ordering.
-
 **Complexity-based step filtering**: Always invoked when routed; complexity gates depth. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted, omitting `information-architecture` from the simple tier even though `user-flows` hard-depends on it). Read §9.2's UX/UI row for the current simple/moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, platform-analysis, feature-brief, information-architecture, user-flows, component-mapping, responsive-strategy, ux-handoff, decision-preservation`).
 
 Always invoked when routed; complexity gates depth. `ux-handoff` ALWAYS runs (consolidation → ux-brief/component-spec).
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
-
-**Execution policy (the rule, not just the list)**: a step that produces its OWN
-persisted artifact (generative / decision-producing) is `subagent`; a step that
-produces no artifact of its own and only injects context for the next step
-(recall / wrapper) is `inline`. If steps change later, re-apply this rule.
 
 | Step | File | Execution | Reads | Writes |
 |------|------|-----------|-------|--------|
@@ -72,12 +43,6 @@ produces no artifact of its own and only injects context for the next step
 | responsive-strategy | steps/responsive-strategy.md | subagent | `ux-ui/components` | `ux-ui/responsive` |
 | ux-handoff | steps/ux-handoff.md | subagent | `ux-ui/feature-brief`, `ux-ui/ia`, `ux-ui/flows`, `ux-ui/components`, `ux-ui/responsive` | `ux-brief` + `component-spec` |
 | decision-preservation | ../asdt-shared/skills/decision-preservation.md | inline | *(prior step's payload)* | *(no own artifact — attaches `summary` field)* |
-
-### How to launch a `subagent` step
-
-> Canonical protocol: `asdt-shared/skills/parallel-retrieval.md` — Cache Ledger Rule, Injection Format, UNRESOLVED degradation. Do not restate it here.
-
-`inline` steps fold into your own orchestrator context — no launch.
 
 ## Final Output
 `ux-brief` + `component-spec` — consumed by Developer and Architect specialists.

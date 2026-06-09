@@ -15,23 +15,6 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
-func TestView_EngramMissingScreenShowsTitle(t *testing.T) {
-	m := setup.New(fstest.MapFS{}, "dev")
-	// State starts at StateEngramMissing (zero value before Init fires).
-	view := m.View()
-	if !strings.Contains(view, "Engram Required") {
-		t.Errorf("engram missing view should contain 'Engram Required', got:\n%s", view)
-	}
-}
-
-func TestView_EngramMissingScreenShowsURL(t *testing.T) {
-	m := setup.New(fstest.MapFS{}, "dev")
-	view := m.View()
-	if !strings.Contains(view, "github.com/Gentleman-Programming/engram") {
-		t.Errorf("engram missing view should contain URL, got:\n%s", view)
-	}
-}
-
 func TestView_MainMenuContainsInstallOption(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)
@@ -68,9 +51,11 @@ func TestView_MainMenuShowsUpdateBanner(t *testing.T) {
 
 func TestView_AssistantListShowsBothNames(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m)
-	m = updateKey(t, m, tea.KeyDown)    // cursor → 1 (Install)
-	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList
+	m = sendEngramFound(t, m) // no-op, already at MainMenu
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
 	view := m2.View()
 	for _, d := range installer.Descriptors {
 		if !strings.Contains(view, d.Name) {
@@ -81,9 +66,11 @@ func TestView_AssistantListShowsBothNames(t *testing.T) {
 
 func TestView_AssistantListSelectedItemHasCursor(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m)
-	m = updateKey(t, m, tea.KeyDown)    // cursor → 1 (Install)
-	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList
+	m = sendEngramFound(t, m) // no-op, already at MainMenu
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
 	view := m2.View()
 	if !strings.Contains(view, "►") {
 		t.Errorf("assistant list missing cursor ►, view:\n%s", view)
@@ -105,9 +92,11 @@ func TestView_AssistantListUsesBadgeForStatus(t *testing.T) {
 	defer lipgloss.SetColorProfile(prev)
 
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m)
-	m = updateKey(t, m, tea.KeyDown)    // cursor → 1 (Install)
-	m2 := updateKey(t, m, tea.KeyEnter) // → AssistantList
+	m = sendEngramFound(t, m) // no-op, already at MainMenu
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
 	view := m2.View()
 
 	wantPresent := panels.NewBadge("present", panels.ColorSuccess).Render()
@@ -133,25 +122,30 @@ func TestView_DoneScreenShowsBothAssistants(t *testing.T) {
 	}
 }
 
-// stateView drives the model from StateEngramMissing to the requested
-// ViewState by walking the same Update transitions the real TUI uses, and
-// returns the rendered View() output for that state.
+// stateView drives the model from StateMainMenu to the requested ViewState by
+// walking the same Update transitions the real TUI uses, and returns the
+// rendered View() output for that state.
 func stateView(t *testing.T, target string) string {
 	t.Helper()
 
 	m := setup.New(fstest.MapFS{}, "dev")
-	view := m.View()
-	if target == "EngramMissing" {
-		return view
+
+	if target == "PreflightCheck" {
+		// Trigger preflight by pressing Enter at cursor-0 (Install).
+		m = updateKey(t, m, tea.KeyEnter) // cursor-0 → StateEnvironmentCheck
+		return m.View()
 	}
 
-	m = sendEngramFound(t, m)
+	m = sendEngramFound(t, m) // no-op, already at MainMenu
 	if target == "MainMenu" {
 		return m.View()
 	}
 
-	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Install)
-	m = updateKey(t, m, tea.KeyEnter) // MainMenu → AssistantList
+	// Install path: cursor-0 Enter → StateEnvironmentCheck → EnvironmentCheckMsg → Enter → StateAssistantList.
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
 	if target == "AssistantList" {
 		return m.View()
 	}
@@ -175,12 +169,12 @@ func stateView(t *testing.T, target string) string {
 	return ""
 }
 
-// TestView_AllStatesHaveBorder proves every one of the 7 view states wraps
+// TestView_AllStatesHaveBorder proves every one of the view states wraps
 // its body in the rounded-border Box style (spec: "every screen's rendered
 // output contains a bordered box").
 func TestView_AllStatesHaveBorder(t *testing.T) {
 	states := []string{
-		"EngramMissing",
+		"PreflightCheck",
 		"MainMenu",
 		"AssistantList",
 		"SelectAssistants",
@@ -200,7 +194,8 @@ func TestView_AllStatesHaveBorder(t *testing.T) {
 	t.Run("Dashboard", func(t *testing.T) {
 		m := setup.New(fstest.MapFS{}, "dev")
 		m = sendEngramFound(t, m)
-		m = updateKey(t, m, tea.KeyEnter) // cursor 0 → StateDashboard
+		m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Dashboard)
+		m = updateKey(t, m, tea.KeyEnter) // → StateDashboard
 		view := m.View()
 		if !strings.ContainsAny(view, "╭╮╰╯│") {
 			t.Errorf("Dashboard view missing rounded-border runes, got:\n%s", view)
@@ -228,7 +223,7 @@ func TestView_FooterRendersHintText(t *testing.T) {
 		state string
 		hint  string
 	}{
-		{"EngramMissing", "q"},
+		{"PreflightCheck", "checking"},
 		{"MainMenu", "↑↓"},
 		{"AssistantList", "enter"},
 		{"SelectAssistants", "space"},
@@ -248,7 +243,8 @@ func TestView_FooterRendersHintText(t *testing.T) {
 	t.Run("Dashboard", func(t *testing.T) {
 		m := setup.New(fstest.MapFS{}, "dev")
 		m = sendEngramFound(t, m)
-		m = updateKey(t, m, tea.KeyEnter) // cursor 0 → StateDashboard
+		m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Dashboard)
+		m = updateKey(t, m, tea.KeyEnter) // → StateDashboard
 		view := m.View()
 		if !strings.Contains(view, "esc") {
 			t.Errorf("Dashboard view missing footer hint %q, got:\n%s", "esc", view)
@@ -267,13 +263,16 @@ func TestView_FooterRendersHintText(t *testing.T) {
 	})
 }
 
-func TestView_DashboardShowsComingSoon(t *testing.T) {
+func TestView_DashboardShowsAssistantNames(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)
-	m = updateKey(t, m, tea.KeyEnter) // cursor 0 → StateDashboard
+	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Dashboard)
+	m = updateKey(t, m, tea.KeyEnter) // → StateDashboard
 	view := m.View()
-	if !strings.Contains(view, "Coming Soon") {
-		t.Errorf("Dashboard view missing 'Coming Soon', got:\n%s", view)
+	for _, d := range installer.Descriptors {
+		if !strings.Contains(view, d.Name) {
+			t.Errorf("dashboard view missing assistant name %q, got:\n%s", d.Name, view)
+		}
 	}
 }
 
@@ -298,6 +297,30 @@ func TestView_InstallingShowsSpinner(t *testing.T) {
 	if !found {
 		t.Errorf("expected Installing view to contain a spinner.Dot frame glyph, got:\n%s", view)
 	}
+}
+
+func TestView_PreflightCheckShowsTitle(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	view := m.View()
+	if !strings.Contains(view, "Pre-flight Check") {
+		t.Errorf("preflight view should contain 'Pre-flight Check', got:\n%s", view)
+	}
+}
+
+func TestView_PreflightCheckShowsSections(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	view := m.View()
+	if !strings.Contains(view, "Memory Provider") {
+		t.Errorf("preflight view missing 'Memory Provider' section, got:\n%s", view)
+	}
+}
+
+// sendEngramFound is a no-op helper kept for caller compatibility.
+// New() already starts at StateMainMenu, so no navigation is needed.
+func sendEngramFound(_ *testing.T, m setup.Model) setup.Model {
+	return m
 }
 
 // TestView_InstallingSpinnerTintedWithColorSecondary verifies that the

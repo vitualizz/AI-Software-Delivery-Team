@@ -14,10 +14,10 @@ const cursorChar = "►"
 
 func renderState(m Model) string {
 	switch m.state {
-	case StateEngramMissing:
-		return renderEngramMissing(m.width)
+	case StateEnvironmentCheck:
+		return renderPreflightCheck(m)
 	case StateDashboard:
-		return renderDashboard(m.width)
+		return renderDashboard(m)
 	case StateMainMenu:
 		return renderMainMenu(m)
 	case StateAssistantList:
@@ -56,22 +56,10 @@ func frame(title, body, footer string, focused bool) string {
 	return lipgloss.JoinVertical(lipgloss.Left, boxed, bar)
 }
 
-func renderEngramMissing(width int) string {
-	var b strings.Builder
-	b.WriteString("ASDT requires the Engram MCP server to manage cross-session memory.\n")
-	b.WriteString("Please install it before continuing.\n\n")
-	b.WriteString("  " + styles.Default.Success.Render("https://github.com/Gentleman-Programming/engram"))
-
-	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Exit", Hints: []panels.Hint{{Key: "q", Description: "quit"}}},
-	}, width)
-	return frame("Engram Required", b.String(), footer, true)
-}
-
 func renderMainMenu(m Model) string {
 	var b strings.Builder
 
-	items := []string{"Dashboard", "Install / Update Skills", "Quit"}
+	items := []string{"Install / Update Skills", "Dashboard", "Quit"}
 	for i, item := range items {
 		if i == m.cursor {
 			fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(item))
@@ -86,10 +74,14 @@ func renderMainMenu(m Model) string {
 				fmt.Sprintf("↑ asdt-tui %s available — https://github.com/vitualizz/ai-software-delivery-team/releases", m.latestVersion)))
 	}
 
+	hero := panels.RenderHero(m.currentVersion)
+	menuStr := strings.TrimRight(b.String(), "\n")
+	body := lipgloss.JoinVertical(lipgloss.Left, hero, "", menuStr)
+
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
 		{Label: "Nav", Hints: []panels.Hint{{Key: "↑↓", Description: "navigate"}, {Key: "enter", Description: "select"}, {Key: "q", Description: "quit"}}},
 	}, m.width)
-	return frame("asdt-tui", strings.TrimRight(b.String(), "\n"), footer, true)
+	return frame("asdt-tui", body, footer, true)
 }
 
 func renderAssistantList(m Model) string {
@@ -182,14 +174,36 @@ func renderInstalling(m Model) string {
 	return frame("Installing...", body, footer, true)
 }
 
-func renderDashboard(width int) string {
+func renderDashboard(m Model) string {
 	var b strings.Builder
-	b.WriteString("  Dashboard — Coming Soon")
+	for _, d := range installer.Descriptors {
+		b.WriteString(renderSummaryLine(d))
+		b.WriteString("\n")
+	}
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
 		{Label: "Nav", Hints: []panels.Hint{{Key: "esc", Description: "back to menu"}}},
-	}, width)
-	return frame("Dashboard", b.String(), footer, true)
+	}, m.width)
+	return frame("Dashboard", strings.TrimRight(b.String(), "\n"), footer, true)
+}
+
+// renderSummaryLine renders a single assistant summary line for the dashboard,
+// showing the assistant name and binary/skills presence badges.
+func renderSummaryLine(d installer.AssistantDescriptor) string {
+	bp, sp, _ := installer.Detect(d)
+	var parts []string
+	parts = append(parts, d.Name)
+	if bp {
+		parts = append(parts, panels.NewBadge("binary", panels.ColorSuccess).Render())
+	} else {
+		parts = append(parts, panels.NewBadge("binary", panels.ColorError).Render())
+	}
+	if sp {
+		parts = append(parts, panels.NewBadge("skills", panels.ColorSuccess).Render())
+	} else {
+		parts = append(parts, panels.NewBadge("skills", panels.ColorError).Render())
+	}
+	return "  " + strings.Join(parts, " ")
 }
 
 func renderDone(m Model) string {

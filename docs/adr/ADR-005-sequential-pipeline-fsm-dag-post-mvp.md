@@ -1,7 +1,7 @@
 # ADR-005: Sequential Pipeline FSM → DAG Post-MVP
 
 Date: 2026-06-04
-Status: Accepted
+Status: Superseded by ADR-011
 
 ## Context
 

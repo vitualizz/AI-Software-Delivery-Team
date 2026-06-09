@@ -10,66 +10,82 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup"
+	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
 )
 
-func TestNew_StartsAtEngramMissing(t *testing.T) {
+func TestNew_StartsAtMainMenu(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	// Before Init() fires (no EngramCheckMsg yet), zero value is StateEngramMissing.
-	if m.State() != setup.StateEngramMissing {
-		t.Errorf("New() state = %v, want StateEngramMissing (%v)", m.State(), setup.StateEngramMissing)
+	// iota sentinel: StateMainMenu must be 0 (the zero value)
+	if setup.StateMainMenu != 0 {
+		t.Errorf("StateMainMenu = %d, want 0 (iota sentinel)", int(setup.StateMainMenu))
+	}
+	if m.State() != setup.StateMainMenu {
+		t.Errorf("New() state = %v, want StateMainMenu (%v)", m.State(), setup.StateMainMenu)
 	}
 }
 
-func TestUpdate_EngramCheckMsg_FoundTrue_TransitionsToMainMenu(t *testing.T) {
+func TestUpdate_EnvironmentCheckMsg_EngramFound_EntersAssistantListOnEnter(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	next, _ := m.Update(setup.EngramCheckMsg{Found: true})
+	// Navigate from MainMenu to StateEnvironmentCheck via cursor-0 Enter.
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m2 := next.(setup.Model)
-	if m2.State() != setup.StateMainMenu {
-		t.Errorf("EngramCheckMsg{Found:true}: state = %v, want StateMainMenu", m2.State())
+	m3 := updateKey(t, m2, tea.KeyEnter)
+	if m3.State() != setup.StateAssistantList {
+		t.Errorf("after Enter(Install) + EnvironmentCheckMsg{true} + Enter: state = %v, want StateAssistantList", m3.State())
 	}
 }
 
-func TestUpdate_EngramCheckMsg_FoundFalse_StaysAtEngramMissing(t *testing.T) {
+func TestUpdate_EnvironmentCheckMsg_EngramMissing_BlocksContinue(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	next, _ := m.Update(setup.EngramCheckMsg{Found: false})
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: false})
 	m2 := next.(setup.Model)
-	if m2.State() != setup.StateEngramMissing {
-		t.Errorf("EngramCheckMsg{Found:false}: state = %v, want StateEngramMissing", m2.State())
+	m3 := updateKey(t, m2, tea.KeyEnter)
+	if m3.State() != setup.StateEnvironmentCheck {
+		t.Errorf("Enter with engram missing should be no-op, state = %v, want StateEnvironmentCheck", m3.State())
 	}
 }
 
-func TestUpdate_EngramMissing_NonQuitKeysAreNoop(t *testing.T) {
+func TestUpdate_EnvironmentCheckProgressMsg_UpdatesSection(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	// State starts at StateEngramMissing; send a key that should be no-op.
-	m2 := updateKey(t, m, tea.KeyEnter)
-	if m2.State() != setup.StateEngramMissing {
-		t.Errorf("Enter in StateEngramMissing: state = %v, want StateEngramMissing", m2.State())
-	}
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckProgressMsg{
+		RowLabel: "Engram",
+		Status:   components.CheckStatusOK,
+		Detail:   "/usr/bin/engram",
+	})
+	m2 := next.(setup.Model)
+	_ = m2 // if no panic, row was updated
 }
 
-func TestUpdate_EngramMissing_QQuits(t *testing.T) {
+func TestUpdate_PreflightQQuits(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 → StateEnvironmentCheck
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
 	_, cmd := m.Update(msg)
 	if cmd == nil {
-		t.Error("q in StateEngramMissing: expected non-nil cmd (tea.Quit), got nil")
+		t.Error("q in StateEnvironmentCheck: expected non-nil cmd (tea.Quit), got nil")
 	}
 }
 
-func TestUpdate_EngramMissing_CtrlCQuits(t *testing.T) {
+func TestUpdate_PreflightCtrlCQuits(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 → StateEnvironmentCheck
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	if cmd == nil {
-		t.Error("ctrl+c in StateEngramMissing: expected non-nil cmd (tea.Quit), got nil")
+		t.Error("ctrl+c in StateEnvironmentCheck: expected non-nil cmd (tea.Quit), got nil")
 	}
 }
 
 func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	// Navigate to StateSelectAssistants.
-	m = sendEngramFound(t, m)         // → StateMainMenu
-	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Install)
-	m = updateKey(t, m, tea.KeyEnter) // → StateAssistantList
+	// Navigate to StateSelectAssistants via the full install flow.
+	m = advanceToMainMenu(t, m) // no-op, already at StateMainMenu
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
 	m = updateKey(t, m, tea.KeyEnter) // → StateSelectAssistants
 
 	if m.State() != setup.StateSelectAssistants {
@@ -78,7 +94,6 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 
 	// Space should toggle cursor item on.
 	m2 := updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeySpace})
-	// Navigate to done to read selected — check via install sequence instead.
 	// The simplest check: send space again to toggle off, verifying toggle behavior.
 	m3 := updateKeyMsg(t, m2, tea.KeyMsg{Type: tea.KeySpace})
 	_ = m3
@@ -88,33 +103,32 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	}
 }
 
-func TestUpdate_EnterOnInstallTransitionsToAssistantList(t *testing.T) {
+func TestUpdate_EnterOnInstallTriggersEnvironmentCheck(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // → StateMainMenu
-	// Cursor starts at 0 = "Dashboard". Move down to cursor 1 = "Install / Update Skills".
-	m = updateKey(t, m, tea.KeyDown)
-	msg := tea.KeyMsg{Type: tea.KeyEnter}
-	next, _ := m.Update(msg)
+	m = advanceToMainMenu(t, m) // no-op
+	// Cursor starts at 0 = "Install / Update Skills".
+	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m2 := next.(setup.Model)
-	if m2.State() != setup.StateAssistantList {
-		t.Errorf("after Enter at cursor 1 (Install): state = %v, want StateAssistantList", m2.State())
+	if m2.State() != setup.StateEnvironmentCheck {
+		t.Errorf("Enter at cursor 0 (Install): state = %v, want StateEnvironmentCheck", m2.State())
 	}
 }
 
 func TestUpdate_EnterOnDashboardTransitionsToDashboard(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // → StateMainMenu, cursor=0
-	// Cursor at 0 = "Dashboard".
+	m = advanceToMainMenu(t, m) // no-op, cursor=0
+	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Dashboard)
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m2 := next.(setup.Model)
 	if m2.State() != setup.StateDashboard {
-		t.Errorf("after Enter at cursor 0 (Dashboard): state = %v, want StateDashboard", m2.State())
+		t.Errorf("after Enter at cursor 1 (Dashboard): state = %v, want StateDashboard", m2.State())
 	}
 }
 
 func TestUpdate_EscFromDashboardReturnsToMenu(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m)         // → StateMainMenu
+	m = advanceToMainMenu(t, m)       // no-op
+	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Dashboard)
 	m = updateKey(t, m, tea.KeyEnter) // → StateDashboard
 	m2 := updateKey(t, m, tea.KeyEsc) // Esc → back
 	if m2.State() != setup.StateMainMenu {
@@ -122,22 +136,13 @@ func TestUpdate_EscFromDashboardReturnsToMenu(t *testing.T) {
 	}
 }
 
-func TestUpdate_DashboardShowsComingSoon(t *testing.T) {
-	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m)         // → StateMainMenu
-	m = updateKey(t, m, tea.KeyEnter) // → StateDashboard
-	view := m.View()
-	if !strings.Contains(view, "Coming Soon") {
-		t.Errorf("Dashboard view missing 'Coming Soon', got:\n%s", view)
-	}
-}
-
 func TestUpdate_ESCAtSelectAssistantsGoesBack(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // → StateMainMenu
-	// Navigate: MainMenu → AssistantList → SelectAssistants.
-	m = updateKey(t, m, tea.KeyDown)     // cursor → 1 (Install)
-	m2 := updateKey(t, m, tea.KeyEnter)  // → AssistantList
+	m = advanceToMainMenu(t, m)       // no-op
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m2 := updateKey(t, m, tea.KeyEnter)  // preflightDone → StateAssistantList
 	m3 := updateKey(t, m2, tea.KeyEnter) // → SelectAssistants
 	if m3.State() != setup.StateSelectAssistants {
 		t.Fatalf("expected StateSelectAssistants, got %v", m3.State())
@@ -150,7 +155,7 @@ func TestUpdate_ESCAtSelectAssistantsGoesBack(t *testing.T) {
 
 func TestUpdate_ESCAtMainMenuIsNoop(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // → StateMainMenu
+	m = advanceToMainMenu(t, m) // no-op
 	m2 := updateKey(t, m, tea.KeyEsc)
 	if m2.State() != setup.StateMainMenu {
 		t.Errorf("ESC at MainMenu: state = %v, want StateMainMenu", m2.State())
@@ -169,7 +174,7 @@ func TestUpdate_InstallDoneMsgTransitionsToDone(t *testing.T) {
 
 func TestUpdate_UpdateCheckMsg_Newer_SetsBanner(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "v0.2.0")
-	m = sendEngramFound(t, m) // → StateMainMenu
+	m = advanceToMainMenu(t, m) // no-op
 
 	next, _ := m.Update(setup.UpdateCheckMsg{Current: "v0.2.0", Latest: "v0.3.0"})
 	m2 := next.(setup.Model)
@@ -185,7 +190,7 @@ func TestUpdate_UpdateCheckMsg_Newer_SetsBanner(t *testing.T) {
 
 func TestUpdate_UpdateCheckMsg_Error_NoBanner(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "v0.2.0")
-	m = sendEngramFound(t, m) // → StateMainMenu
+	m = advanceToMainMenu(t, m) // no-op
 
 	next, _ := m.Update(setup.UpdateCheckMsg{Err: errors.New("boom")})
 	m2 := next.(setup.Model)
@@ -198,7 +203,7 @@ func TestUpdate_UpdateCheckMsg_Error_NoBanner(t *testing.T) {
 
 func TestUpdate_UpdateCheckMsg_DevBuild_NoBanner(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // → StateMainMenu
+	m = advanceToMainMenu(t, m) // no-op
 
 	next, _ := m.Update(setup.UpdateCheckMsg{Current: "dev", Latest: "v9.9.9"})
 	m2 := next.(setup.Model)
@@ -209,22 +214,27 @@ func TestUpdate_UpdateCheckMsg_DevBuild_NoBanner(t *testing.T) {
 	}
 }
 
-// toInstalling drives the model from StateEngramMissing through the menu
+// toInstalling drives the model from StateMainMenu through the full install
 // flow to StateInstalling — the same Update transitions the real TUI uses
 // (mirrors views_test.go's stateView helper, but returns setup.Model so
 // callers can keep driving Update directly).
 func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	t.Helper()
-	m = sendEngramFound(t, m)
-	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Install)
-	m = updateKey(t, m, tea.KeyEnter) // MainMenu → AssistantList
-	m = updateKey(t, m, tea.KeyEnter) // AssistantList → SelectAssistants
-	m = updateKey(t, m, tea.KeyEnter) // SelectAssistants → SelectProvider
-	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → Installing
-	if m.State() != setup.StateInstalling {
-		t.Fatalf("toInstalling: state = %v, want StateInstalling", m.State())
+	m = advanceToMainMenu(t, m)       // no-op
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m2, ok := next.(setup.Model)
+	if !ok {
+		t.Fatalf("toInstalling: EnvironmentCheckMsg Update returned %T, want setup.Model", next)
 	}
-	return m
+	m2 = updateKey(t, m2, tea.KeyEnter) // preflightDone → StateAssistantList
+	m2 = updateKey(t, m2, tea.KeyEnter) // AssistantList → SelectAssistants
+	m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
+	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → Installing
+	if m2.State() != setup.StateInstalling {
+		t.Fatalf("toInstalling: state = %v, want StateInstalling", m2.State())
+	}
+	return m2
 }
 
 // TestUpdate_SpinnerTickAdvancesWhileInstalling verifies that a
@@ -254,12 +264,11 @@ func TestUpdate_SpinnerTickAdvancesWhileInstalling(t *testing.T) {
 }
 
 // TestUpdate_SpinnerTickIgnoredOutsideInstalling verifies that a
-// spinner.TickMsg received OUTSIDE StateInstalling is gated off — it must not
-// produce a re-tick command, so the spinner loop does not run (and animate)
-// in screens where it has no visual representation.
+// spinner.TickMsg received OUTSIDE StateInstalling (and StateEnvironmentCheck)
+// is gated off — it must not produce a re-tick command.
 func TestUpdate_SpinnerTickIgnoredOutsideInstalling(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // → StateMainMenu (not Installing)
+	m = advanceToMainMenu(t, m) // no-op → StateMainMenu (not Installing or EnvironmentCheck)
 
 	_, cmd := m.Update(spinner.TickMsg{})
 	if cmd != nil {
@@ -270,15 +279,10 @@ func TestUpdate_SpinnerTickIgnoredOutsideInstalling(t *testing.T) {
 	}
 }
 
-// sendEngramFound sends EngramCheckMsg{Found:true} and returns updated model.
-func sendEngramFound(t *testing.T, m setup.Model) setup.Model {
-	t.Helper()
-	next, _ := m.Update(setup.EngramCheckMsg{Found: true})
-	m2, ok := next.(setup.Model)
-	if !ok {
-		t.Fatalf("Update returned %T, want setup.Model", next)
-	}
-	return m2
+// advanceToMainMenu is a no-op helper kept for caller compatibility.
+// New() already starts at StateMainMenu, so no navigation is needed.
+func advanceToMainMenu(_ *testing.T, m setup.Model) setup.Model {
+	return m
 }
 
 // updateKey sends a key press through Update and returns the new Model.

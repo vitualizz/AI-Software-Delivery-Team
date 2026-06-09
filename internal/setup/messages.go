@@ -8,11 +8,13 @@ import (
 	"io/fs"
 	"net/http"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
 )
 
 // InstallDoneMsg is sent by InstallCmd when the installer goroutine completes.
@@ -20,18 +22,22 @@ type InstallDoneMsg struct {
 	Results []installer.InstallResult
 }
 
-// EngramCheckMsg is sent by EngramCheckCmd with the result of the PATH lookup.
-type EngramCheckMsg struct {
-	Found bool
+// EnvironmentCheckProgressMsg is sent by each probe in EnvironmentCheckCmd
+// as soon as it resolves. One message per row — carries the row label so
+// Update() can locate and update the correct CheckRow in preflightSections.
+type EnvironmentCheckProgressMsg struct {
+	RowLabel string
+	Status   components.CheckStatus
+	Detail   string
+	SoftWarn bool
 }
 
-// EngramCheckCmd returns a tea.Cmd that checks whether the engram binary is on
-// PATH and sends EngramCheckMsg with the result.
-func EngramCheckCmd() tea.Cmd {
-	return func() tea.Msg {
-		_, err := exec.LookPath("engram")
-		return EngramCheckMsg{Found: err == nil}
-	}
+// EnvironmentCheckMsg is the terminal message sent after ALL three probes in
+// EnvironmentCheckCmd have resolved. Carries the gate flags needed to
+// decide whether Continue is enabled.
+type EnvironmentCheckMsg struct {
+	EngramFound    bool
+	CodegraphFound bool
 }
 
 // UpdateCheckMsg carries the result of the GitHub latest-release lookup.
@@ -97,5 +103,87 @@ func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.P
 	return func() tea.Msg {
 		results := installer.Install(assistants, provider, skillsFS)
 		return InstallDoneMsg{Results: results}
+	}
+}
+
+const environmentCheckTimeout = 5 * time.Second
+
+// EnvironmentCheckCmd fans out three environment probes concurrently.
+// Each probe sends an EnvironmentCheckProgressMsg immediately when it
+// resolves. Uses context.WithTimeout(5s) for all async probes to prevent
+// TUI hang on slow PATH resolution.
+func EnvironmentCheckCmd() tea.Cmd {
+	return tea.Batch(osProbeCmd(), engramProbeCmd(), codegraphProbeCmd())
+}
+
+func osProbeCmd() tea.Cmd {
+	return func() tea.Msg {
+		detail := runtime.GOOS + "/" + runtime.GOARCH
+		return EnvironmentCheckProgressMsg{
+			RowLabel: "OS / Arch",
+			Status:   components.CheckStatusOK,
+			Detail:   detail,
+		}
+	}
+}
+
+func engramProbeCmd() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), environmentCheckTimeout)
+		defer cancel()
+		path, err := lookPathCtx(ctx, "engram")
+		if err != nil {
+			return EnvironmentCheckProgressMsg{
+				RowLabel: "Engram",
+				Status:   components.CheckStatusError,
+				Detail:   "not found — install: https://github.com/Gentleman-Programming/engram",
+			}
+		}
+		return EnvironmentCheckProgressMsg{
+			RowLabel: "Engram",
+			Status:   components.CheckStatusOK,
+			Detail:   path,
+		}
+	}
+}
+
+func codegraphProbeCmd() tea.Cmd {
+	return func() tea.Msg {
+		ctx, cancel := context.WithTimeout(context.Background(), environmentCheckTimeout)
+		defer cancel()
+		path, err := lookPathCtx(ctx, "codegraph")
+		if err != nil {
+			return EnvironmentCheckProgressMsg{
+				RowLabel: "Codegraph",
+				Status:   components.CheckStatusWarning,
+				Detail:   "not found — optional: https://github.com/Gentleman-Programming/codegraph",
+				SoftWarn: true,
+			}
+		}
+		return EnvironmentCheckProgressMsg{
+			RowLabel: "Codegraph",
+			Status:   components.CheckStatusOK,
+			Detail:   path,
+		}
+	}
+}
+
+// lookPathCtx wraps exec.LookPath with context cancellation. exec.LookPath
+// itself is synchronous — this goroutine+channel pattern enforces the timeout.
+func lookPathCtx(ctx context.Context, name string) (string, error) {
+	type result struct {
+		path string
+		err  error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		p, err := exec.LookPath(name)
+		ch <- result{p, err}
+	}()
+	select {
+	case r := <-ch:
+		return r.path, r.err
+	case <-ctx.Done():
+		return "", ctx.Err()
 	}
 }
