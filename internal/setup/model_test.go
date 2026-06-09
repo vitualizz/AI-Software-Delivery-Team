@@ -81,7 +81,7 @@ func TestUpdate_PreflightCtrlCQuits(t *testing.T) {
 func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	// Navigate to StateSelectAssistants via the full install flow.
-	m = advanceToMainMenu(t, m) // no-op, already at StateMainMenu
+	m = advanceToMainMenu(t, m)       // no-op, already at StateMainMenu
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
@@ -116,8 +116,8 @@ func TestUpdate_EnterOnInstallTriggersEnvironmentCheck(t *testing.T) {
 
 func TestUpdate_EnterOnDashboardTransitionsToDashboard(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = advanceToMainMenu(t, m) // no-op, cursor=0
-	m = updateKey(t, m, tea.KeyDown)  // cursor → 1 (Dashboard)
+	m = advanceToMainMenu(t, m)      // no-op, cursor=0
+	m = updateKey(t, m, tea.KeyDown) // cursor → 1 (Dashboard)
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m2 := next.(setup.Model)
 	if m2.State() != setup.StateDashboard {

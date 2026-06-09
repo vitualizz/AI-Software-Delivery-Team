@@ -51,7 +51,7 @@ func TestView_MainMenuShowsUpdateBanner(t *testing.T) {
 
 func TestView_AssistantListShowsBothNames(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // no-op, already at MainMenu
+	m = sendEngramFound(t, m)         // no-op, already at MainMenu
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
@@ -66,7 +66,7 @@ func TestView_AssistantListShowsBothNames(t *testing.T) {
 
 func TestView_AssistantListSelectedItemHasCursor(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // no-op, already at MainMenu
+	m = sendEngramFound(t, m)         // no-op, already at MainMenu
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
@@ -92,7 +92,7 @@ func TestView_AssistantListUsesBadgeForStatus(t *testing.T) {
 	defer lipgloss.SetColorProfile(prev)
 
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = sendEngramFound(t, m) // no-op, already at MainMenu
+	m = sendEngramFound(t, m)         // no-op, already at MainMenu
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)

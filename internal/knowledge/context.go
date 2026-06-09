@@ -60,4 +60,3 @@ type ProjectContext struct {
 	NamingStyle        ContextDetection `yaml:"naming_style"`
 	ArchitecturalStyle ContextDetection `yaml:"architectural_style"`
 }
-

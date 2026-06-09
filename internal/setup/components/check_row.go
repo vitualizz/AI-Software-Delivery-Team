@@ -1,3 +1,4 @@
+// Package components provides reusable TUI components for the setup screen.
 package components
 
 import (
@@ -9,9 +10,13 @@ import (
 type CheckStatus int
 
 const (
+	// CheckStatusPending indicates the check has not yet resolved.
 	CheckStatusPending CheckStatus = iota
+	// CheckStatusOK indicates the check passed.
 	CheckStatusOK
+	// CheckStatusWarning indicates the check passed with a non-blocking warning.
 	CheckStatusWarning
+	// CheckStatusError indicates the check failed.
 	CheckStatusError
 )
 
@@ -42,7 +47,7 @@ func (r *CheckRow) TickSpinner(frame string) {
 }
 
 // Render returns a styled single-line representation of the check row.
-func (r CheckRow) Render(width int) string {
+func (r CheckRow) Render(_ int) string {
 	icon := statusIcon(r.Status, r.SpinnerFrame)
 	label := lipgloss.NewStyle().Width(20).Render(r.Label)
 	detail := ""
