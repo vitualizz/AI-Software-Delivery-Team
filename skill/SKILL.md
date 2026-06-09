@@ -249,6 +249,8 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 
 > **This algorithm runs on EVERY candidate `steps:` list — whether it is a `trivial` ad-hoc composition OR a preset tier (simple/moderate/complex). It is a structural guard against phantom-name and broken-dependency regressions. Execute it before emitting any `## Tailored Workflow` block.**
 
+> **Derivation rule**: When emitting a preset tier (trivial/simple/moderate/complex), derive the step list by reading the target specialist's `workflow.yaml` `name:` fields filtered to the preset's declared subset — treat the prose tables below as hints for which names to include, not as the authoritative source. The `workflow.yaml` file is authoritative. This prevents "valid-but-wrong" drift where a step name exists in `workflow.yaml` but belongs to a different tier.
+
 **Two-pass algorithm (for specialist S and its `workflow.yaml`):**
 
 **Pass 1 — Name check**: For each step name in the candidate list, verify it exists as a `name:` field in `S/workflow.yaml`. If any name is absent → REJECT the entire list, log the phantom name, and fall back to the nearest valid complexity preset (the smallest preset whose step set is a superset of the valid names in the candidate list).
