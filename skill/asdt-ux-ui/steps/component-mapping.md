@@ -8,9 +8,7 @@ Maximize reuse. Justify every new component.
 - `ux-ui/flows`: interaction sequences, state changes
 - `platform-summary`: component_library, existing patterns
 
-Retrieve `ux-ui/flows` via mem_search + mem_get_observation by topic_key
-(`platform-summary` is provided directly by the orchestrator's inline
-`platform-analysis` step).
+`ux-ui/flows` arrives injected per the parallel-retrieval contract — consume it directly. `platform-summary` is injected by the orchestrator's inline `platform-analysis` step. Do not fetch either yourself.
 
 Extract from flows: all unique UI states and interactions.
 Extract from platform-summary: component_library name and approach.

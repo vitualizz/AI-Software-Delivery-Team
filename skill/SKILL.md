@@ -336,6 +336,8 @@ UX/UI — read `asdt-ux-ui/workflow.yaml`; valid names are its `name:` values (`
 | **moderate** | feature-brief → information-architecture → user-flows → component-mapping → ux-handoff |
 | **complex** | Full workflow (feature-brief → information-architecture → user-flows → component-mapping → responsive-strategy → ux-handoff) |
 
+> **Invariant**: `simple` and `moderate` are intentionally identical for UX/UI — this specialist has no mid-tier toggle; `responsive-strategy` is the only complexity-gated step and it gates `complex` only. Do not diverge these lists.
+
 **Security step mapping by risk surface (STRUCTURALLY SEPARATE — risk-surface-gated, NEVER complexity-gated):**
 
 > **Caution**: Security is the ONLY specialist gated by `risk_surface` instead of `complexity`. Do not copy the complexity-gated pattern from Developer/Architect/QA/UX-UI onto Security — that is the exact regression this mechanism guards against.

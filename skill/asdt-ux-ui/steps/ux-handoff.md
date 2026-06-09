@@ -20,9 +20,9 @@ All inputs context-extracted to max 200 tokens each = max 1,000 tokens total.
 Apply the `report` shared skill:
 1. From feature-brief: extract actor + success_criteria.
 2. From ia: extract navigation.entry_point + primary_actions.
-3. From flows: extract happy-path steps only (not edge cases — those go in QA).
+3. From flows: extract happy-path steps and decision_points (not edge cases — those go in QA).
 4. From components: full component inventory.
-5. From responsive: component_behavior table.
+5. From responsive (if resolved): extract the component_behavior table — this is authoritative for responsive specs and overrides the one-liner `responsive_behavior` fields in component-mapping output. If the responsive input is UNRESOLVED (tier did not include responsive-strategy), omit the responsive section and add `"responsive strategy deferred — tier did not include responsive-strategy"` to open_items.
 6. Consolidate open_items from ALL inputs into a deduplicated list.
 
 ## Output
@@ -56,6 +56,7 @@ payload:
     - id: ""
       name: ""
       steps: []
+      decision_points: []
   information_architecture:
     sections: []
     navigation_path: ""
@@ -70,7 +71,9 @@ payload:
   new_components:
     - name: ""
       purpose: ""
+      reason_existing_insufficient: ""
       props: []
+      events: []
       responsive_behavior: ""
   open_items: []
 ```
