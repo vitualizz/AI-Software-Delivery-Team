@@ -18,8 +18,6 @@ Generate tests for the implementation, covering happy paths and key edge cases.
 - `developer/dev-tasks`: task list with acceptance criteria references
 - `developer/dev-implementation`: code snippets per task
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract from dev-tasks: `tasks[].ac_ref`, `tasks[].id`.
 Extract from dev-implementation: `steps[].code_snippets[].content` (signatures only, not full bodies).
 

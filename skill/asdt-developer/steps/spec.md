@@ -18,8 +18,6 @@ Define exactly what needs to be built: in-scope, out-of-scope, and acceptance cr
 - Request: the original feature description
 - `developer/dev-exploration`: files to understand, patterns, open questions
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract from dev-exploration: `open_questions` (answer them here), `patterns_to_follow`.
 
 ## Context budget

@@ -18,9 +18,7 @@ Establish what "done" looks like from the user's perspective before designing an
 - Request: the feature description from the user
 - `platform-summary`: existing design system, component library, CSS approach
 
-Retrieve via mem_search + mem_get_observation by topic_key (the request and the
-inline-injected `platform-summary` are provided directly by the orchestrator;
-this is the first generative step and reads no upstream specialist artifact).
+Note: The request and inline-injected `platform-summary` are provided directly by the orchestrator; this is the first generative step and reads no upstream specialist artifact.
 
 Extract from platform-summary: component_library, css_approach.
 

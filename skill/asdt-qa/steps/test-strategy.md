@@ -17,8 +17,6 @@ Define the testing approach: which level tests cover which behaviors, and why.
 ## Inputs
 - `qa/edge-cases`: edge case inventory with priorities
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: edge_cases[].technique, edge_cases[].priority, critical_count.
 
 ## Context budget

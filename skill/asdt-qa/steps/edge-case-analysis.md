@@ -18,8 +18,6 @@ Edge cases are not random — they can be derived methodically.
 ## Inputs
 - `qa/ac-list`: normalized acceptance criteria
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: acceptance_criteria[].given/when/then (to derive boundaries).
 
 ## Context budget

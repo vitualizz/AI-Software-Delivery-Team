@@ -17,7 +17,6 @@ Choose the technical approach and define the data model and API shape.
 ## Inputs
 - `developer/dev-spec`: scope, acceptance criteria, technical requirements
 
-Retrieve via mem_search + mem_get_observation by topic_key.
 ONLY READ dev-spec. Do NOT load exploration or any other artifact.
 
 ## Context budget

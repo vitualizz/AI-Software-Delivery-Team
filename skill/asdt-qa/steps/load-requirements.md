@@ -26,7 +26,7 @@ QA starts from the deliverables of other specialists — not from the raw reques
 Note: this step's `inputs:` list in `workflow.yaml` is empty by design — it has
 no prior `subagent`-produced QA artifact to retrieve; it is QA's first generative
 step and reads directly from upstream specialists' artifacts (or the raw request
-as fallback). Retrieve via mem_search + mem_get_observation by topic_key.
+as fallback).
 
 ## Context budget
 Extract only: user_stories/acceptance_criteria/scope from each artifact.

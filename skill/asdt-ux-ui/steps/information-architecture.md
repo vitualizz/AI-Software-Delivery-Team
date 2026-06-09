@@ -17,8 +17,6 @@ Decide how information is organized before deciding how it looks.
 ## Inputs
 - `ux-ui/feature-brief`: actor, problem, success criteria, constraints
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: success_criteria (determines what content is needed), design_constraints.
 
 ## Context budget

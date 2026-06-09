@@ -18,8 +18,6 @@ Apply the report shared skill. Every finding becomes a concrete action item.
 - `security/stride-threats`: STRIDE threats with severity
 - `security/owasp-findings`: OWASP findings with recommendations
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Apply context-extraction: from stride-threats keep Critical + High severity only.
 From owasp-findings keep all findings sorted by severity.
 

@@ -18,8 +18,6 @@ Break the implementation into an ordered checklist of atomic tasks.
 - `developer/dev-spec`: scope, acceptance criteria
 - `developer/dev-design`: technical approach, data model, API surface
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract from dev-spec: `acceptance_criteria`, `scope.in`.
 Extract from dev-design: `data_model`, `api_surface`, `key_constraints`.
 

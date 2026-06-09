@@ -17,8 +17,6 @@ Define the concrete technical structure: data model, API surface, and service bo
 ## Inputs
 - `architect/adr`: chosen approach, key constraints, consequences
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: decision (the chosen approach), consequences.negative (constraints to design around).
 
 ## Context budget

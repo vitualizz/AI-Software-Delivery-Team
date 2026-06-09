@@ -17,8 +17,6 @@ Systematic coverage prevents the "I forgot to check X" failure mode.
 ## Inputs
 - `security/attack-surface`: entry points, trust boundaries, data flows
 
-Retrieve via mem_search + mem_get_observation by topic_key.
-
 Extract: entry_points[], data_flows[].vulnerabilities_noted.
 
 ## Context budget
