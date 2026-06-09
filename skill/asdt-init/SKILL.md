@@ -26,7 +26,8 @@ This is a light, mostly-mechanical flow — but it has one gate only the orchest
 - **Present** → delegate the rest to ONE sub-agent, passing "Engram confirmed present" into its prompt as an established fact:
   - Stack detection (Step 1)
   - The idempotency check and file writes (Step 3)
-  - The confirmation message (Step 4)
+  - Project context detection (Step 4)
+  - The confirmation message (Step 5)
 
 It returns a short summary of what it found and wrote — keeping the bash output, file reads, and intermediate reasoning out of your main context, which is the whole point of routing work through ASDT specialists in the first place.
 
@@ -102,8 +103,111 @@ file_structure: {conventions.file_structure}
 
 Both files stay small and bounded: their size grows with the number of detected stacks, never with repo size.
 
-### Step 4 — Confirm
+### Step 4 — Detect project context
+
+Produce `.asdt/knowledge/project-context.yaml` — a machine-written file that records _how_ the project is structured and coded (monorepo shape, test runner, naming style, architectural pattern). This is separate from `platform.yaml`, which records _what_ is installed.
+
+#### 4.1 Check for existing project-context.yaml
+
+Look for `{root}/knowledge/project-context.yaml`:
+
+- **Absent** → fresh detection path (§4.2).
+- **Present** → recalibration path (§4.3).
+
+#### 4.2 Fresh detection
+
+The sub-agent invokes the Go context detector directly (no CLI subcommand exists yet — direct library invocation):
+
+```go
+det := knowledge.DefaultContextDetector(primaryLang)
+ctx, _ := det.DetectContext(projectRoot, knowledge.DetectConfig{PrimaryLanguage: primaryLang})
+reader.WriteContext(root, ctx)
+```
+
+`primaryLang` comes from the first entry of `detected_stack` written in Step 3.
+
+Each probe runs independently. A probe error is non-fatal — the sub-agent skips that probe and continues. The resulting `ProjectContext` is written to `{root}/knowledge/project-context.yaml` via `FSReader.WriteContext`.
+
+**Detection rules — no model judgment, exact mapping only:**
+
+**MonorepoProbe** (`is_monorepo` field):
+- `os.Stat(projectRoot + "/go.work")` succeeds → `value="true"`, `source=detected`, `confidence=high`
+- `os.Stat(projectRoot + "/pnpm-workspace.yaml")` succeeds → `value="true"`, `source=detected`, `confidence=high`
+- Neither found → `value="false"`, `source=detected`, `confidence=high`
+
+**TestRunnerProbe** (`test_runner` field):
+- lang=`go`: read `Makefile` at root; if content contains `"go test"` → `value="make test"`, `confidence=medium`; else if `go.mod` exists → `value="go test ./..."`, `confidence=high`
+- lang=`node`: read `package.json`; if `scripts.test` is non-empty → `value=scripts.test`, `confidence=high`; else if `jest.config.js` exists → `value="jest"`, `confidence=medium`; else if `vitest.config.ts` exists → `value="vitest"`, `confidence=medium`
+- Any other lang or no match → `value="unknown"`, `source=inferred`, `confidence=low`
+
+**NamingStyleDetector** (`naming_style` field):
+- Collect up to 8 source files via `filepath.WalkDir` depth ≤ 3, filtered by language extension (`.go` for Go; `.ts`/`.tsx` for Node); skip files > 64 KB.
+- For each file, check line-by-line with exact regexps:
+  - Go: `^func [A-Z]|^type [A-Z]|^var [A-Z]|^const [A-Z]` → PascalCase hit; `^func [a-z]|^type [a-z]|^var [a-z]|^const [a-z]` → camelCase hit
+  - Node: `^export (function|class|const|interface) [A-Z]` → PascalCase; `^export (function|const) [a-z]` → camelCase
+- Majority rule: ≥75% files have consistent style → `confidence=high`; 50–74% → `confidence=medium`; <50% → `confidence=low`
+- Go dominant PascalCase → `value="snake_case filenames, PascalCase exported symbols"` (standard Go convention confirmed)
+- No source files found → `value="unknown"`, `source=inferred`, `confidence=low`
+
+**ArchitecturalStyleDetector** (`architectural_style` field, Tier 1 only):
+- `os.ReadDir(projectRoot)` — read top-level directory names only:
+  - `cmd/` AND `internal/` present → `value="hexagonal"`, `source=detected`, `confidence=high`
+  - `src/` present → read one level deeper (`os.ReadDir(src/)`):
+    - `controllers/`, `models/`, `views/` all present → `value="mvc"`, `confidence=high`
+    - `features/` OR `modules/` present → `value="modular"`, `confidence=medium`
+    - Otherwise → `value="layered"`, `confidence=medium`
+  - `lib/` only (no `src/`) → `value="layered"`, `confidence=medium`
+  - No pattern matched → `value="unknown"`, `source=inferred`, `confidence=low`
+
+The sub-agent returns a `DetectionSummary` alongside the Step 3 output, listing each detected field, its value, source, and confidence.
+
+> **Forward reference:** a future change will wire `asdt-cli detect-context` as a subcommand that calls this same library. When that subcommand exists, Step 4.2 will invoke it instead of the direct library call.
+
+#### 4.3 Recalibration (project-context.yaml already exists)
+
+When `project-context.yaml` already exists:
+
+1. Run fresh detection → produce `NewContext` (same rules as §4.2).
+2. Compute a delta table:
+
+   | Field | Old value | New value | Changed? |
+   |---|---|---|---|
+   | is_monorepo | … | … | yes/no |
+   | test_runner | … | … | yes/no |
+   | naming_style | … | … | yes/no |
+   | architectural_style | … | … | yes/no |
+
+3. Present the delta table to the user.
+4. Ask ONE question: "Accept all changes, or review field by field?"
+5. If "accept all" → overwrite `project-context.yaml` with `NewContext`.
+6. If "field by field" → for each changed field, ask the user to accept / reject / set manually. One question per field.
+7. **Human answers always win.** Fields where the existing `source=manual` are NEVER silently overwritten — they must appear in the delta table and require explicit user acceptance.
+
+#### 4.4 Confidence and source rules
+
+| Source | When to assign |
+|---|---|
+| `detected` | Value determined by a bounded command with direct file evidence |
+| `inferred` | Pattern matched without direct file evidence (fallback / best-effort) |
+| `manual` | User explicitly set this value during a recalibration review |
+
+| Confidence | Meaning |
+|---|---|
+| `high` | Strong signal — treat as authoritative convention |
+| `medium` | Likely match — confirm before diverging |
+| `low` | Weak signal — best-effort guess |
+
+Confidence thresholds are assigned by each probe's algorithm (see §4.2 rules). Do not reassign confidence based on judgment — use the exact rules above.
+
+#### 4.5 Output
+
+- `{root}/knowledge/project-context.yaml` written (fresh) or confirmed/updated (recalibration).
+- Orchestrator receives a `DetectionSummary` for display to the user.
+- Proceed to Step 5.
+
+### Step 5 — Confirm
 Tell the user:
 - Configuration written to `.asdt/config.yaml`
 - Detected stack and platform info written to `.asdt/knowledge/`
+- Project context written to `.asdt/knowledge/project-context.yaml`
 - They can now use `/asdt-architect`, `/asdt-developer`, etc.

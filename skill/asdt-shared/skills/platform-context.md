@@ -71,6 +71,27 @@ Conventions: cmd/ for binaries, internal/ for private packages
 
 ---
 
+## Conditional: Project Context
+
+> Load this section only if `.asdt/knowledge/project-context.yaml` exists.
+> If the file is absent, skip this entire section silently.
+> If `schema_version` != `"1"`, skip and note `project-context.yaml: schema_version mismatch, skipped` in open_items.
+
+The following fields describe the structural and stylistic context of this project,
+as detected by `asdt init`. Each field carries a `source` (detected | inferred | manual)
+and a `confidence` (high | medium | low). Fields with an empty `value` are omitted.
+
+**Monorepo**: {{ is_monorepo.value }}  *({{ is_monorepo.source }}, {{ is_monorepo.confidence }})*
+**Test runner**: {{ test_runner.value }}  *({{ test_runner.source }}, {{ test_runner.confidence }})*
+**Naming style**: {{ naming_style.value }}  *({{ naming_style.source }}, {{ naming_style.confidence }})*
+**Architectural style**: {{ architectural_style.value }}  *({{ architectural_style.source }}, {{ architectural_style.confidence }})*
+
+When writing code or tests, treat `detected/high` fields as authoritative conventions.
+Treat `inferred/medium` fields as likely conventions — confirm before diverging.
+Treat `manual` fields as user-declared — never override without explicit user approval.
+
+---
+
 ## Usage Note
 
 This skill is always loaded by specialists via their `shared-skills` list. The specialist does not need to duplicate this logic — it calls this skill at its Platform Analysis step.

@@ -438,6 +438,120 @@ func TestWriteSummary_AutoCreatesKnowledgeDir(t *testing.T) {
 	}
 }
 
+// --- FSReader WriteContext/ReadContext tests ---
+
+// TestFSReader_WriteContext_RoundTrip writes a ProjectContext with all fields
+// populated, reads it back, and asserts all fields are preserved.
+func TestFSReader_WriteContext_RoundTrip(t *testing.T) {
+	root := makeRoot(t)
+	reader := knowledge.NewFSReader()
+
+	ts := time.Date(2026, 6, 9, 10, 0, 0, 0, time.UTC)
+	original := knowledge.ProjectContext{
+		SchemaVersion: "1",
+		DetectedAt:    ts,
+		IsMonorepo: knowledge.ContextDetection{
+			Value:      "true",
+			Source:     knowledge.ContextSourceDetected,
+			Confidence: knowledge.ContextConfidenceHigh,
+		},
+		TestRunner: knowledge.ContextDetection{
+			Value:      "go test ./...",
+			Source:     knowledge.ContextSourceDetected,
+			Confidence: knowledge.ContextConfidenceHigh,
+		},
+		NamingStyle: knowledge.ContextDetection{
+			Value:      "snake_case filenames, PascalCase exported symbols",
+			Source:     knowledge.ContextSourceDetected,
+			Confidence: knowledge.ContextConfidenceHigh,
+		},
+		ArchitecturalStyle: knowledge.ContextDetection{
+			Value:      "hexagonal",
+			Source:     knowledge.ContextSourceDetected,
+			Confidence: knowledge.ContextConfidenceHigh,
+		},
+	}
+
+	if err := reader.WriteContext(root, original); err != nil {
+		t.Fatalf("WriteContext: %v", err)
+	}
+
+	restored, err := reader.ReadContext(root)
+	if err != nil {
+		t.Fatalf("ReadContext: %v", err)
+	}
+
+	if restored.SchemaVersion != original.SchemaVersion {
+		t.Errorf("SchemaVersion: got %q, want %q", restored.SchemaVersion, original.SchemaVersion)
+	}
+	if !restored.DetectedAt.Equal(original.DetectedAt) {
+		t.Errorf("DetectedAt: got %v, want %v", restored.DetectedAt, original.DetectedAt)
+	}
+	if restored.IsMonorepo.Value != original.IsMonorepo.Value {
+		t.Errorf("IsMonorepo.Value: got %q, want %q", restored.IsMonorepo.Value, original.IsMonorepo.Value)
+	}
+	if restored.IsMonorepo.Source != original.IsMonorepo.Source {
+		t.Errorf("IsMonorepo.Source: got %q, want %q", restored.IsMonorepo.Source, original.IsMonorepo.Source)
+	}
+	if restored.IsMonorepo.Confidence != original.IsMonorepo.Confidence {
+		t.Errorf("IsMonorepo.Confidence: got %q, want %q", restored.IsMonorepo.Confidence, original.IsMonorepo.Confidence)
+	}
+	if restored.TestRunner.Value != original.TestRunner.Value {
+		t.Errorf("TestRunner.Value: got %q, want %q", restored.TestRunner.Value, original.TestRunner.Value)
+	}
+	if restored.NamingStyle.Value != original.NamingStyle.Value {
+		t.Errorf("NamingStyle.Value: got %q, want %q", restored.NamingStyle.Value, original.NamingStyle.Value)
+	}
+	if restored.ArchitecturalStyle.Value != original.ArchitecturalStyle.Value {
+		t.Errorf("ArchitecturalStyle.Value: got %q, want %q", restored.ArchitecturalStyle.Value, original.ArchitecturalStyle.Value)
+	}
+}
+
+// TestFSReader_ReadContext_MissingFile_ReturnsError verifies that ReadContext
+// returns a non-nil error when project-context.yaml does not exist.
+func TestFSReader_ReadContext_MissingFile_ReturnsError(t *testing.T) {
+	root := makeRoot(t)
+	reader := knowledge.NewFSReader()
+
+	_, err := reader.ReadContext(root)
+	if err == nil {
+		t.Error("expected error reading non-existent project-context.yaml, got nil")
+	}
+}
+
+// TestFSReader_WriteContext_CreatesKnowledgeDirectory verifies that WriteContext
+// creates the knowledge/ directory when it does not yet exist.
+func TestFSReader_WriteContext_CreatesKnowledgeDirectory(t *testing.T) {
+	dir := t.TempDir()
+	asdt := filepath.Join(dir, ".asdt")
+	if err := os.MkdirAll(asdt, 0o755); err != nil {
+		t.Fatalf("mkdir .asdt: %v", err)
+	}
+	root, err := config.Discover(dir)
+	if err != nil {
+		t.Fatalf("Discover: %v", err)
+	}
+
+	// knowledge/ subdirectory does NOT exist yet.
+	reader := knowledge.NewFSReader()
+	ctx := knowledge.ProjectContext{
+		SchemaVersion: "1",
+		IsMonorepo: knowledge.ContextDetection{
+			Value:      "false",
+			Source:     knowledge.ContextSourceDetected,
+			Confidence: knowledge.ContextConfidenceHigh,
+		},
+	}
+
+	if err := reader.WriteContext(root, ctx); err != nil {
+		t.Fatalf("WriteContext with missing knowledge dir: %v", err)
+	}
+
+	if _, err := reader.ReadContext(root); err != nil {
+		t.Fatalf("ReadContext after WriteContext: %v", err)
+	}
+}
+
 // TestFSReader_RoundTrip_PreservesScannedAt verifies that the ScannedAt
 // timestamp and all nested fields are preserved exactly through Write+Read.
 func TestFSReader_RoundTrip_PreservesScannedAt(t *testing.T) {

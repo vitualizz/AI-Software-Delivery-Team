@@ -1,0 +1,99 @@
+# project-context.schema.yaml
+# Schema for .asdt/knowledge/project-context.yaml
+# Produced by asdt init Step 4 (Detect project context).
+# schema_version "1" — increment when breaking changes are introduced.
+
+schema_version: "1"
+
+fields:
+  schema_version:
+    type: string
+    required: true
+    description: "Schema version string. Currently '1'. Increment on breaking changes."
+
+  detected_at:
+    type: string
+    format: datetime
+    required: true
+    description: "UTC timestamp when this file was written (ISO 8601)."
+
+  is_monorepo:
+    type: detection
+    required: true
+    description: "Whether the project root is a monorepo."
+    detection:
+      value:
+        type: string
+        enum: ["true", "false"]
+      source:
+        type: string
+        enum: [detected, inferred, manual]
+      confidence:
+        type: string
+        enum: [high, medium, low]
+
+  test_runner:
+    type: detection
+    required: true
+    description: "The primary test runner command for this project."
+    detection:
+      value:
+        type: string
+        examples: ["go test ./...", "make test", "jest", "vitest", "unknown"]
+      source:
+        type: string
+        enum: [detected, inferred, manual]
+      confidence:
+        type: string
+        enum: [high, medium, low]
+
+  naming_style:
+    type: detection
+    required: true
+    description: "Dominant identifier casing style detected from sampled source files."
+    detection:
+      value:
+        type: string
+        examples:
+          - "snake_case filenames, PascalCase exported symbols"
+          - "camelCase"
+          - "PascalCase"
+          - "mixed"
+          - "unknown"
+      source:
+        type: string
+        enum: [detected, inferred, manual]
+      confidence:
+        type: string
+        enum: [high, medium, low]
+
+  architectural_style:
+    type: detection
+    required: true
+    description: "Dominant architectural pattern detected from top-level directory layout."
+    detection:
+      value:
+        type: string
+        enum: [hexagonal, mvc, modular, layered, unknown]
+      source:
+        type: string
+        enum: [detected, inferred, manual]
+      confidence:
+        type: string
+        enum: [high, medium, low]
+
+detection_types:
+  detected:
+    description: "Value determined by a bounded command with direct file evidence."
+  inferred:
+    description: "Value inferred from indirect pattern matching without direct file evidence."
+  manual:
+    description: "Value explicitly set by the user during review. Never silently overwritten."
+
+confidence_thresholds:
+  high:
+    description: "Confident match — treat as authoritative convention."
+  medium:
+    description: "Likely match — confirm before diverging from this convention."
+  low:
+    description: "Weak signal — treat as a best-effort guess."
