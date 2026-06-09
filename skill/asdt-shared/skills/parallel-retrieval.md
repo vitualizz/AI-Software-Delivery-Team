@@ -17,6 +17,14 @@ explanation inline anywhere else — edit it here and every pointer stays correc
   your own declared inputs** — that work has already been done for you and
   repeating it wastes MCP round trips.
 
+## Executor Header Injection (orchestrator, mandatory)
+
+Before building any sub-agent prompt, prepend the content of
+`asdt-shared/skills/executor-header.md` as the first block. This ensures every
+sub-agent receives its executor guardrails regardless of which step file is
+being launched. The step file itself no longer contains the EXECUTOR block —
+the orchestrator owns injection.
+
 ## Cache Ledger Rule (orchestrator)
 
 Maintain a per-run map `topic_key -> resolved content`:
