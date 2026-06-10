@@ -347,40 +347,6 @@ func TestUpdate_AgentSetup_Esc_ReturnsToSelectProvider(t *testing.T) {
 
 // --- StateAgentWriteMode transition tests ---
 
-// advanceToAgentWriteMode drives the model to StateAgentWriteMode by injecting
-// a simulated conflict so that Enter on a preset in StateAgentSetup does not
-// proceed directly to StateInstalling.
-func advanceToAgentWriteMode(t *testing.T, m setup.Model) setup.Model {
-	t.Helper()
-	m = advanceToSelectProvider(t, m)
-	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
-	if m.State() != setup.StateAgentSetup {
-		t.Fatalf("expected StateAgentSetup, got %v", m.State())
-	}
-
-	// Inject a conflict via a faked AgentInstallDoneMsg that sets agentConflicts.
-	// We cannot set unexported fields directly, so we instead rely on the
-	// EnvironmentCheckMsg path. Instead, simulate a conflict by sending the
-	// model through detectAgentConflicts via a real tmp file.
-	//
-	// Because we cannot set unexported fields from the test package, we drive
-	// the model through the TUI by pointing HOME at a directory that already
-	// has a CLAUDE.md with an asdt block, so detectAgentConflicts fires.
-	// That already happens when advanceToSelectProvider calls Enter on the
-	// SelectProvider step — so if the test home has no files, agentConflicts
-	// is empty and the model goes to Installing.
-	//
-	// The simplest approach: create the required file BEFORE reaching
-	// SelectProvider so that detectAgentConflicts finds it.
-	// This test must be run with a writable HOME set via t.Setenv.
-	t.Helper()
-	// If agentConflicts is already populated, Enter on cursor 0 goes to
-	// StateAgentWriteMode. Otherwise it goes to StateInstalling.
-	// We cannot force the conflict here without file system access, so we
-	// accept that this path is tested via the filesystem-aware test below.
-	return m
-}
-
 func TestUpdate_AgentSetup_WithConflict_EntersAgentWriteMode(t *testing.T) {
 	// Create a fake home with a CLAUDE.md that contains the asdt block marker,
 	// so detectAgentConflicts returns a non-empty slice.

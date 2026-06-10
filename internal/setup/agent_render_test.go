@@ -101,4 +101,3 @@ func TestRenderAgentConfig_NoPlaceholdersRemain(t *testing.T) {
 		t.Errorf("AGENTS.md missing sentinel for stack/arch, got:\n%s", content)
 	}
 }
-

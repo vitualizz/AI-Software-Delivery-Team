@@ -59,10 +59,10 @@ type Model struct {
 	preflightDone     bool
 	engramMissing     bool
 
-	selectedPersona int                    // index into installer.PersonaPresets (0=Axiom,1=Sage,2=Forge,3=Lee Palacios)
-	agentSetupSkip  bool                   // user chose to skip agent config entirely
-	agentWriteMode  installer.AgentWriteMode // how to handle an existing config
-	agentConflicts  []string               // target paths that already have an existing config
+	selectedPersona int
+	agentSetupSkip  bool
+	agentWriteMode  installer.AgentWriteMode
+	agentConflicts  []string
 }
 
 // New constructs an initial Model with the running binary version. Init()
