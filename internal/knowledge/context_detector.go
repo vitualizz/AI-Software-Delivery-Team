@@ -34,7 +34,7 @@ func DefaultContextDetector(primaryLang string) *ContextDetector {
 // ProjectContext. Probe errors are non-fatal: a failed probe produces a
 // ContextDetection with source=inferred and confidence=low. The returned
 // error is always nil (forward-compatible signature).
-func (d *ContextDetector) DetectContext(projectRoot string, cfg DetectConfig) (ProjectContext, error) {
+func (d *ContextDetector) DetectContext(projectRoot string, _ DetectConfig) (ProjectContext, error) {
 	results := make(map[string]ContextDetection, len(d.probes))
 
 	fallback := ContextDetection{

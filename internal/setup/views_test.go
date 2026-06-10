@@ -20,7 +20,7 @@ import (
 // view string assertions are deterministic regardless of the developer's
 // system locale.
 func TestMain(m *testing.M) {
-	os.Setenv("ASDT_LANG", "en")
+	_ = os.Setenv("ASDT_LANG", "en")
 	os.Exit(m.Run())
 }
 

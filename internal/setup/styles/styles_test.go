@@ -100,4 +100,3 @@ func TestBoxHasRoundedBorderAndPadding(t *testing.T) {
 		t.Errorf("Box padding = (%d,%d,%d,%d), want (1,2,1,2)", top, right, bottom, left)
 	}
 }
-
