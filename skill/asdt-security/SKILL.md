@@ -32,15 +32,13 @@ Missing context → note in open_items and proceed with what's available.
 
 ## Orchestration Plan
 
-**Risk-surface-based step filtering (NOT complexity-gated)**: Security's depth is gated by `risk_surface`, NEVER `complexity`. Do not copy the complexity-gated pattern used by other specialists onto Security.
+**Risk-surface-based step filtering (NOT complexity-gated)**: Security's depth is gated by `risk_surface`, NEVER `complexity` — do not copy the complexity-gated pattern used by other specialists onto Security. This section is the authoritative risk-surface→step mapping for this specialist — the meta-orchestrator's `skill/SKILL.md` §9.2 holds a compact cache row derived from it; update both when steps change.
 
 | Risk surface | Behavior | Steps |
 |-------|----------|-------|
 | **none** | Not auto-invoked (still user-invocable on demand — "no required predecessor" preserved) | — |
 | **moderate** | Lighter pass | threat-modeling → hardening-checklist |
 | **high** | Full STRIDE chain | All 4 (threat-modeling → attack-surface → owasp-analysis → hardening-checklist) |
-
-Security's depth is gated by `risk_surface`, NEVER `complexity`. Do not copy the complexity-gated pattern used by other specialists onto Security.
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the risk-surface-based defaults above.
 

@@ -26,9 +26,19 @@ write implementation code, architecture decisions, or test plans.
 
 ## Orchestration Plan
 
-**Complexity-based step filtering**: Always invoked when routed; complexity gates depth. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted, omitting `information-architecture` from the simple tier even though `user-flows` hard-depends on it). Read §9.2's UX/UI row for the current simple/moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, platform-analysis, feature-brief, information-architecture, user-flows, component-mapping, responsive-strategy, ux-handoff, decision-preservation`).
+**Complexity-based step filtering**: UX/UI is always invoked when routed; complexity gates step depth. `ux-handoff` ALWAYS runs (consolidation → ux-brief/component-spec). This section is the authoritative tier→step mapping for this specialist — the meta-orchestrator's `skill/SKILL.md` §9.2 holds a compact cache row derived from it; update both when steps change.
 
-Always invoked when routed; complexity gates depth. `ux-handoff` ALWAYS runs (consolidation → ux-brief/component-spec).
+| Level | Steps |
+|-------|-------|
+| **trivial** | `feature-brief` |
+| **simple** | `feature-brief → information-architecture → user-flows → component-mapping → ux-handoff` |
+| **moderate** | `feature-brief → information-architecture → user-flows → component-mapping → ux-handoff` |
+| **complex** | Full workflow (`feature-brief → information-architecture → user-flows → component-mapping → responsive-strategy → ux-handoff`) |
+
+**Trivial eligible**: Yes — `feature-brief` has `inputs: []`; inline preludes `knowledge-recall`, `platform-analysis` always run.
+**Inline steps** (context injection only — never required as explicit list entries): `knowledge-recall`, `platform-analysis`, `decision-preservation`
+**Invariant**: `simple` and `moderate` are intentionally identical — `responsive-strategy` is the only complexity-gated step and it gates `complex` only. Do not diverge these lists.
+**Hard dependency**: `information-architecture` is a required input of `user-flows` — never omit it.
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
 

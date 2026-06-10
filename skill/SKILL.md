@@ -56,6 +56,7 @@ When you receive a feature request:
 2. **Match to relevant specialists** based on request type (see Specialist Registry below).
 
 3. **Determine execution order** based on artifact dependencies:
+   - PM produces `pm/backlog-entry` → Architect, Developer, and QA can read it as the primary requirements source
    - UX/UI produces a `ux-brief` → Architect and Developer can read it
    - Architect produces `system-design` → Developer can read it
    - Developer produces `dev-implementation` → QA can read it
@@ -67,6 +68,7 @@ When you receive a feature request:
 
 | Specialist | Command | Discipline | When to involve |
 |---|---|---|---|
+| **Product Manager** | `/asdt-pm` | Requirements formalization, user stories, scope definition, backlog management | When the request is a new feature in user-facing language that needs formal requirements before architecture or code — NOT for refactors, cosmetic changes, or already technically scoped requests |
 | **UX/UI Designer** | `/asdt-ux-ui` | User experience, interface design, component specs, user flows | When the request involves a user-facing interface, flow changes, or new screens |
 | **Software Architect** | `/asdt-architect` | Architecture decisions, system design, API design, ADRs, scalability | When the request involves system-level decisions, new service boundaries, or non-trivial API design |
 | **Developer** | `/asdt-developer` | Implementation planning, code generation, test generation | When the request involves writing or changing code |
@@ -124,10 +126,12 @@ Security's per-specialist block carries `risk_surface: {tier}` in place of `comp
 
 | Request | Specialists | Order | Complexity | Risk Surface |
 |---|---|---|---|---|
+| "build an onboarding flow for new users" | PM, UX/UI, Architect, Developer | `/asdt-pm` → `/asdt-ux-ui` → `/asdt-architect` → `/asdt-developer` | complex | none |
+| "add user subscription management" | PM, Architect, Developer, QA | `/asdt-pm` → `/asdt-architect` → `/asdt-developer` → `/asdt-qa` | complex | moderate |
 | "add password reset" | Developer (Architect if token design is complex) | `/asdt-developer` | moderate | high |
 | "redesign the dashboard" | UX/UI, Developer | `/asdt-ux-ui` → `/asdt-developer` | moderate | none |
 | "review our auth for vulnerabilities" | Security | `/asdt-security` | moderate | high |
-| "build AI reports module from scratch" | UX/UI, Architect, Developer | `/asdt-ux-ui` → `/asdt-architect` → `/asdt-developer` | complex | moderate |
+| "build AI reports module from scratch" | PM, UX/UI, Architect, Developer | `/asdt-pm` → `/asdt-ux-ui` → `/asdt-architect` → `/asdt-developer` | complex | moderate |
 | "is our API scalable?" | Architect | `/asdt-architect` | complex | none |
 | "add login feature with tests" | Developer, QA | `/asdt-developer` → `/asdt-qa` | moderate | high |
 | "refactor the payment service" | Architect, Developer | `/asdt-architect` → `/asdt-developer` | complex | moderate |
@@ -266,6 +270,7 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 **Collapse fallback**: After Pass 2, compare the resulting validated list against each specialist's presets in ascending order (trivial → simple → moderate → complex). If the validated list equals or is a superset of a preset, relabel `complexity:` to the smallest preset whose step set is a superset of the validated list — never emit a grown list with a `complexity:` value lower than the work it actually represents (e.g., never label a list that grew to match `simple` as `complexity: trivial`).
 
 **Inline steps** (outputs injected into context — NEVER required as explicit list producers):
+- PM: `knowledge-recall`, `decision-preservation`
 - Architect: `knowledge-recall`, `platform-analysis`, `decision-preservation`
 - QA: `knowledge-recall`, `decision-preservation`
 - UX/UI: `knowledge-recall`, `platform-analysis`, `decision-preservation`
@@ -274,16 +279,6 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 **Trivial eligibility**: The `trivial` tier applies ONLY when the orchestrator independently classifies complexity as `trivial` (§9.1). It is not user-selectable. A `trivial` list is exactly the specialist's single `inputs: []` subagent step — by construction it always passes Pass 2 (no declared inputs to satisfy). If a specialist has no useful single-step output (QA), `trivial` is not eligible for that specialist — fall back to `simple` and label the block `complexity: simple`.
 
 ---
-
-**Trivial step eligibility by specialist** (derived from each specialist's `inputs: []` subagent step — verified against `workflow.yaml`):
-
-| Specialist | `trivial` eligible? | `trivial` step list | Notes |
-|------------|---------------------|---------------------|-------|
-| **Developer** | Yes | `explore` | `explore` has `inputs: []` in `asdt-developer/workflow.yaml`; inline preludes `knowledge-recall` always run as context injection |
-| **Architect** | Yes | `load-constraints` | `load-constraints` has `inputs: []` in `asdt-architect/workflow.yaml`; inline preludes `knowledge-recall`, `platform-analysis` always run. NOTE: at `simple`, Architect is not called at all; at `trivial`, it answers with one minimal grounded step — lighter-than-simple rather than absent |
-| **UX/UI** | Yes | `feature-brief` | `feature-brief` has `inputs: []` in `asdt-ux-ui/workflow.yaml`; inline preludes `knowledge-recall`, `platform-analysis` always run |
-| **QA** | No — falls back to `simple` | — | QA's lightest useful output requires `load-requirements → edge-case-analysis → test-strategy → test-case-generation` chain; no dependency-complete step set exists below `simple`. Trivial requests targeting QA are auto-promoted to `simple` |
-| **Security** | Not applicable | — | Security is risk-surface-gated (not complexity-gated); the `trivial` axis does not apply |
 
 ---
 
@@ -300,53 +295,20 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 | `design` | Included based on complexity level (see per-specialist rules) |
 | `tasks` | Included based on complexity level (see per-specialist rules) |
 
-**Per-specialist step mapping by complexity:**
+**Per-specialist step mapping:**
 
-> **Single source of truth**: every step name below MUST exist verbatim as a `name:` field in that specialist's own `workflow.yaml` — that file is the canonical registry, not this table. Before emitting any `## Tailored Workflow` block, verify each name against the target specialist's `workflow.yaml`. The lists below are an EXPLICIT NAMED SUBSET (selection cannot be expressed without naming members), but they are not a second copy to maintain independently — if `workflow.yaml` renames or removes a step, this table's corresponding entry is stale and MUST be re-derived from the registry, never patched from memory or prose.
+Each specialist declares its own tier→step lists inside the `## Orchestration Plan` section of its `SKILL.md`. That section is the authoritative source. Before emitting any `## Tailored Workflow` block, read the target specialist's `## Orchestration Plan`. The compact reference below lists the trivial step for quick access — for non-trivial tiers, always load the specialist file.
 
-Developer:
-| Level | Steps |
-|-------|-------|
-| **trivial** | explore |
-| **simple** | explore → spec → implement |
-| **moderate** | explore → spec → design → implement → test (if TDD) |
-| **complex** | explore → spec → design → tasks → implement → test (if TDD) |
+| Specialist | File | Trivial step | Trivial eligible? |
+|---|---|---|---|
+| **PM** | `skill/asdt-pm/SKILL.md` | `feature-intake` | Yes |
+| **Developer** | `skill/asdt-developer/SKILL.md` | `explore` | Yes |
+| **Architect** | `skill/asdt-architect/SKILL.md` | `load-constraints` | Yes — but at `simple`, Architect is not invoked at all |
+| **QA** | `skill/asdt-qa/SKILL.md` | — | No — falls back to `simple` |
+| **UX/UI** | `skill/asdt-ux-ui/SKILL.md` | `feature-brief` | Yes |
+| **Security** | `skill/asdt-security/SKILL.md` | — | N/A — risk-surface gated, not complexity gated |
 
-Architect — read `asdt-architect/workflow.yaml`; valid names are its `name:` values (`knowledge-recall, platform-analysis, load-constraints, evaluate-approaches, decision-record, system-design, risk-analysis, technical-handoff, decision-preservation`):
-| Level | Steps |
-|-------|-------|
-| **trivial** | load-constraints |
-| **simple** | Not called (architect not needed) |
-| **moderate** | knowledge-recall → load-constraints → evaluate-approaches → decision-record |
-| **complex** | Full workflow (all steps) |
-
-QA — read `asdt-qa/workflow.yaml`; valid names are its `name:` values (`knowledge-recall, load-requirements, ac-validation, edge-case-analysis, test-strategy, test-case-generation, quality-report, decision-preservation`):
-| Level | Steps |
-|-------|-------|
-| **trivial** | Not eligible — falls back to `simple`. QA's lightest useful output requires `test-strategy → test-case-generation` chain; no dependency-complete step set exists below `simple`. Trivial requests are auto-promoted to `simple`. |
-| **simple** | load-requirements → ac-validation → test-case-generation → quality-report |
-| **moderate** | load-requirements → ac-validation → edge-case-analysis → test-strategy → test-case-generation → quality-report (`test-strategy` is a hard input of `test-case-generation` — never omit it) |
-| **complex** | Full workflow (load-requirements → ac-validation → edge-case-analysis → test-strategy → test-case-generation → quality-report) |
-
-UX/UI — read `asdt-ux-ui/workflow.yaml`; valid names are its `name:` values (`knowledge-recall, platform-analysis, feature-brief, information-architecture, user-flows, component-mapping, responsive-strategy, ux-handoff, decision-preservation`):
-| Level | Steps |
-|-------|-------|
-| **trivial** | feature-brief |
-| **simple** | feature-brief → information-architecture → user-flows → component-mapping → ux-handoff (`information-architecture` is a hard input of `user-flows` — never omit it) |
-| **moderate** | feature-brief → information-architecture → user-flows → component-mapping → ux-handoff |
-| **complex** | Full workflow (feature-brief → information-architecture → user-flows → component-mapping → responsive-strategy → ux-handoff) |
-
-> **Invariant**: `simple` and `moderate` are intentionally identical for UX/UI — this specialist has no mid-tier toggle; `responsive-strategy` is the only complexity-gated step and it gates `complex` only. Do not diverge these lists.
-
-**Security step mapping by risk surface (STRUCTURALLY SEPARATE — risk-surface-gated, NEVER complexity-gated):**
-
-> **Caution**: Security is the ONLY specialist gated by `risk_surface` instead of `complexity`. Do not copy the complexity-gated pattern from Developer/Architect/QA/UX-UI onto Security — that is the exact regression this mechanism guards against.
-
-| Risk surface | Steps |
-|-------|-------|
-| **none** | Not auto-invoked — available on demand, "no required predecessor" preserved |
-| **moderate** | threat-modeling → hardening-checklist |
-| **high** | Full STRIDE chain (threat-modeling → attack-surface → owasp-analysis → hardening-checklist) |
+> **Adding a new specialist**: declare its tier→step mapping inside the `## Orchestration Plan` of its own `SKILL.md`, then add one row to this table. No other changes to this file are required for the tier mapping.
 
 **Tailored Workflow block format:**
 

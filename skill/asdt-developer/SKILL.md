@@ -25,6 +25,21 @@ produce architecture decisions, UX specs, or test plans.
 
 ## Orchestration Plan
 
+**Complexity-based step filtering**: Developer is invoked whenever the request involves writing or changing code; complexity gates step depth. This section is the authoritative tier→step mapping for this specialist — the meta-orchestrator's `skill/SKILL.md` §9.2 holds a compact cache row derived from it; update both when steps change.
+
+| Level | Steps |
+|-------|-------|
+| **trivial** | `explore` |
+| **simple** | `explore → spec → implement` |
+| **moderate** | `explore → spec → design → implement → test (if TDD)` |
+| **complex** | `explore → spec → design → tasks → implement → test (if TDD)` |
+
+**Trivial eligible**: Yes — `explore` has `inputs: []`; inline prelude `knowledge-recall` always runs.
+**Inline steps** (context injection only — never required as explicit list entries): `knowledge-recall`, `decision-preservation`
+**Conditional**: `test` included ONLY if `strict_tdd: true` in `.asdt/config.yaml`. `explore` and `spec` are irrenunciable — always included.
+
+When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
+
 | Step | File | Execution | Reads | Writes |
 |------|------|-----------|-------|--------|
 | knowledge-recall | ../asdt-shared/skills/knowledge-recall.md | inline | *(query from change context)* | *(no artifact — enriches context)* |

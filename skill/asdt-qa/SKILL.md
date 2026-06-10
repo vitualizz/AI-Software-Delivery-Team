@@ -26,9 +26,18 @@ or UX specs.
 
 ## Orchestration Plan
 
-**Complexity-based step filtering**: QA is always invoked when routed to; complexity gates step DEPTH, not invocation. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted, omitting `test-strategy` from the moderate tier even though `test-case-generation` hard-depends on it). Read §9.2's QA row for the current simple/moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, load-requirements, ac-validation, edge-case-analysis, test-strategy, test-case-generation, quality-report, decision-preservation`).
+**Complexity-based step filtering**: QA is always invoked when routed to; complexity gates step depth, not invocation. `ac-validation` ALWAYS runs (invariant: AC gaps must be surfaced). This section is the authoritative tier→step mapping for this specialist — the meta-orchestrator's `skill/SKILL.md` §9.2 holds a compact cache row derived from it; update both when steps change.
 
-QA is always invoked when routed to; complexity gates step DEPTH, not invocation. `ac-validation` ALWAYS runs (invariant: AC gaps must be surfaced).
+| Level | Steps |
+|-------|-------|
+| **trivial** | Not eligible — falls back to `simple`; no dependency-complete step set exists below `simple` |
+| **simple** | `load-requirements → ac-validation → test-case-generation → quality-report` |
+| **moderate** | `load-requirements → ac-validation → edge-case-analysis → test-strategy → test-case-generation → quality-report` |
+| **complex** | Full workflow (same steps as moderate) |
+
+**Trivial eligible**: No — falls back to `simple`.
+**Inline steps** (context injection only — never required as explicit list entries): `knowledge-recall`, `decision-preservation`
+**Hard dependency**: `test-strategy` is a required input of `test-case-generation` — never omit it from `moderate` or `complex`.
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
 

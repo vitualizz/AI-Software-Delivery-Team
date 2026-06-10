@@ -1,0 +1,60 @@
+specialist: pm
+steps:
+  - name: knowledge-recall
+    skill: ../asdt-shared/skills/knowledge-recall.md
+    description: Query organizational memory for prior requirements, similar features, and scope decisions relevant to this change
+    execution: inline
+
+  - name: feature-intake
+    skill: steps/feature-intake.md
+    description: Extract and normalize the raw feature request into a structured problem statement
+    execution: subagent
+    inputs: []
+    output_topic_key: "{project}/{change}/pm/feature-intake"
+    reference_skills: []
+
+  - name: user-stories
+    skill: steps/user-stories.md
+    description: Define user stories with MoSCoW priority and high-level acceptance criteria from the problem statement
+    execution: subagent
+    inputs:
+      - "{project}/{change}/pm/feature-intake"
+    output_topic_key: "{project}/{change}/pm/user-stories"
+    reference_skills: []
+
+  - name: scope-analysis
+    skill: steps/scope-analysis.md
+    description: Define explicit in-scope and out-of-scope boundaries, integration points, and risk flags
+    execution: subagent
+    inputs:
+      - "{project}/{change}/pm/user-stories"
+    output_topic_key: "{project}/{change}/pm/scope-analysis"
+    reference_skills: []
+
+  - name: prioritization
+    skill: steps/prioritization.md
+    description: Order user stories by value, effort, and risk using MoSCoW; produce a delivery sequence
+    execution: subagent
+    inputs:
+      - "{project}/{change}/pm/user-stories"
+      - "{project}/{change}/pm/scope-analysis"
+    output_topic_key: "{project}/{change}/pm/prioritization"
+    reference_skills: []
+
+  - name: backlog-entry
+    skill: steps/backlog-entry.md
+    description: Consolidate all PM artifacts into the final structured backlog entry consumed by downstream specialists
+    execution: subagent
+    inputs:
+      - "{project}/{change}/pm/user-stories"
+      - "{project}/{change}/pm/scope-analysis"
+      - "{project}/{change}/pm/prioritization"
+    output_topic_key: "{project}/{change}/pm/backlog-entry"
+    reference_skills:
+      - ../asdt-shared/skills/context-extraction.md
+      - ../asdt-shared/skills/report.md
+
+  - name: decision-preservation
+    skill: ../asdt-shared/skills/decision-preservation.md
+    description: Save a permanent organizational knowledge record of PM decisions made during this run
+    execution: inline

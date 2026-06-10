@@ -27,7 +27,17 @@ UX specs, or test plans.
 
 ## Orchestration Plan
 
-**Complexity-based step filtering**: The Architect specialist is only invoked for moderate and complex changes. Tier→step mapping is owned by the meta-orchestrator's `skill/SKILL.md` §9.2 against THIS directory's `workflow.yaml` — this file does not restate it (the restated copy is what drifted into phantom step names like `explore`/`spec`, which do not exist in `asdt-architect/workflow.yaml`). Read §9.2's Architect row for the current moderate/complex step lists; every name there is verified against this specialist's `workflow.yaml` `name:` fields (`knowledge-recall, platform-analysis, load-constraints, evaluate-approaches, decision-record, system-design, risk-analysis, technical-handoff, decision-preservation`).
+**Complexity-based step filtering**: The Architect specialist is invoked for moderate and complex changes, plus single-step `trivial` consults; at `simple`, it is not called at all. This section is the authoritative tier→step mapping for this specialist — the meta-orchestrator's `skill/SKILL.md` §9.2 holds a compact cache row derived from it; update both when steps change.
+
+| Level | Steps |
+|-------|-------|
+| **trivial** | `load-constraints` |
+| **simple** | Not called — Architect is not needed at this complexity level |
+| **moderate** | `knowledge-recall → load-constraints → evaluate-approaches → decision-record` |
+| **complex** | Full workflow (all steps) |
+
+**Trivial eligible**: Yes — `load-constraints` has `inputs: []`; inline preludes `knowledge-recall`, `platform-analysis` always run.
+**Inline steps** (context injection only — never required as explicit list entries): `knowledge-recall`, `platform-analysis`, `decision-preservation`
 
 When a Tailored Workflow block is present in the prompt, its `steps:` list takes precedence over the complexity-based defaults above.
 
