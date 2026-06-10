@@ -150,6 +150,7 @@ func writeOpenCodeAgentConfig(rendered string, mode AgentWriteMode) (AgentConfig
 var AgentConfigAdapters = []AgentConfigAdapterDescriptor{
 	{
 		AssistantID: AssistantClaudeCode,
+		ConfigPath:  func() string { return claudeAgentDir() + "/CLAUDE.md" },
 		AgentConfigExists: func() bool {
 			data, err := os.ReadFile(claudeAgentDir() + "/CLAUDE.md")
 			if err != nil {
@@ -161,6 +162,7 @@ var AgentConfigAdapters = []AgentConfigAdapterDescriptor{
 	},
 	{
 		AssistantID: AssistantOpenCode,
+		ConfigPath:  func() string { return openCodeConfigDir() + "/AGENTS.md" },
 		AgentConfigExists: func() bool {
 			_, err := os.Stat(openCodeConfigDir() + "/AGENTS.md")
 			return err == nil

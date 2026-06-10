@@ -22,8 +22,8 @@ func TestKeyboardFooterRendersFullHintsAbove80(t *testing.T) {
 	if !strings.Contains(result, "quit") {
 		t.Errorf("expected description 'quit' at width > 80, got: %q", result)
 	}
-	if !strings.Contains(result, "|") {
-		t.Errorf("expected '|' separator between hints at width > 80, got: %q", result)
+	if !strings.Contains(result, "•") {
+		t.Errorf("expected '•' separator between hints at width > 80, got: %q", result)
 	}
 }
 
@@ -67,8 +67,8 @@ func TestKeyboardFooterCompactAtOrBelow50(t *testing.T) {
 			if strings.Contains(result, "switch panel") || strings.Contains(result, "quit") {
 				t.Errorf("expected NO descriptions in compact footer at width %d, got: %q", w, result)
 			}
-			if !strings.Contains(result, "|") {
-				t.Errorf("expected '|' separator in compact footer at width %d, got: %q", w, result)
+			if !strings.Contains(result, "•") {
+				t.Errorf("expected '•' separator in compact footer at width %d, got: %q", w, result)
 			}
 		})
 	}

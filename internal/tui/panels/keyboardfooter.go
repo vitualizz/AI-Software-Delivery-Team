@@ -46,7 +46,7 @@ func RenderKeyboardFooter(groups []HintGroup, width int) string {
 		}
 	}
 
-	return strings.Join(parts, " | ")
+	return strings.Join(parts, " • ")
 }
 
 // renderCompactFooter renders a narrow-width footer with only key tokens
@@ -63,5 +63,5 @@ func renderCompactFooter(groups []HintGroup) string {
 		}
 	}
 
-	return strings.Join(parts, "|")
+	return strings.Join(parts, "•")
 }

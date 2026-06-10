@@ -16,6 +16,14 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
+// TestMain forces the English locale for the entire test binary so that
+// view string assertions are deterministic regardless of the developer's
+// system locale.
+func TestMain(m *testing.M) {
+	os.Setenv("ASDT_LANG", "en")
+	os.Exit(m.Run())
+}
+
 func TestView_MainMenuContainsInstallOption(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)
@@ -50,44 +58,36 @@ func TestView_MainMenuShowsUpdateBanner(t *testing.T) {
 	}
 }
 
-func TestView_AssistantListShowsBothNames(t *testing.T) {
+func TestView_SelectAssistantsShowsBothNames(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)         // no-op, already at MainMenu
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
-	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
+	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
 	view := m2.View()
 	for _, d := range installer.Descriptors {
 		if !strings.Contains(view, d.Name) {
-			t.Errorf("assistant list missing %q, view:\n%s", d.Name, view)
+			t.Errorf("select assistants missing %q, view:\n%s", d.Name, view)
 		}
 	}
 }
 
-func TestView_AssistantListSelectedItemHasCursor(t *testing.T) {
+func TestView_SelectAssistantsSelectedItemHasCursor(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)         // no-op, already at MainMenu
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
-	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
+	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
 	view := m2.View()
 	if !strings.Contains(view, "►") {
-		t.Errorf("assistant list missing cursor ►, view:\n%s", view)
+		t.Errorf("select assistants missing cursor ►, view:\n%s", view)
 	}
 }
 
-func TestView_AssistantListUsesBadgeForStatus(t *testing.T) {
-	// Force a color-capable profile: in Ascii (no-color) mode, the prior
-	// ad-hoc `fmt.Sprintf("[%s]", styles.Default.Success.Render("present"))`
-	// and panels.NewBadge(...).Render() both degrade to the same plain
-	// "[present]" string — the assertion would pass either way and prove
-	// nothing about which rendering path is actually used. With color
-	// enabled, panels.Badge styles the brackets *inside* the colored span
-	// ("\x1b[...][present]\x1b[0m"), while the old call site styled only the
-	// label and wrapped brackets outside ("[\x1b[...]present\x1b[0m]") — a
-	// real, observable difference that proves adoption (not duplication).
+func TestView_SelectAssistantsUsesBadgeForStatus(t *testing.T) {
+	// Force color so panels.Badge styling is distinguishable from plain-text fallback.
 	prev := lipgloss.ColorProfile()
 	lipgloss.SetColorProfile(termenv.TrueColor)
 	defer lipgloss.SetColorProfile(prev)
@@ -97,14 +97,27 @@ func TestView_AssistantListUsesBadgeForStatus(t *testing.T) {
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
-	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
+	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
 	view := m2.View()
 
 	wantPresent := panels.NewBadge("present", panels.ColorSuccess).Render()
 	wantMissing := panels.NewBadge("missing", panels.ColorError).Render()
 
 	if !strings.Contains(view, wantPresent) && !strings.Contains(view, wantMissing) {
-		t.Errorf("expected assistant list to render status via panels.Badge ([present]/[missing] in tone color), got: %q", view)
+		t.Errorf("expected select assistants to render status via panels.Badge ([present]/[missing] in tone color), got: %q", view)
+	}
+}
+
+func TestView_SelectAssistantsShowsCheckboxes(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = sendEngramFound(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // → StateEnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m2 := updateKey(t, m, tea.KeyEnter) // → StateSelectAssistants
+	view := m2.View()
+	if !strings.Contains(view, "[x]") {
+		t.Errorf("select assistants missing pre-selected checkbox [x], view:\n%s", view)
 	}
 }
 
@@ -150,16 +163,11 @@ func stateView(t *testing.T, target string) string {
 		t.Setenv("XDG_CONFIG_HOME", "")
 	}
 
-	// Install path: cursor-0 Enter → StateEnvironmentCheck → EnvironmentCheckMsg → Enter → StateAssistantList.
+	// Install path: cursor-0 Enter → StateEnvironmentCheck → EnvironmentCheckMsg → Enter → StateSelectAssistants.
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
-	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
-	if target == "AssistantList" {
-		return m.View()
-	}
-
-	m = updateKey(t, m, tea.KeyEnter) // AssistantList → SelectAssistants
+	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
 	if target == "SelectAssistants" {
 		return m.View()
 	}
@@ -171,6 +179,11 @@ func stateView(t *testing.T, target string) string {
 
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	if target == "AgentSetup" {
+		return m.View()
+	}
+
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Review
+	if target == "Review" {
 		return m.View()
 	}
 
@@ -193,15 +206,14 @@ func stateView(t *testing.T, target string) string {
 		m2 = updateKey(t, m2, tea.KeyEnter) // MainMenu → EnvironmentCheck
 		next2, _ := m2.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 		m2 = next2.(setup.Model)
-		m2 = updateKey(t, m2, tea.KeyEnter) // EnvironmentCheck → AssistantList
-		m2 = updateKey(t, m2, tea.KeyEnter) // AssistantList → SelectAssistants
+		m2 = updateKey(t, m2, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
 		m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
 		m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup (conflict detected)
 		m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup preset → AgentWriteMode
 		return m2.View()
 	}
 
-	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Installing
+	m = updateKey(t, m, tea.KeyEnter) // Review → Installing
 	if target == "Installing" {
 		return m.View()
 	}
@@ -217,10 +229,10 @@ func TestView_AllStatesHaveBorder(t *testing.T) {
 	states := []string{
 		"PreflightCheck",
 		"MainMenu",
-		"AssistantList",
 		"SelectAssistants",
 		"SelectProvider",
 		"AgentSetup",
+		"Review",
 		"AgentWriteMode",
 		"Installing",
 	}
@@ -258,9 +270,7 @@ func TestView_AllStatesHaveBorder(t *testing.T) {
 }
 
 // TestView_FooterRendersHintText proves the per-screen key-hint footer text
-// survives StatusBar styling — i.e. it wasn't dropped when raw "\n[...] quit"
-// literals were replaced (spec: "every screen's footer is rendered via
-// StatusBar styling").
+// is rendered inside the bordered box on every screen.
 func TestView_FooterRendersHintText(t *testing.T) {
 	cases := []struct {
 		state string
@@ -268,9 +278,9 @@ func TestView_FooterRendersHintText(t *testing.T) {
 	}{
 		{"PreflightCheck", "checking"},
 		{"MainMenu", "↑↓"},
-		{"AssistantList", "enter"},
 		{"SelectAssistants", "space"},
 		{"SelectProvider", "esc"},
+		{"Review", "esc"},
 		{"Installing", "q"},
 	}
 
@@ -357,6 +367,85 @@ func TestView_PreflightCheckShowsSections(t *testing.T) {
 	view := m.View()
 	if !strings.Contains(view, "Memory Provider") {
 		t.Errorf("preflight view missing 'Memory Provider' section, got:\n%s", view)
+	}
+}
+
+func TestView_PreflightCheckShowsShellRow(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	view := m.View()
+	if !strings.Contains(view, "Shell") {
+		t.Errorf("preflight view missing 'Shell' row, got:\n%s", view)
+	}
+}
+
+func TestView_ReviewShowsAssistantsAndProvider(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "Review")
+	for _, d := range installer.Descriptors {
+		if !strings.Contains(view, d.Name) {
+			t.Errorf("review view missing assistant name %q, got:\n%s", d.Name, view)
+		}
+	}
+	if !strings.Contains(view, "Assistants") {
+		t.Errorf("review view missing 'Assistants' label, got:\n%s", view)
+	}
+}
+
+func TestView_SelectProviderShowsRadioIndicator(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "SelectProvider")
+	if !strings.Contains(view, "(•)") {
+		t.Errorf("SelectProvider missing selected radio indicator '(•)', got:\n%s", view)
+	}
+	// Unselected radio only appears when there is more than one provider.
+	if len(installer.Providers) > 1 && !strings.Contains(view, "( )") {
+		t.Errorf("SelectProvider missing unselected radio indicator '( )', got:\n%s", view)
+	}
+}
+
+func TestView_AgentSetupShowsRadioIndicator(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "AgentSetup")
+	if !strings.Contains(view, "(•)") {
+		t.Errorf("AgentSetup missing selected radio indicator '(•)', got:\n%s", view)
+	}
+	if !strings.Contains(view, "( )") {
+		t.Errorf("AgentSetup missing unselected radio indicator '( )', got:\n%s", view)
+	}
+}
+
+func TestView_PreflightCheckShowsEngramRecovery(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // → StateEnvironmentCheck
+	// Inject EnvironmentCheckMsg with Engram missing
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: false})
+	m2 := next.(setup.Model)
+	view := m2.View()
+	if !strings.Contains(view, "Engram") {
+		t.Errorf("preflight view missing Engram recovery section, got:\n%s", view)
+	}
+}
+
+func TestView_AgentWriteModeShowsPerAssistantRows(t *testing.T) {
+	view := stateView(t, "AgentWriteMode")
+	// The view should show at least one mode label (Keep is default)
+	if !strings.Contains(view, "Keep") && !strings.Contains(view, "Overwrite") && !strings.Contains(view, "Append") {
+		t.Errorf("agent write mode view missing mode labels, got:\n%s", view)
+	}
+}
+
+func TestView_DoneScreenShowsNextStepHint(t *testing.T) {
+	successResult := installer.InstallResult{AssistantID: installer.AssistantClaudeCode, Err: nil}
+	m := setup.New(fstest.MapFS{}, "dev")
+	next, _ := m.Update(setup.InstallDoneMsg{Results: []installer.InstallResult{successResult}})
+	m2 := next.(setup.Model)
+	view := m2.View()
+	if !strings.Contains(view, "/asdt") {
+		t.Errorf("done screen missing next-step hint '/asdt', got:\n%s", view)
 	}
 }
 

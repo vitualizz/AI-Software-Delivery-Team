@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
@@ -19,50 +20,70 @@ const (
 	// viewing the dashboard, or quitting.
 	StateMainMenu ViewState = iota
 	// StateEnvironmentCheck is shown after the user selects "Install / Update
-	// Skills". It fans out three environment probes (OS, Engram, Codegraph)
+	// Skills". It fans out environment probes (OS, Shell, Engram, Codegraph)
 	// concurrently; Continue is gated until all probes resolve and engram is found.
 	StateEnvironmentCheck
 	// StateDashboard shows the dashboard overview with per-assistant status.
 	StateDashboard
-	// StateAssistantList displays the list of available assistants.
-	StateAssistantList
 	// StateSelectAssistants allows the user to choose assistants to install.
+	// Shows present/missing status badges alongside checkboxes.
 	StateSelectAssistants
 	// StateSelectProvider allows the user to choose a memory provider.
 	StateSelectProvider
 	// StateAgentSetup shows the persona selection step (optional).
 	StateAgentSetup
 	// StateAgentWriteMode is shown when conflicts are detected; the user
-	// chooses how to handle the existing config (overwrite, append, or skip).
+	// chooses per-assistant how to handle existing configs (cycle with space).
 	StateAgentWriteMode
+	// StateReview shows a summary of all selections before installation begins.
+	StateReview
 	// StateInstalling shows installation progress.
 	StateInstalling
 	// StateDone is the terminal state shown after installation completes.
 	StateDone
 )
 
+// preflightState holds state for the StateEnvironmentCheck screen.
+type preflightState struct {
+	sections      []components.SectionGroup
+	done          bool
+	engramMissing bool
+}
+
+// wizardState holds install-wizard state across SelectAssistants → Installing → Done.
+type wizardState struct {
+	selected        map[int]bool
+	provider        int
+	results         []installer.InstallResult
+	agentResults    []installer.AgentConfigResult
+	installExpected int  // number of per-assistant install Cmds fired
+	agentDone       bool // true once AgentInstallDoneMsg arrives (or skip)
+}
+
+// agentConfigState holds per-assistant agent config state across AgentSetup and AgentWriteMode.
+type agentConfigState struct {
+	selectedPersona int
+	skip            bool
+	writeModes      map[string]installer.AgentWriteMode
+	conflicts       []string
+}
+
 // Model is the root Bubbletea model for the installer TUI.
 type Model struct {
-	state             ViewState
-	cursor            int
-	selected          map[int]bool
-	provider          int
-	results           []installer.InstallResult
-	agentResults      []installer.AgentConfigResult
-	skillsFS          fs.FS
-	currentVersion    string
-	latestVersion     string
-	updateAvailable   bool
-	width             int
-	spinner           spinner.Model
-	preflightSections []components.SectionGroup
-	preflightDone     bool
-	engramMissing     bool
+	state   ViewState
+	cursor  int
+	width   int
+	spinner spinner.Model
 
-	selectedPersona int
-	agentSetupSkip  bool
-	agentWriteMode  installer.AgentWriteMode
-	agentConflicts  []string
+	skillsFS        fs.FS
+	catalog         i18n.Catalog
+	currentVersion  string
+	latestVersion   string
+	updateAvailable bool
+
+	preflight   preflightState
+	wizard      wizardState
+	agentConfig agentConfigState
 }
 
 // New constructs an initial Model with the running binary version. Init()
@@ -75,13 +96,15 @@ type Model struct {
 // indeterminate-spinner construction (Dot frames, ColorSecondary tint)
 // instead of each hand-rolling its own and risking drift.
 func New(skillsFS fs.FS, version string) Model {
+	str := i18n.Active()
 	return Model{
-		selected:          make(map[int]bool),
-		skillsFS:          skillsFS,
-		currentVersion:    version,
-		width:             80,
-		spinner:           panels.NewSpinner(),
-		preflightSections: initialPreflightSections(),
+		wizard:         wizardState{selected: make(map[int]bool)},
+		skillsFS:       skillsFS,
+		currentVersion: version,
+		width:          80,
+		spinner:        panels.NewSpinner(),
+		preflight:      preflightState{sections: initialPreflightSections(str.Installer)},
+		catalog:        str,
 	}
 }
 
@@ -105,10 +128,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Detail:   msg.Detail,
 			SoftWarn: msg.SoftWarn,
 		}
-		m.preflightSections = components.UpdateRow(m.preflightSections, msg.RowLabel, progress)
-		if allProbesDone(m.preflightSections) {
-			engramFound := !rowHasStatus(m.preflightSections, "Engram", components.CheckStatusError)
-			codegraphFound := !rowHasStatus(m.preflightSections, "Codegraph", components.CheckStatusWarning)
+		m.preflight.sections = components.UpdateRow(m.preflight.sections, msg.RowLabel, progress)
+		if allProbesDone(m.preflight.sections) {
+			engramFound := !rowHasStatus(m.preflight.sections, "Engram", components.CheckStatusError)
+			codegraphFound := !rowHasStatus(m.preflight.sections, "Codegraph", components.CheckStatusWarning)
 			return m, func() tea.Msg {
 				return EnvironmentCheckMsg{EngramFound: engramFound, CodegraphFound: codegraphFound}
 			}
@@ -116,8 +139,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case EnvironmentCheckMsg:
-		m.preflightDone = true
-		m.engramMissing = !msg.EngramFound
+		m.preflight.done = true
+		m.preflight.engramMissing = !msg.EngramFound
 		return m, nil
 
 	case UpdateCheckMsg:
@@ -130,13 +153,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case AssistantInstallProgressMsg:
+		m.wizard.results = append(m.wizard.results, msg.Result)
+		if m.allInstallsDone() {
+			m.state = StateDone
+		}
+		return m, nil
+
 	case InstallDoneMsg:
-		m.results = msg.Results
+		// Kept for test compatibility: direct sends of InstallDoneMsg still
+		// transition to StateDone without going through per-assistant tracking.
+		m.wizard.results = msg.Results
 		m.state = StateDone
 		return m, nil
 
 	case AgentInstallDoneMsg:
-		m.agentResults = msg.Results
+		m.wizard.agentResults = msg.Results
+		m.wizard.agentDone = true
+		if m.allInstallsDone() {
+			m.state = StateDone
+		}
 		return m, nil
 
 	case tea.WindowSizeMsg:
@@ -154,9 +190,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.state == StateEnvironmentCheck {
 			// Advance per-row spinner frames for still-pending rows.
 			frame := m.spinner.View()
-			for i := range m.preflightSections {
-				for j := range m.preflightSections[i].Rows {
-					m.preflightSections[i].Rows[j].TickSpinner(frame)
+			for i := range m.preflight.sections {
+				for j := range m.preflight.sections[i].Rows {
+					m.preflight.sections[i].Rows[j].TickSpinner(frame)
 				}
 			}
 		}
@@ -189,8 +225,6 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleDashboard(msg)
 	case StateMainMenu:
 		return m.handleMainMenu(msg)
-	case StateAssistantList:
-		return m.handleAssistantList(msg)
 	case StateSelectAssistants:
 		return m.handleSelectAssistants(msg)
 	case StateSelectProvider:
@@ -199,6 +233,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleAgentSetup(msg)
 	case StateAgentWriteMode:
 		return m.handleAgentWriteMode(msg)
+	case StateReview:
+		return m.handleReview(msg)
 	case StateDone:
 		return m.handleDone(msg)
 	}
@@ -206,7 +242,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 }
 
 // handleEnvironmentCheck handles keys for the pre-flight check screen.
-// Enter proceeds to StateAssistantList only when preflight is done and engram was found.
+// Enter proceeds to StateSelectAssistants only when preflight is done and engram was found.
+// All assistants are pre-selected on first entry so the default is visible.
 // Esc returns to StateMainMenu at any point.
 // q and ctrl+c always quit.
 func (m Model) handleEnvironmentCheck(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -214,8 +251,13 @@ func (m Model) handleEnvironmentCheck(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyCtrlC:
 		return m, tea.Quit
 	case tea.KeyEnter:
-		if m.preflightDone && !m.engramMissing {
-			m.state = StateAssistantList
+		if m.preflight.done && !m.preflight.engramMissing {
+			m.state = StateSelectAssistants
+			if len(m.wizard.selected) == 0 {
+				for i := range installer.Descriptors {
+					m.wizard.selected[i] = true
+				}
+			}
 			m.cursor = 0
 			return m, nil
 		}
@@ -244,9 +286,9 @@ func (m Model) handleMainMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEnter:
 		switch m.cursor {
 		case 0: // Install / Update Skills → trigger preflight
-			m.preflightSections = initialPreflightSections()
-			m.preflightDone = false
-			m.engramMissing = false
+			m.preflight.sections = initialPreflightSections(m.catalog.Installer)
+			m.preflight.done = false
+			m.preflight.engramMissing = false
 			m.state = StateEnvironmentCheck
 			m.cursor = 0
 			return m, tea.Batch(EnvironmentCheckCmd(), m.spinner.Tick)
@@ -271,27 +313,6 @@ func (m Model) handleDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m Model) handleAssistantList(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	count := len(installer.Descriptors)
-	switch msg.Type {
-	case tea.KeyUp:
-		if m.cursor > 0 {
-			m.cursor--
-		}
-	case tea.KeyDown:
-		if m.cursor < count-1 {
-			m.cursor++
-		}
-	case tea.KeyEnter:
-		m.state = StateSelectAssistants
-		m.cursor = 0
-	case tea.KeyEsc:
-		m.state = StateMainMenu
-		m.cursor = 0
-	}
-	return m, nil
-}
-
 func (m Model) handleSelectAssistants(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	count := len(installer.Descriptors)
 	switch msg.Type {
@@ -300,16 +321,31 @@ func (m Model) handleSelectAssistants(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor--
 		}
 	case tea.KeyDown:
-		if m.cursor < count-1 {
+		if m.cursor < count { // confirm button sits at index count
 			m.cursor++
 		}
 	case tea.KeySpace:
-		m.selected[m.cursor] = !m.selected[m.cursor]
+		if m.cursor < count { // guard: confirm button has no selectable index
+			m.wizard.selected[m.cursor] = !m.wizard.selected[m.cursor]
+		}
+	case tea.KeyRunes:
+		if string(msg.Runes) == "a" {
+			allSelected := true
+			for i := range installer.Descriptors {
+				if !m.wizard.selected[i] {
+					allSelected = false
+					break
+				}
+			}
+			for i := range installer.Descriptors {
+				m.wizard.selected[i] = !allSelected
+			}
+		}
 	case tea.KeyEnter:
 		m.state = StateSelectProvider
 		m.cursor = 0
 	case tea.KeyEsc:
-		m.state = StateAssistantList
+		m.state = StateEnvironmentCheck
 		m.cursor = 0
 	}
 	return m, nil
@@ -321,16 +357,22 @@ func (m Model) handleSelectProvider(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyUp:
 		if m.cursor > 0 {
 			m.cursor--
+			if m.cursor < count {
+				m.wizard.provider = m.cursor // live-track selection so confirm button works correctly
+			}
 		}
 	case tea.KeyDown:
-		if m.cursor < count-1 {
+		if m.cursor < count { // confirm button sits at index count
 			m.cursor++
+			if m.cursor < count {
+				m.wizard.provider = m.cursor
+			}
 		}
 	case tea.KeyEnter:
-		m.provider = m.cursor
+		// m.wizard.provider already reflects the live selection; no cursor assignment needed.
 		m.state = StateAgentSetup
 		m.cursor = 0
-		m.agentConflicts = m.detectAgentConflicts()
+		m.agentConfig.conflicts = m.detectAgentConflicts()
 		return m, nil
 	case tea.KeyEsc:
 		m.state = StateSelectAssistants
@@ -361,7 +403,7 @@ func (m Model) detectAgentConflicts() []string {
 func (m Model) selectedAssistants() []installer.AssistantDescriptor {
 	var assistants []installer.AssistantDescriptor
 	for i, d := range installer.Descriptors {
-		if m.selected[i] {
+		if m.wizard.selected[i] {
 			assistants = append(assistants, d)
 		}
 	}
@@ -372,37 +414,37 @@ func (m Model) selectedAssistants() []installer.AssistantDescriptor {
 }
 
 func (m Model) handleAgentSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// 5 options: 4 presets + Skip
-	const optionCount = 5
+	// 4 navigable presets (0-3); [ Skip → ] button sits at index len(PersonaPresets).
+	presets := len(installer.PersonaPresets)
 	switch msg.Type {
 	case tea.KeyUp:
 		if m.cursor > 0 {
 			m.cursor--
+			m = m.syncAgentSetupSelection()
 		}
 	case tea.KeyDown:
-		if m.cursor < optionCount-1 {
+		if m.cursor < presets { // [ Skip → ] button at index presets
 			m.cursor++
+			m = m.syncAgentSetupSelection()
 		}
 	case tea.KeyEnter:
-		if m.cursor < len(installer.PersonaPresets) {
-			// User selected a preset.
-			m.selectedPersona = m.cursor
-			m.agentSetupSkip = false
-			// If conflicts exist, ask how to handle the existing config.
-			if len(m.agentConflicts) > 0 {
-				m.state = StateAgentWriteMode
-				m.cursor = 0
-				return m, nil
-			}
-			// No conflicts — clean write.
-			m.agentWriteMode = installer.AgentModeOverwrite
-		} else {
-			// User selected Skip.
-			m.agentSetupSkip = true
+		if m.cursor == presets {
+			// User pressed Enter on the [ Skip → ] button.
+			m.agentConfig.skip = true
 		}
-		m.state = StateInstalling
+		// m.agentConfig.selectedPersona / m.agentConfig.skip reflect the current choice.
+		if !m.agentConfig.skip && len(m.agentConfig.conflicts) > 0 {
+			m.agentConfig.writeModes = make(map[string]installer.AgentWriteMode)
+			for _, id := range m.agentConfig.conflicts {
+				m.agentConfig.writeModes[id] = installer.AgentModeSkip // safe default: Keep
+			}
+			m.state = StateAgentWriteMode
+			m.cursor = 0
+			return m, nil
+		}
+		m.state = StateReview
 		m.cursor = 0
-		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
+		return m, nil
 	case tea.KeyEsc:
 		m.state = StateSelectProvider
 		m.cursor = 0
@@ -410,32 +452,68 @@ func (m Model) handleAgentSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// syncAgentSetupSelection returns a Model with selectedPersona / skip
+// updated to match the current cursor. Only called for cursor positions within
+// the preset list (0 to len(PersonaPresets)-1); the [ Skip → ] button position
+// is handled explicitly in the Enter handler.
+func (m Model) syncAgentSetupSelection() Model {
+	if m.cursor < len(installer.PersonaPresets) {
+		m.agentConfig.selectedPersona = m.cursor
+		m.agentConfig.skip = false
+	}
+	return m
+}
+
 func (m Model) handleAgentWriteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	// 3 options: Overwrite, Append, Do nothing
-	const optionCount = 3
+	count := len(m.agentConfig.conflicts)
 	switch msg.Type {
 	case tea.KeyUp:
 		if m.cursor > 0 {
 			m.cursor--
 		}
 	case tea.KeyDown:
-		if m.cursor < optionCount-1 {
+		if m.cursor < count { // confirm button sits at index count
 			m.cursor++
 		}
-	case tea.KeyEnter:
-		switch m.cursor {
-		case 0:
-			m.agentWriteMode = installer.AgentModeOverwrite
-		case 1:
-			m.agentWriteMode = installer.AgentModeAppend
-		default:
-			m.agentWriteMode = installer.AgentModeSkip
+	case tea.KeySpace:
+		if m.cursor < len(m.agentConfig.conflicts) {
+			id := m.agentConfig.conflicts[m.cursor]
+			m.agentConfig.writeModes[id] = (m.agentConfig.writeModes[id] + 1) % 3
 		}
-		m.state = StateInstalling
+	case tea.KeyEnter:
+		m.state = StateReview
 		m.cursor = 0
-		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
 	case tea.KeyEsc:
 		m.state = StateAgentSetup
+		m.cursor = 0
+	}
+	return m, nil
+}
+
+func (m Model) handleReview(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyDown:
+		if m.cursor == 0 {
+			m.cursor = 1 // scroll to Install button
+		}
+	case tea.KeyUp:
+		if m.cursor == 1 {
+			m.cursor = 0
+		}
+	case tea.KeyEnter:
+		m.state = StateInstalling
+		m.cursor = 0
+		m.wizard.installExpected = len(m.selectedAssistants())
+		if m.agentConfig.skip {
+			m.wizard.agentDone = true
+		}
+		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
+	case tea.KeyEsc:
+		if len(m.agentConfig.conflicts) > 0 && !m.agentConfig.skip {
+			m.state = StateAgentWriteMode
+		} else {
+			m.state = StateAgentSetup
+		}
 		m.cursor = 0
 	}
 	return m, nil
@@ -446,27 +524,44 @@ func (m Model) handleDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case tea.KeyEsc, tea.KeyEnter:
 		m.state = StateMainMenu
 		m.cursor = 0
-		m.results = nil
-		m.selected = make(map[int]bool)
+		m.wizard.results = nil
+		m.wizard.agentResults = nil
+		m.wizard.installExpected = 0
+		m.wizard.agentDone = false
+		m.wizard.selected = make(map[int]bool)
 	}
 	return m, nil
 }
 
 func (m Model) buildInstallCmd() tea.Cmd {
 	assistants := m.selectedAssistants()
-	provider := installer.Providers[m.provider]
+	provider := installer.Providers[m.wizard.provider]
 	installCmd := InstallCmd(assistants, provider, m.skillsFS)
-	if m.agentSetupSkip {
+	if m.agentConfig.skip {
 		return installCmd
 	}
-	preset := installer.PersonaPresets[m.selectedPersona]
-	agentCmd := AgentInstallCmd(assistants, preset, m.agentWriteMode, m.skillsFS)
+	preset := installer.PersonaPresets[m.agentConfig.selectedPersona]
+	agentCmd := AgentInstallCmd(assistants, preset, m.agentConfig.writeModes, m.skillsFS)
 	return tea.Batch(installCmd, agentCmd)
+}
+
+// AgentWriteModes returns the per-assistant write mode map. Exported for tests.
+func (m Model) AgentWriteModes() map[string]installer.AgentWriteMode {
+	return m.agentConfig.writeModes
 }
 
 // View renders the current state.
 func (m Model) View() string {
 	return renderState(m)
+}
+
+// allInstallsDone reports whether both the per-assistant installs and the agent
+// config step have finished, so Update can transition to StateDone.
+func (m Model) allInstallsDone() bool {
+	if len(m.wizard.results) < m.wizard.installExpected {
+		return false
+	}
+	return m.wizard.agentDone
 }
 
 func allProbesDone(sections []components.SectionGroup) bool {

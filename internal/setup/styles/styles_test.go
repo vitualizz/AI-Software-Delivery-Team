@@ -101,15 +101,3 @@ func TestBoxHasRoundedBorderAndPadding(t *testing.T) {
 	}
 }
 
-// TestStatusBarHasForegroundAndBackground verifies that StatusBar carries both
-// a foreground and a background color using panel AdaptiveColor values.
-func TestStatusBarHasForegroundAndBackground(t *testing.T) {
-	sb := styles.Default.StatusBar
-
-	if !reflect.DeepEqual(sb.GetForeground(), panels.ColorPrimary) {
-		t.Error("StatusBar foreground does not match panels.ColorPrimary")
-	}
-	if !reflect.DeepEqual(sb.GetBackground(), panels.ColorInactive) {
-		t.Error("StatusBar background does not match panels.ColorInactive")
-	}
-}

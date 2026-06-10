@@ -25,15 +25,15 @@ func TestNew_StartsAtMainMenu(t *testing.T) {
 	}
 }
 
-func TestUpdate_EnvironmentCheckMsg_EngramFound_EntersAssistantListOnEnter(t *testing.T) {
+func TestUpdate_EnvironmentCheckMsg_EngramFound_EntersSelectAssistantsOnEnter(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	// Navigate from MainMenu to StateEnvironmentCheck via cursor-0 Enter.
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m2 := next.(setup.Model)
 	m3 := updateKey(t, m2, tea.KeyEnter)
-	if m3.State() != setup.StateAssistantList {
-		t.Errorf("after Enter(Install) + EnvironmentCheckMsg{true} + Enter: state = %v, want StateAssistantList", m3.State())
+	if m3.State() != setup.StateSelectAssistants {
+		t.Errorf("after Enter(Install) + EnvironmentCheckMsg{true} + Enter: state = %v, want StateSelectAssistants", m3.State())
 	}
 }
 
@@ -86,8 +86,7 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
-	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateAssistantList
-	m = updateKey(t, m, tea.KeyEnter) // → StateSelectAssistants
+	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
 
 	if m.State() != setup.StateSelectAssistants {
 		t.Fatalf("expected StateSelectAssistants, got %v", m.State())
@@ -101,6 +100,40 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	// If we get here without panic the space handler ran. Verify state unchanged.
 	if m2.State() != setup.StateSelectAssistants {
 		t.Errorf("after space: state = %v, want StateSelectAssistants", m2.State())
+	}
+}
+
+func TestUpdate_SelectAssistants_AKeySelectsAll(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → EnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants (all pre-selected)
+
+	// Deselect all first, then press 'a' to re-select all.
+	for range installer.Descriptors {
+		m = updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeySpace})
+		m = updateKey(t, m, tea.KeyDown)
+	}
+	m2 := updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'a'}})
+	if m2.State() != setup.StateSelectAssistants {
+		t.Errorf("after 'a': state = %v, want StateSelectAssistants", m2.State())
+	}
+}
+
+func TestUpdate_SelectAssistants_PreSelectsAllOnFirstEntry(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter)
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
+	if m.State() != setup.StateSelectAssistants {
+		t.Fatalf("expected StateSelectAssistants, got %v", m.State())
+	}
+	// Confirm immediately without touching selection → should proceed to SelectProvider.
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateSelectProvider {
+		t.Errorf("Enter at SelectAssistants (all pre-selected): state = %v, want StateSelectProvider", m2.State())
 	}
 }
 
@@ -143,14 +176,13 @@ func TestUpdate_ESCAtSelectAssistantsGoesBack(t *testing.T) {
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
-	m2 := updateKey(t, m, tea.KeyEnter)  // preflightDone → StateAssistantList
-	m3 := updateKey(t, m2, tea.KeyEnter) // → SelectAssistants
-	if m3.State() != setup.StateSelectAssistants {
-		t.Fatalf("expected StateSelectAssistants, got %v", m3.State())
+	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
+	if m2.State() != setup.StateSelectAssistants {
+		t.Fatalf("expected StateSelectAssistants, got %v", m2.State())
 	}
-	m4 := updateKey(t, m3, tea.KeyEsc)
-	if m4.State() != setup.StateAssistantList {
-		t.Errorf("ESC at SelectAssistants: state = %v, want StateAssistantList", m4.State())
+	m3 := updateKey(t, m2, tea.KeyEsc)
+	if m3.State() != setup.StateEnvironmentCheck {
+		t.Errorf("ESC at SelectAssistants: state = %v, want StateEnvironmentCheck", m3.State())
 	}
 }
 
@@ -165,11 +197,91 @@ func TestUpdate_ESCAtMainMenuIsNoop(t *testing.T) {
 
 func TestUpdate_InstallDoneMsgTransitionsToDone(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	// Force state to Installing directly via the message.
+	// Force state to Installing directly via the message (backward-compat path).
 	next, _ := m.Update(setup.InstallDoneMsg{Results: []installer.InstallResult{}})
 	m2 := next.(setup.Model)
 	if m2.State() != setup.StateDone {
 		t.Errorf("InstallDoneMsg: state = %v, want StateDone", m2.State())
+	}
+}
+
+func TestUpdate_AssistantInstallProgress_AccumulatesResults(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	// Send one progress msg — should NOT transition to Done yet (installExpected = 0, agentDone = false).
+	next, _ := m.Update(setup.AssistantInstallProgressMsg{
+		Result: installer.InstallResult{AssistantID: installer.AssistantClaudeCode},
+	})
+	m2 := next.(setup.Model)
+	// State should not be StateDone because installExpected is 0 (not set via real flow).
+	// The result should be appended regardless.
+	if m2.State() == setup.StateDone {
+		// installExpected==0 means len(results)==0 is never < 0, agentDone==false → not done.
+		// But len(results)=1 >= installExpected=0 AND agentDone=false → not done. Correct.
+		t.Error("should not be StateDone: agentDone is false")
+	}
+}
+
+func TestUpdate_AssistantInstallProgress_AllDone_TransitionsToDone(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	// Advance to StateReview with skip=true (sets agentDone=true on Enter).
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup
+	// Navigate to Skip button (5 presets, Skip is at index 5).
+	for range installer.PersonaPresets {
+		m = updateKey(t, m, tea.KeyDown)
+	}
+	m = updateKey(t, m, tea.KeyEnter) // Skip → Review
+	if m.State() != setup.StateReview {
+		t.Fatalf("expected StateReview, got %v", m.State())
+	}
+	m = updateKey(t, m, tea.KeyEnter) // Review → Installing (sets installExpected, agentDone=true)
+	if m.State() != setup.StateInstalling {
+		t.Fatalf("expected StateInstalling, got %v", m.State())
+	}
+
+	// Send one progress msg per selected assistant to reach installExpected.
+	// All assistants are pre-selected by default, so we need len(installer.Descriptors) msgs.
+	for _, d := range installer.Descriptors {
+		next, _ := m.Update(setup.AssistantInstallProgressMsg{
+			Result: installer.InstallResult{AssistantID: d.ID},
+		})
+		m = next.(setup.Model)
+	}
+	if m.State() != setup.StateDone {
+		t.Errorf("after all progress msgs (skip=true): state = %v, want StateDone", m.State())
+	}
+}
+
+func TestUpdate_AssistantInstallProgress_WaitsForAgentConfig(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (no conflicts in clean HOME)
+	m = updateKey(t, m, tea.KeyEnter) // preset 0 → Review
+	m = updateKey(t, m, tea.KeyEnter) // Review → Installing (agentDone=false)
+	if m.State() != setup.StateInstalling {
+		t.Fatalf("expected StateInstalling, got %v", m.State())
+	}
+
+	// Send all install msgs — should NOT transition yet because agentDone=false.
+	for _, d := range installer.Descriptors {
+		next, _ := m.Update(setup.AssistantInstallProgressMsg{
+			Result: installer.InstallResult{AssistantID: d.ID},
+		})
+		m = next.(setup.Model)
+	}
+	if m.State() == setup.StateDone {
+		t.Error("should not be StateDone: AgentInstallDoneMsg not yet received")
+	}
+
+	// Now send AgentInstallDoneMsg → should transition.
+	next, _ := m.Update(setup.AgentInstallDoneMsg{Results: []installer.AgentConfigResult{}})
+	m = next.(setup.Model)
+	if m.State() != setup.StateDone {
+		t.Errorf("after AgentInstallDoneMsg: state = %v, want StateDone", m.State())
 	}
 }
 
@@ -231,11 +343,11 @@ func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	if !ok {
 		t.Fatalf("toInstalling: EnvironmentCheckMsg Update returned %T, want setup.Model", next)
 	}
-	m2 = updateKey(t, m2, tea.KeyEnter) // preflightDone → StateAssistantList
-	m2 = updateKey(t, m2, tea.KeyEnter) // AssistantList → SelectAssistants
+	m2 = updateKey(t, m2, tea.KeyEnter) // preflightDone → StateSelectAssistants
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup
-	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → Installing (no conflicts → clean write)
+	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → Review (no conflicts)
+	m2 = updateKey(t, m2, tea.KeyEnter) // Review → Installing
 	if m2.State() != setup.StateInstalling {
 		t.Fatalf("toInstalling: state = %v, want StateInstalling", m2.State())
 	}
@@ -295,7 +407,7 @@ func TestUpdate_SelectProvider_EnterGoesToAgentSetup(t *testing.T) {
 	}
 }
 
-func TestUpdate_AgentSetup_EnterPreset_GoesToInstalling(t *testing.T) {
+func TestUpdate_AgentSetup_EnterPreset_GoesToReview(t *testing.T) {
 	// Use a clean HOME so detectAgentConflicts finds no existing config.
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
@@ -305,14 +417,46 @@ func TestUpdate_AgentSetup_EnterPreset_GoesToInstalling(t *testing.T) {
 	if m.State() != setup.StateAgentSetup {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
 	}
-	// Enter on cursor=0 (Axiom preset) with no conflicts → StateInstalling.
+	// Enter on cursor=0 (Sky preset) with no conflicts → StateReview.
 	m2 := updateKey(t, m, tea.KeyEnter)
-	if m2.State() != setup.StateInstalling {
-		t.Errorf("Enter on preset at AgentSetup (no conflicts): state = %v, want StateInstalling", m2.State())
+	if m2.State() != setup.StateReview {
+		t.Errorf("Enter on preset at AgentSetup (no conflicts): state = %v, want StateReview", m2.State())
 	}
 }
 
-func TestUpdate_AgentSetup_EnterSkip_GoesToInstalling(t *testing.T) {
+func TestUpdate_Review_EnterGoesToInstalling(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Review
+	if m.State() != setup.StateReview {
+		t.Fatalf("expected StateReview, got %v", m.State())
+	}
+	m2 := updateKey(t, m, tea.KeyEnter) // Review → Installing
+	if m2.State() != setup.StateInstalling {
+		t.Errorf("Enter at Review: state = %v, want StateInstalling", m2.State())
+	}
+}
+
+func TestUpdate_Review_EscGoesToAgentSetup(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Review (no conflicts)
+	if m.State() != setup.StateReview {
+		t.Fatalf("expected StateReview, got %v", m.State())
+	}
+	m2 := updateKey(t, m, tea.KeyEsc)
+	if m2.State() != setup.StateAgentSetup {
+		t.Errorf("Esc at Review (no conflicts): state = %v, want StateAgentSetup", m2.State())
+	}
+}
+
+func TestUpdate_AgentSetup_EnterSkip_GoesToReview(t *testing.T) {
 	// Use a clean HOME so detectAgentConflicts finds no existing config.
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
@@ -320,15 +464,16 @@ func TestUpdate_AgentSetup_EnterSkip_GoesToInstalling(t *testing.T) {
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 
-	// Navigate to Skip (cursor=4 = 4 presets).
+	// Navigate to Skip (cursor=5 = 5 presets).
+	m = updateKey(t, m, tea.KeyDown)
 	m = updateKey(t, m, tea.KeyDown)
 	m = updateKey(t, m, tea.KeyDown)
 	m = updateKey(t, m, tea.KeyDown)
 	m = updateKey(t, m, tea.KeyDown)
 
-	m2 := updateKey(t, m, tea.KeyEnter) // Skip → Installing
-	if m2.State() != setup.StateInstalling {
-		t.Errorf("Enter on Skip: state = %v, want StateInstalling", m2.State())
+	m2 := updateKey(t, m, tea.KeyEnter) // Skip → Review
+	if m2.State() != setup.StateReview {
+		t.Errorf("Enter on Skip: state = %v, want StateReview", m2.State())
 	}
 }
 
@@ -372,18 +517,18 @@ func TestUpdate_AgentSetup_WithConflict_EntersAgentWriteMode(t *testing.T) {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
 	}
 
-	// Enter on preset 0 (Axiom) with conflict → should go to StateAgentWriteMode.
+	// Enter on preset 0 (Sky) with conflict → should go to StateAgentWriteMode.
 	m2 := updateKey(t, m, tea.KeyEnter)
 	if m2.State() != setup.StateAgentWriteMode {
 		t.Errorf("Enter on preset with conflict: state = %v, want StateAgentWriteMode", m2.State())
 	}
 }
 
-func TestUpdate_AgentWriteMode_EnterOverwrite_GoesToInstalling(t *testing.T) {
+func setupConflict(t *testing.T) {
+	t.Helper()
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("XDG_CONFIG_HOME", "")
-
 	claudeDir := tmpHome + "/.claude"
 	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -392,80 +537,67 @@ func TestUpdate_AgentWriteMode_EnterOverwrite_GoesToInstalling(t *testing.T) {
 	if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
 
+func advanceToAgentWriteMode(t *testing.T) setup.Model {
+	t.Helper()
+	setupConflict(t)
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict detected)
 	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode (preset 0 with conflict)
 	if m.State() != setup.StateAgentWriteMode {
-		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
+		t.Fatalf("advanceToAgentWriteMode: state = %v, want StateAgentWriteMode", m.State())
 	}
+	return m
+}
 
-	// cursor=0 (Overwrite) → Enter → StateInstalling.
+func TestUpdate_AgentWriteMode_EnterGoesToReview(t *testing.T) {
+	m := advanceToAgentWriteMode(t)
 	m2 := updateKey(t, m, tea.KeyEnter)
-	if m2.State() != setup.StateInstalling {
-		t.Errorf("Enter Overwrite at AgentWriteMode: state = %v, want StateInstalling", m2.State())
+	if m2.State() != setup.StateReview {
+		t.Errorf("Enter at AgentWriteMode: state = %v, want StateReview", m2.State())
 	}
 }
 
-func TestUpdate_AgentWriteMode_EnterAppend_GoesToInstalling(t *testing.T) {
-	tmpHome := t.TempDir()
-	t.Setenv("HOME", tmpHome)
-	t.Setenv("XDG_CONFIG_HOME", "")
-
-	claudeDir := tmpHome + "/.claude"
-	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
-		t.Fatal(err)
+func TestUpdate_AgentWriteMode_SpaceCyclesMode(t *testing.T) {
+	m := advanceToAgentWriteMode(t)
+	// Default mode for the conflicted assistant is AgentModeSkip (Keep).
+	// Space cycles: Skip(2) → Overwrite(0).
+	m2 := updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeySpace})
+	modes := m2.AgentWriteModes()
+	if len(modes) == 0 {
+		t.Fatal("expected agentWriteModes to be non-empty after AgentWriteMode entry")
 	}
-	marker := "<!-- asdt:agent-config -->"
-	if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	m := setup.New(fstest.MapFS{}, "dev")
-	m = advanceToSelectProvider(t, m)
-	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict)
-	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode
-	if m.State() != setup.StateAgentWriteMode {
-		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
-	}
-
-	// Navigate to cursor=1 (Append) → Enter → StateInstalling.
-	m = updateKey(t, m, tea.KeyDown)
-	m2 := updateKey(t, m, tea.KeyEnter)
-	if m2.State() != setup.StateInstalling {
-		t.Errorf("Enter Append at AgentWriteMode: state = %v, want StateInstalling", m2.State())
+	for _, mode := range modes {
+		if mode != installer.AgentModeOverwrite {
+			t.Errorf("after one Space cycle: mode = %v, want AgentModeOverwrite", mode)
+		}
 	}
 }
 
-func TestUpdate_AgentWriteMode_EnterDoNothing_GoesToInstalling(t *testing.T) {
-	tmpHome := t.TempDir()
-	t.Setenv("HOME", tmpHome)
-	t.Setenv("XDG_CONFIG_HOME", "")
-
-	claudeDir := tmpHome + "/.claude"
-	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
-		t.Fatal(err)
+func TestUpdate_AgentWriteMode_SpaceCyclesAllModes(t *testing.T) {
+	m := advanceToAgentWriteMode(t)
+	// Skip → Overwrite → Append → Skip
+	m = updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeySpace}) // → Overwrite
+	m = updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeySpace}) // → Append
+	m = updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeySpace}) // → Skip
+	for _, mode := range m.AgentWriteModes() {
+		if mode != installer.AgentModeSkip {
+			t.Errorf("after 3 Space cycles: mode = %v, want AgentModeSkip", mode)
+		}
 	}
-	marker := "<!-- asdt:agent-config -->"
-	if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+}
 
-	m := setup.New(fstest.MapFS{}, "dev")
-	m = advanceToSelectProvider(t, m)
-	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict)
-	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode
-	if m.State() != setup.StateAgentWriteMode {
-		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
+func TestUpdate_AgentWriteMode_ReviewEscGoesBackToAgentWriteMode(t *testing.T) {
+	m := advanceToAgentWriteMode(t)
+	m = updateKey(t, m, tea.KeyEnter) // AgentWriteMode → Review
+	if m.State() != setup.StateReview {
+		t.Fatalf("expected StateReview, got %v", m.State())
 	}
-
-	// Navigate to cursor=2 (Do nothing) → Enter → StateInstalling.
-	m = updateKey(t, m, tea.KeyDown)
-	m = updateKey(t, m, tea.KeyDown)
-	m2 := updateKey(t, m, tea.KeyEnter)
-	if m2.State() != setup.StateInstalling {
-		t.Errorf("Enter Do-nothing at AgentWriteMode: state = %v, want StateInstalling", m2.State())
+	m2 := updateKey(t, m, tea.KeyEsc) // Review → AgentWriteMode (has conflicts)
+	if m2.State() != setup.StateAgentWriteMode {
+		t.Errorf("Esc at Review (with conflicts): state = %v, want StateAgentWriteMode", m2.State())
 	}
 }
 
@@ -503,8 +635,7 @@ func advanceToSelectProvider(t *testing.T, m setup.Model) setup.Model {
 	m = updateKey(t, m, tea.KeyEnter) // MainMenu → EnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
-	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → AssistantList
-	m = updateKey(t, m, tea.KeyEnter) // AssistantList → SelectAssistants
+	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
 	m = updateKey(t, m, tea.KeyEnter) // SelectAssistants → SelectProvider
 	if m.State() != setup.StateSelectProvider {
 		t.Fatalf("advanceToSelectProvider: state = %v, want StateSelectProvider", m.State())

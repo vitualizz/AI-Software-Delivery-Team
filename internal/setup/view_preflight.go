@@ -1,30 +1,35 @@
 package setup
 
 import (
+	"fmt"
 	"strings"
 
+	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
+	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
 // initialPreflightSections returns the seed state for the pre-flight check screen.
-// All rows start in CheckStatusPending so the view immediately shows the spinner.
-func initialPreflightSections() []components.SectionGroup {
+// Section titles come from the active catalog; row labels are kept as constants
+// because they also serve as lookup keys in rowHasStatus and in probe messages.
+func initialPreflightSections(s i18n.InstallerStrings) []components.SectionGroup {
 	return []components.SectionGroup{
 		{
-			Title: "Your Environment",
+			Title: s.SectionYourEnvironment,
 			Rows: []components.CheckRow{
 				{Label: "OS / Arch", Status: components.CheckStatusPending},
+				{Label: "Shell", Status: components.CheckStatusPending},
 			},
 		},
 		{
-			Title: "Memory Provider",
+			Title: s.SectionMemoryProvider,
 			Rows: []components.CheckRow{
 				{Label: "Engram", Status: components.CheckStatusPending},
 			},
 		},
 		{
-			Title: "AI Enhancements",
+			Title: s.SectionAIEnhancements,
 			Rows: []components.CheckRow{
 				{Label: "Codegraph", Status: components.CheckStatusPending, SoftWarn: true},
 			},
@@ -33,32 +38,42 @@ func initialPreflightSections() []components.SectionGroup {
 }
 
 func renderPreflightCheck(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
-	for _, sg := range m.preflightSections {
+
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 1, 5))
+
+	for _, sg := range m.preflight.sections {
 		b.WriteString(sg.Render(m.width))
 		b.WriteString("\n")
 	}
 
+	if m.preflight.engramMissing && m.preflight.done {
+		fmt.Fprintf(&b, "\n  %s\n", styles.Default.Warning.Render(s.PrefEngramRequired))
+		fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render(s.PrefEngramInstall))
+		fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render(s.PrefEngramRestart))
+	}
+
 	var footer string
 	switch {
-	case !m.preflightDone:
+	case !m.preflight.done:
 		footer = panels.RenderKeyboardFooter([]panels.HintGroup{
-			{Label: "Status", Hints: []panels.Hint{{Key: "checking", Description: "environment"}}},
+			{Label: s.HintGroupStatus, Hints: []panels.Hint{{Key: s.HintChecking, Description: s.HintEnvironment}}},
 		}, m.width)
-	case m.engramMissing:
+	case m.preflight.engramMissing:
 		footer = panels.RenderKeyboardFooter([]panels.HintGroup{
-			{Label: "Required", Hints: []panels.Hint{
-				{Key: "engram", Description: "required — install: https://github.com/Gentleman-Programming/engram"},
-				{Key: "esc", Description: "back"},
+			{Label: s.HintGroupRequired, Hints: []panels.Hint{
+				{Key: "engram", Description: s.HintEngramRequired},
+				{Key: "esc", Description: s.HintBack},
 			}},
 		}, m.width)
 	default:
 		footer = panels.RenderKeyboardFooter([]panels.HintGroup{
-			{Label: "Actions", Hints: []panels.Hint{
-				{Key: "enter", Description: "continue"},
-				{Key: "esc", Description: "back"},
+			{Label: s.HintGroupActions, Hints: []panels.Hint{
+				{Key: "enter", Description: s.HintContinue},
+				{Key: "esc", Description: s.HintBack},
 			}},
 		}, m.width)
 	}
-	return frame("Pre-flight Check", strings.TrimRight(b.String(), "\n"), footer, true)
+	return frame(s.TitlePreflightCheck, strings.TrimRight(b.String(), "\n"), footer, true)
 }

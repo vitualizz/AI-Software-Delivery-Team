@@ -5,12 +5,30 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
 const cursorChar = "►"
+
+// stepLine returns a dim "step X of N" indicator using the active catalog.
+func stepLine(s i18n.InstallerStrings, current, total int) string {
+	return styles.Default.Dim.Render(fmt.Sprintf("%s %d %s %d", s.StepWord, current, s.StepOfWord, total))
+}
+
+// modeLabel returns the catalog-translated label for an AgentWriteMode.
+func modeLabel(s i18n.InstallerStrings, mode installer.AgentWriteMode) string {
+	switch mode {
+	case installer.AgentModeOverwrite:
+		return s.LabelModeOverwrite
+	case installer.AgentModeAppend:
+		return s.LabelModeAppend
+	default:
+		return s.LabelModeKeep
+	}
+}
 
 func renderState(m Model) string {
 	switch m.state {
@@ -20,8 +38,8 @@ func renderState(m Model) string {
 		return renderDashboard(m)
 	case StateMainMenu:
 		return renderMainMenu(m)
-	case StateAssistantList:
-		return renderAssistantList(m)
+	case StateReview:
+		return renderReview(m)
 	case StateSelectAssistants:
 		return renderSelectAssistants(m)
 	case StateSelectProvider:
@@ -45,25 +63,27 @@ func titleStyle() lipgloss.Style {
 }
 
 // frame composes a screen from a title, a body block, and a footer hint,
-// wrapping the title+body in the bordered Box and rendering the footer
-// through StatusBar, joined vertically. The focused flag controls border
-// decoration via FocusBorderStyle.
+// all rendered inside a single bordered box. The footer sits as the last
+// line inside the box (Gentle-AI pattern), keeping the layout as one
+// visual unit instead of stacking a separate bar below.
 func frame(title, body, footer string, focused bool) string {
 	header := titleStyle().Render("▎ " + title)
-	inner := lipgloss.JoinVertical(lipgloss.Left, header, "", body)
-	boxed := panels.FocusBorderStyle(focused).
+	var inner string
+	if footer != "" {
+		inner = lipgloss.JoinVertical(lipgloss.Left, header, "", body, "", footer)
+	} else {
+		inner = lipgloss.JoinVertical(lipgloss.Left, header, "", body)
+	}
+	return panels.FocusBorderStyle(focused).
 		Padding(1, 2).
 		Render(inner)
-	bar := styles.Default.StatusBar.
-		Width(lipgloss.Width(boxed)).
-		Render(footer)
-	return lipgloss.JoinVertical(lipgloss.Left, boxed, bar)
 }
 
 func renderMainMenu(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
 
-	items := []string{"Install / Update Skills", "Dashboard", "Quit"}
+	items := []string{s.MenuInstall, s.MenuDashboard, s.MenuQuit}
 	for i, item := range items {
 		if i == m.cursor {
 			fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(item))
@@ -83,13 +103,19 @@ func renderMainMenu(m Model) string {
 	body := lipgloss.JoinVertical(lipgloss.Left, hero, "", menuStr)
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Nav", Hints: []panels.Hint{{Key: "↑↓", Description: "navigate"}, {Key: "enter", Description: "select"}, {Key: "q", Description: "quit"}}},
+		{Label: s.HintGroupNav, Hints: []panels.Hint{
+			{Key: "↑↓", Description: s.HintNavigate},
+			{Key: "enter", Description: s.HintSelect},
+			{Key: "q", Description: s.HintQuit},
+		}},
 	}, m.width)
-	return frame("asdt-tui", body, footer, true)
+	return frame(s.TitleMainMenu, body, footer, true)
 }
 
-func renderAssistantList(m Model) string {
+func renderSelectAssistants(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 2, 5))
 
 	for i, d := range installer.Descriptors {
 		bp, sp, _ := installer.Detect(d)
@@ -102,30 +128,8 @@ func renderAssistantList(m Model) string {
 			badge = panels.NewBadge("missing", panels.ColorError)
 		}
 
-		cursor := "  "
-		var nameStr string
-		if i == m.cursor {
-			cursor = cursorChar + " "
-			nameStr = styles.Default.Cursor.Render(d.Name)
-		} else {
-			nameStr = styles.Default.Dim.Render(d.Name)
-		}
-
-		fmt.Fprintf(&b, "  %s%s %s\n", cursor, nameStr, badge.Render())
-	}
-
-	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Actions", Hints: []panels.Hint{{Key: "enter", Description: "continue"}, {Key: "esc", Description: "back"}, {Key: "q", Description: "quit"}}},
-	}, m.width)
-	return frame("Installed Assistants", strings.TrimRight(b.String(), "\n"), footer, true)
-}
-
-func renderSelectAssistants(m Model) string {
-	var b strings.Builder
-
-	for i, d := range installer.Descriptors {
 		check := "[ ]"
-		if m.selected[i] {
+		if m.wizard.selected[i] {
 			check = "[x]"
 		}
 
@@ -138,127 +142,298 @@ func renderSelectAssistants(m Model) string {
 			nameStr = styles.Default.Dim.Render(d.Name)
 		}
 
-		fmt.Fprintf(&b, "  %s%s %s\n", cursor, check, nameStr)
+		fmt.Fprintf(&b, "  %s%s %s %s\n", cursor, check, nameStr, badge.Render())
+	}
+
+	b.WriteString("\n")
+	if m.cursor == len(installer.Descriptors) {
+		fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(s.BtnContinue))
+	} else {
+		fmt.Fprintf(&b, "      %s\n", styles.Default.Dim.Render(s.BtnContinue))
 	}
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Actions", Hints: []panels.Hint{{Key: "space", Description: "toggle"}, {Key: "enter", Description: "confirm"}, {Key: "esc", Description: "back"}, {Key: "q", Description: "quit"}}},
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "space", Description: s.HintToggle},
+			{Key: "a", Description: s.HintAllNone},
+			{Key: "esc", Description: s.HintBack},
+			{Key: "q", Description: s.HintQuit},
+		}},
 	}, m.width)
-	return frame("Select Assistants to Install", strings.TrimRight(b.String(), "\n"), footer, true)
+	return frame(s.TitleSelectAssistants, strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
 func renderSelectProvider(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 3, 5))
 
 	for i, p := range installer.Providers {
+		focused := i == m.cursor
+		selected := i == m.wizard.provider
+
 		cursor := "  "
-		var nameStr string
-		if i == m.cursor {
+		if focused {
 			cursor = cursorChar + " "
+		}
+
+		var radioStr string
+		if selected {
+			radioStr = styles.Default.Cursor.Render("(•)")
+		} else {
+			radioStr = styles.Default.Dim.Render("( )")
+		}
+
+		var nameStr string
+		if focused {
 			nameStr = styles.Default.Cursor.Render(p.Name)
 		} else {
 			nameStr = styles.Default.Dim.Render(p.Name)
 		}
 
-		fmt.Fprintf(&b, "  %s%s — %s\n", cursor, nameStr, p.Description)
+		fmt.Fprintf(&b, "  %s%s %s — %s\n", cursor, radioStr, nameStr, p.Description)
+	}
+
+	b.WriteString("\n")
+	if m.cursor == len(installer.Providers) {
+		fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(s.BtnContinue))
+	} else {
+		fmt.Fprintf(&b, "      %s\n", styles.Default.Dim.Render(s.BtnContinue))
 	}
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Actions", Hints: []panels.Hint{{Key: "enter", Description: "install"}, {Key: "esc", Description: "back"}, {Key: "q", Description: "quit"}}},
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "esc", Description: s.HintBack},
+			{Key: "q", Description: s.HintQuit},
+		}},
 	}, m.width)
-	return frame("Select Memory Provider", strings.TrimRight(b.String(), "\n"), footer, true)
+	return frame(s.TitleSelectProvider, strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
 func renderAgentSetup(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 4, 5))
 
-	// Always show a notice that this writes to global assistant config.
-	if len(m.agentConflicts) > 0 {
+	if len(m.agentConfig.conflicts) > 0 {
 		fmt.Fprintf(&b, "  %s\n",
-			styles.Default.Warning.Render("⚠  Existing global agent config detected — will be overwritten."))
+			styles.Default.Warning.Render(s.WarnExistingConfig))
 		fmt.Fprintf(&b, "  %s\n\n",
-			styles.Default.Dim.Render("   Proceed at your own risk."))
+			styles.Default.Dim.Render(s.WarnExistingConfigNote))
 	} else {
 		fmt.Fprintf(&b, "  %s\n\n",
-			styles.Default.Dim.Render("This will write to your global AI assistant config."))
+			styles.Default.Dim.Render(s.InfoWriteGlobal))
 	}
 
-	// 4 presets + Skip.
-	type option struct {
-		name        string
-		description string
-	}
-	options := make([]option, 0, len(installer.PersonaPresets)+1)
-	for _, p := range installer.PersonaPresets {
-		options = append(options, option{name: p.Name, description: p.Description})
-	}
-	options = append(options, option{name: "Skip", description: "Continue without configuring agent persona."})
+	for i, p := range installer.PersonaPresets {
+		focused := i == m.cursor
+		selected := !m.agentConfig.skip && i == m.agentConfig.selectedPersona
 
-	for i, opt := range options {
 		cursor := "  "
-		var nameStr string
-		if i == m.cursor {
+		if focused {
 			cursor = cursorChar + " "
-			nameStr = styles.Default.Cursor.Render(opt.name)
-		} else {
-			nameStr = styles.Default.Dim.Render(opt.name)
 		}
-		fmt.Fprintf(&b, "  %s%s — %s\n", cursor, nameStr, opt.description)
+
+		var radioStr string
+		if selected {
+			radioStr = styles.Default.Cursor.Render("(•)")
+		} else {
+			radioStr = styles.Default.Dim.Render("( )")
+		}
+
+		var nameStr, descStr string
+		if focused {
+			nameStr = styles.Default.Cursor.Render(p.Name)
+			descStr = p.Description
+		} else {
+			nameStr = styles.Default.Dim.Render(p.Name)
+			descStr = styles.Default.Dim.Render(p.Description)
+		}
+		fmt.Fprintf(&b, "  %s%s %s — %s\n", cursor, radioStr, nameStr, descStr)
 	}
 
-	subtitle := styles.Default.Dim.Render("Configure how AI assistants behave across all tools")
+	b.WriteString("\n")
+	if m.cursor == len(installer.PersonaPresets) {
+		fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(s.BtnSkip))
+	} else {
+		fmt.Fprintf(&b, "      %s\n", styles.Default.Dim.Render(s.BtnSkip))
+	}
+
+	subtitle := styles.Default.Dim.Render(s.BodyAgentSetupSubtitle)
 	body := lipgloss.JoinVertical(lipgloss.Left, subtitle, "", strings.TrimRight(b.String(), "\n"))
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Actions", Hints: []panels.Hint{{Key: "↑↓", Description: "navigate"}, {Key: "enter", Description: "select"}, {Key: "esc", Description: "back"}, {Key: "q", Description: "quit"}}},
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "↑↓", Description: s.HintNavigate},
+			{Key: "esc", Description: s.HintBack},
+			{Key: "q", Description: s.HintQuit},
+		}},
 	}, m.width)
-	return frame("Agent Persona", body, footer, true)
+	return frame(s.TitleAgentSetup, body, footer, true)
 }
 
 func renderAgentWriteMode(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 4, 5))
+	fmt.Fprintf(&b, "  %s\n\n", styles.Default.Dim.Render(s.BodyAgentWriteMode))
 
-	type option struct {
-		name        string
-		description string
-	}
-	options := []option{
-		{name: "Overwrite", description: "Replace the existing config entirely"},
-		{name: "Append", description: "Add the new config at the end of the file"},
-		{name: "Do nothing", description: "Leave the existing config untouched"},
+	nameFor := make(map[string]string, len(installer.Descriptors))
+	for _, d := range installer.Descriptors {
+		nameFor[d.ID] = d.Name
 	}
 
-	for i, opt := range options {
+	for i, id := range m.agentConfig.conflicts {
+		name := nameFor[id]
+		if name == "" {
+			name = id
+		}
+		mode := m.agentConfig.writeModes[id]
+		label := "[" + modeLabel(s, mode) + "]"
+
+		adapter, hasAdapter := installer.AgentConfigAdapterFor(installer.AssistantID(id))
+		pathStr := ""
+		if hasAdapter {
+			pathStr = "  " + styles.Default.Dim.Render(adapter.ConfigPath())
+		}
+
 		cursor := "  "
-		var nameStr string
+		var nameStr, modeStr string
 		if i == m.cursor {
 			cursor = cursorChar + " "
-			nameStr = styles.Default.Cursor.Render(opt.name)
+			nameStr = styles.Default.Cursor.Render(name)
+			modeStr = styles.Default.Cursor.Render(label)
 		} else {
-			nameStr = styles.Default.Dim.Render(opt.name)
+			nameStr = styles.Default.Dim.Render(name)
+			modeStr = styles.Default.Dim.Render(label)
 		}
-		fmt.Fprintf(&b, "  %s%s — %s\n", cursor, nameStr, opt.description)
+
+		fmt.Fprintf(&b, "  %s%s  %s%s\n", cursor, nameStr, modeStr, pathStr)
 	}
 
-	subtitle := styles.Default.Dim.Render("Choose how to handle the existing agent config")
-	body := lipgloss.JoinVertical(lipgloss.Left, subtitle, "", strings.TrimRight(b.String(), "\n"))
+	b.WriteString("\n")
+	if m.cursor == len(m.agentConfig.conflicts) {
+		fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(s.BtnContinue))
+	} else {
+		fmt.Fprintf(&b, "      %s\n", styles.Default.Dim.Render(s.BtnContinue))
+	}
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Actions", Hints: []panels.Hint{{Key: "↑↓", Description: "navigate"}, {Key: "enter", Description: "select"}, {Key: "esc", Description: "back"}}},
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "↑↓", Description: s.HintNavigate},
+			{Key: "space", Description: s.HintCycleMode},
+			{Key: "esc", Description: s.HintBack},
+		}},
 	}, m.width)
-	return frame("Existing Config Detected", body, footer, true)
+	return frame(s.TitleAgentWriteMode, strings.TrimRight(b.String(), "\n"), footer, true)
+}
+
+func renderReview(m Model) string {
+	s := m.catalog.Installer
+	var b strings.Builder
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 5, 5))
+
+	names := make([]string, 0)
+	for i, d := range installer.Descriptors {
+		if m.wizard.selected[i] {
+			names = append(names, d.Name)
+		}
+	}
+	if len(names) == 0 {
+		for _, d := range installer.Descriptors {
+			names = append(names, d.Name)
+		}
+	}
+	fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelAssistants), strings.Join(names, " · "))
+
+	if m.wizard.provider < len(installer.Providers) {
+		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelProvider), installer.Providers[m.wizard.provider].Name)
+	}
+
+	if m.agentConfig.skip {
+		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelPersona), styles.Default.Dim.Render(s.LabelSkipped))
+	} else if m.agentConfig.selectedPersona < len(installer.PersonaPresets) {
+		preset := installer.PersonaPresets[m.agentConfig.selectedPersona]
+		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelPersona), preset.Name+" — "+preset.Description)
+	}
+
+	if !m.agentConfig.skip && len(m.agentConfig.conflicts) > 0 {
+		nameFor := make(map[string]string, len(installer.Descriptors))
+		for _, d := range installer.Descriptors {
+			nameFor[d.ID] = d.Name
+		}
+		fmt.Fprintf(&b, "\n  %s\n", styles.Default.Dim.Render(s.LabelConfig))
+		for _, id := range m.agentConfig.conflicts {
+			name := nameFor[id]
+			if name == "" {
+				name = id
+			}
+			mode := m.agentConfig.writeModes[id]
+			adapter, ok := installer.AgentConfigAdapterFor(installer.AssistantID(id))
+			pathStr := ""
+			if ok {
+				pathStr = adapter.ConfigPath() + "  "
+			}
+			fmt.Fprintf(&b, "    %s  %s%s\n",
+				styles.Default.Dim.Render(name),
+				styles.Default.Dim.Render(pathStr),
+				styles.Default.Cursor.Render("["+modeLabel(s, mode)+"]"),
+			)
+		}
+	}
+
+	b.WriteString("\n")
+	if m.cursor == 1 {
+		fmt.Fprintf(&b, "  %s %s\n", cursorChar, styles.Default.Cursor.Render(s.BtnInstall))
+	} else {
+		fmt.Fprintf(&b, "      %s\n", styles.Default.Dim.Render(s.BtnInstall))
+	}
+
+	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "esc", Description: s.HintBack},
+			{Key: "q", Description: s.HintQuit},
+		}},
+	}, m.width)
+	return frame(s.TitleReview, strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
 func renderInstalling(m Model) string {
-	body := m.spinner.View() + " " + styles.Default.Dim.Render("Installing assistants and skills...")
+	s := m.catalog.Installer
+
+	// Build a lookup for completed results keyed by AssistantID.
+	doneFor := make(map[installer.AssistantID]installer.InstallResult, len(m.wizard.results))
+	for _, r := range m.wizard.results {
+		doneFor[r.AssistantID] = r
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 5, 5))
+
+	spinnerFrame := m.spinner.View()
+	for i, d := range installer.Descriptors {
+		if !m.wizard.selected[i] && len(m.wizard.selected) > 0 {
+			continue
+		}
+		if r, done := doneFor[d.ID]; done {
+			if r.Err != nil {
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Error.Render(fmt.Sprintf("✗ %s: %v", d.Name, r.Err)))
+			} else {
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Success.Render("✓ "+d.Name))
+			}
+		} else {
+			fmt.Fprintf(&b, "  %s %s\n", spinnerFrame, styles.Default.Dim.Render(d.Name))
+		}
+	}
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Actions", Hints: []panels.Hint{{Key: "q", Description: "quit"}}},
+		{Label: s.HintGroupActions, Hints: []panels.Hint{{Key: "q", Description: s.HintQuit}}},
 	}, m.width)
-	return frame("Installing...", body, footer, true)
+	return frame(s.TitleInstalling, strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
 func renderDashboard(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
 	for _, d := range installer.Descriptors {
 		b.WriteString(renderSummaryLine(d))
@@ -266,13 +441,12 @@ func renderDashboard(m Model) string {
 	}
 
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Nav", Hints: []panels.Hint{{Key: "esc", Description: "back to menu"}}},
+		{Label: s.HintGroupNav, Hints: []panels.Hint{{Key: "esc", Description: s.HintBackToMenu}}},
 	}, m.width)
-	return frame("Dashboard", strings.TrimRight(b.String(), "\n"), footer, true)
+	return frame(s.TitleDashboard, strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
-// renderSummaryLine renders a single assistant summary line for the dashboard,
-// showing the assistant name and binary/skills presence badges.
+// renderSummaryLine renders a single assistant summary line for the dashboard.
 func renderSummaryLine(d installer.AssistantDescriptor) string {
 	bp, sp, _ := installer.Detect(d)
 	var parts []string
@@ -291,6 +465,7 @@ func renderSummaryLine(d installer.AssistantDescriptor) string {
 }
 
 func renderDone(m Model) string {
+	s := m.catalog.Installer
 	var b strings.Builder
 
 	nameFor := make(map[installer.AssistantID]string, len(installer.Descriptors))
@@ -298,7 +473,7 @@ func renderDone(m Model) string {
 		nameFor[d.ID] = d.Name
 	}
 
-	for _, r := range m.results {
+	for _, r := range m.wizard.results {
 		name := nameFor[r.AssistantID]
 		if name == "" {
 			name = string(r.AssistantID)
@@ -310,9 +485,9 @@ func renderDone(m Model) string {
 		}
 	}
 
-	if len(m.agentResults) > 0 {
-		fmt.Fprintf(&b, "\n  %s\n", styles.Default.Dim.Render("Agent Config:"))
-		for _, r := range m.agentResults {
+	if len(m.wizard.agentResults) > 0 {
+		fmt.Fprintf(&b, "\n  %s\n", styles.Default.Dim.Render(s.LabelAgentConfig))
+		for _, r := range m.wizard.agentResults {
 			name := nameFor[r.AssistantID]
 			if name == "" {
 				name = string(r.AssistantID)
@@ -321,19 +496,23 @@ func renderDone(m Model) string {
 			case r.Err != nil:
 				fmt.Fprintf(&b, "  %s\n", styles.Default.Error.Render(fmt.Sprintf("✗ %s: %v", name, r.Err)))
 			case r.Skipped:
-				fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render("– "+name+": skipped (existing config kept)"))
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render(fmt.Sprintf(s.MsgAgentConfigSkipped, name)))
 			default:
-				fmt.Fprintf(&b, "  %s\n", styles.Default.Success.Render("✓ "+name+" agent config written"))
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Success.Render(fmt.Sprintf(s.MsgAgentConfigWritten, name)))
 			}
-			// Note about OpenCode override behavior.
 			if r.AssistantID == installer.AssistantOpenCode && r.Err == nil && !r.Skipped {
-				fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render("  Note: OpenCode reads this as a global override for all projects."))
+				fmt.Fprintf(&b, "  %s\n", styles.Default.Dim.Render(s.MsgOpenCodeNote))
 			}
 		}
 	}
 
+	fmt.Fprintf(&b, "\n  %s\n", styles.Default.Dim.Render(s.MsgGetStarted))
+
 	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
-		{Label: "Actions", Hints: []panels.Hint{{Key: "enter/esc", Description: "back to menu"}, {Key: "q", Description: "quit"}}},
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "enter/esc", Description: s.HintBackToMenu},
+			{Key: "q", Description: s.HintQuit},
+		}},
 	}, m.width)
-	return frame("Installation Complete", strings.TrimRight(b.String(), "\n"), footer, true)
+	return frame(s.TitleDone, strings.TrimRight(b.String(), "\n"), footer, true)
 }

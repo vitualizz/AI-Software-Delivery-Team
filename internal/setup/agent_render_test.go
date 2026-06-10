@@ -23,10 +23,11 @@ var agentRenderFS = fstest.MapFS{
 
 {{persona_block}}
 `)},
-	"asdt-init/personas/axiom.md":        &fstest.MapFile{Data: []byte(`You are Axiom. Precise and structural.`)},
-	"asdt-init/personas/sage.md":         &fstest.MapFile{Data: []byte(`You are Sage. Patient and educational.`)},
-	"asdt-init/personas/forge.md":        &fstest.MapFile{Data: []byte(`You are Forge. Direct and pragmatic.`)},
-	"asdt-init/personas/lee-palacios.md": &fstest.MapFile{Data: []byte(`You are Lee Palacios. Warm and friendly.`)},
+	"asdt-init/personas/sky.md":          &fstest.MapFile{Data: []byte(`You are Sky. Sharp and thorough.`)},
+	"asdt-init/personas/toffy.md":        &fstest.MapFile{Data: []byte(`You are Toffy. Warm and enthusiastic.`)},
+	"asdt-init/personas/atreus.md":       &fstest.MapFile{Data: []byte(`You are Atreus. Bold and reckless.`)},
+	"asdt-init/personas/babi.md":         &fstest.MapFile{Data: []byte(`You are Babi. Your biggest fan.`)},
+	"asdt-init/personas/lee-palacios.md": &fstest.MapFile{Data: []byte(`You are Lee Palacios. Cat lover, coder, otaku.`)},
 }
 
 // TestRenderAgentConfig_AllPresetsSubstituteCorrectly verifies that for each preset
@@ -38,7 +39,7 @@ func TestRenderAgentConfig_AllPresetsSubstituteCorrectly(t *testing.T) {
 			results := installer.InstallAgentConfig(
 				[]installer.AssistantDescriptor{{ID: "no-adapter-for-render-test"}},
 				preset,
-				installer.AgentModeOverwrite,
+				map[string]installer.AgentWriteMode{},
 				agentRenderFS,
 			)
 			if len(results) != 1 {
@@ -63,11 +64,11 @@ func TestRenderAgentConfig_NoPlaceholdersRemain(t *testing.T) {
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("XDG_CONFIG_HOME", "")
 
-	preset := installer.PersonaPresets[0] // Axiom
+	preset := installer.PersonaPresets[0] // Sky
 	assistants := []installer.AssistantDescriptor{
 		{ID: installer.AssistantClaudeCode, Name: "Claude Code"},
 	}
-	results := installer.InstallAgentConfig(assistants, preset, installer.AgentModeOverwrite, agentRenderFS)
+	results := installer.InstallAgentConfig(assistants, preset, map[string]installer.AgentWriteMode{}, agentRenderFS)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
@@ -91,8 +92,8 @@ func TestRenderAgentConfig_NoPlaceholdersRemain(t *testing.T) {
 			t.Errorf("AGENTS.md still contains placeholder %q", ph)
 		}
 	}
-	if !strings.Contains(content, "Axiom") {
-		t.Errorf("AGENTS.md missing preset name 'Axiom', got:\n%s", content)
+	if !strings.Contains(content, "Sky") {
+		t.Errorf("AGENTS.md missing preset name 'Sky', got:\n%s", content)
 	}
 	if !strings.Contains(content, preset.Description) {
 		t.Errorf("AGENTS.md missing preset description, got:\n%s", content)

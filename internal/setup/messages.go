@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -17,7 +18,15 @@ import (
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
 )
 
-// InstallDoneMsg is sent by InstallCmd when the installer goroutine completes.
+// AssistantInstallProgressMsg is sent per-assistant as each install completes,
+// enabling live progress display during StateInstalling.
+type AssistantInstallProgressMsg struct {
+	Result installer.InstallResult
+}
+
+// InstallDoneMsg is kept for test compatibility — handlers that send this
+// directly still transition to StateDone. Normal installs use per-assistant
+// AssistantInstallProgressMsg messages instead.
 type InstallDoneMsg struct {
 	Results []installer.InstallResult
 }
@@ -102,32 +111,44 @@ func newerAvailable(current, latest string) bool {
 	return l != c
 }
 
-// InstallCmd returns a tea.Cmd that runs installer.Install asynchronously
-// and wraps the results in InstallDoneMsg.
+// InstallCmd returns a tea.Batch of per-assistant Cmds, each emitting one
+// AssistantInstallProgressMsg when that assistant's install completes.
+// Running concurrently lets the TUI update row-by-row as each finishes.
 func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.ProviderDescriptor, skillsFS fs.FS) tea.Cmd {
-	return func() tea.Msg {
-		results := installer.Install(assistants, provider, skillsFS)
-		return InstallDoneMsg{Results: results}
+	cmds := make([]tea.Cmd, len(assistants))
+	for i, a := range assistants {
+		a := a // capture loop variable
+		cmds[i] = func() tea.Msg {
+			results := installer.Install([]installer.AssistantDescriptor{a}, provider, skillsFS)
+			if len(results) > 0 {
+				return AssistantInstallProgressMsg{Result: results[0]}
+			}
+			return AssistantInstallProgressMsg{
+				Result: installer.InstallResult{AssistantID: a.ID},
+			}
+		}
 	}
+	return tea.Batch(cmds...)
 }
 
 // AgentInstallCmd runs installer.InstallAgentConfig in a goroutine and sends
-// AgentInstallDoneMsg when it completes.
-func AgentInstallCmd(assistants []installer.AssistantDescriptor, preset installer.PersonaPreset, mode installer.AgentWriteMode, skillsFS fs.FS) tea.Cmd {
+// AgentInstallDoneMsg when it completes. modes maps each AssistantID to its
+// write mode; a nil or empty map defaults all assistants to AgentModeOverwrite.
+func AgentInstallCmd(assistants []installer.AssistantDescriptor, preset installer.PersonaPreset, modes map[string]installer.AgentWriteMode, skillsFS fs.FS) tea.Cmd {
 	return func() tea.Msg {
-		results := installer.InstallAgentConfig(assistants, preset, mode, skillsFS)
+		results := installer.InstallAgentConfig(assistants, preset, modes, skillsFS)
 		return AgentInstallDoneMsg{Results: results}
 	}
 }
 
 const environmentCheckTimeout = 5 * time.Second
 
-// EnvironmentCheckCmd fans out three environment probes concurrently.
+// EnvironmentCheckCmd fans out environment probes concurrently.
 // Each probe sends an EnvironmentCheckProgressMsg immediately when it
 // resolves. Uses context.WithTimeout(5s) for all async probes to prevent
 // TUI hang on slow PATH resolution.
 func EnvironmentCheckCmd() tea.Cmd {
-	return tea.Batch(osProbeCmd(), engramProbeCmd(), codegraphProbeCmd())
+	return tea.Batch(osProbeCmd(), shellProbeCmd(), engramProbeCmd(), codegraphProbeCmd())
 }
 
 func osProbeCmd() tea.Cmd {
@@ -137,6 +158,20 @@ func osProbeCmd() tea.Cmd {
 			RowLabel: "OS / Arch",
 			Status:   components.CheckStatusOK,
 			Detail:   detail,
+		}
+	}
+}
+
+func shellProbeCmd() tea.Cmd {
+	return func() tea.Msg {
+		shell := os.Getenv("SHELL")
+		if shell == "" {
+			shell = "unknown"
+		}
+		return EnvironmentCheckProgressMsg{
+			RowLabel: "Shell",
+			Status:   components.CheckStatusOK,
+			Detail:   shell,
 		}
 	}
 }

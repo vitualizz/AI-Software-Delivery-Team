@@ -18,10 +18,11 @@ var agentTestFS = fstest.MapFS{
 
 {{persona_block}}
 `)},
-	"asdt-init/personas/axiom.md":        &fstest.MapFile{Data: []byte(`You are Axiom. Precise and structural.`)},
-	"asdt-init/personas/sage.md":         &fstest.MapFile{Data: []byte(`You are Sage. Patient and educational.`)},
-	"asdt-init/personas/forge.md":        &fstest.MapFile{Data: []byte(`You are Forge. Direct and pragmatic.`)},
-	"asdt-init/personas/lee-palacios.md": &fstest.MapFile{Data: []byte(`You are Lee Palacios. Warm and friendly.`)},
+	"asdt-init/personas/sky.md":          &fstest.MapFile{Data: []byte(`You are Sky. Sharp and thorough.`)},
+	"asdt-init/personas/toffy.md":        &fstest.MapFile{Data: []byte(`You are Toffy. Warm and enthusiastic.`)},
+	"asdt-init/personas/atreus.md":       &fstest.MapFile{Data: []byte(`You are Atreus. Bold and reckless.`)},
+	"asdt-init/personas/babi.md":         &fstest.MapFile{Data: []byte(`You are Babi. Your biggest fan.`)},
+	"asdt-init/personas/lee-palacios.md": &fstest.MapFile{Data: []byte(`You are Lee Palacios. Cat lover, coder, otaku.`)},
 }
 
 func TestRenderAgentConfig_SubstitutesAllPlaceholders(t *testing.T) {
@@ -53,12 +54,12 @@ func TestRenderAgentConfig_SubstitutesAllPlaceholders(t *testing.T) {
 }
 
 func TestRenderAgentConfig_PersonaBlockPresent(t *testing.T) {
-	preset := PersonaPresets[0] // Axiom
+	preset := PersonaPresets[0] // Sky
 	out, err := renderAgentConfig(agentTestFS, preset)
 	if err != nil {
 		t.Fatalf("renderAgentConfig: %v", err)
 	}
-	if !contains(out, "You are Axiom") {
+	if !contains(out, "You are Sky") {
 		t.Errorf("output missing persona block content, got:\n%s", out)
 	}
 }
@@ -66,7 +67,7 @@ func TestRenderAgentConfig_PersonaBlockPresent(t *testing.T) {
 func TestInstallAgentConfig_NoAdapterSkipsSilently(t *testing.T) {
 	// Use an assistant ID that has no registered adapter.
 	unknownAssistant := AssistantDescriptor{ID: "unknown-ai", Name: "Unknown AI"}
-	results := InstallAgentConfig([]AssistantDescriptor{unknownAssistant}, PersonaPresets[0], AgentModeOverwrite, agentTestFS)
+	results := InstallAgentConfig([]AssistantDescriptor{unknownAssistant}, PersonaPresets[0], map[string]AgentWriteMode{}, agentTestFS)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
@@ -82,7 +83,7 @@ func TestInstallAgentConfig_PerAssistantIsolation(t *testing.T) {
 	// Two assistants: unknown (skip) + another unknown. Each should have its own result.
 	a1 := AssistantDescriptor{ID: "no-adapter-1", Name: "No Adapter 1"}
 	a2 := AssistantDescriptor{ID: "no-adapter-2", Name: "No Adapter 2"}
-	results := InstallAgentConfig([]AssistantDescriptor{a1, a2}, PersonaPresets[0], AgentModeOverwrite, agentTestFS)
+	results := InstallAgentConfig([]AssistantDescriptor{a1, a2}, PersonaPresets[0], map[string]AgentWriteMode{}, agentTestFS)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
 	}
@@ -97,7 +98,7 @@ func TestInstallAgentConfig_RenderErrorPropagatedToAllAssistants(t *testing.T) {
 	// Use an FS that is missing the template.
 	emptyFS := fstest.MapFS{}
 	a := AssistantDescriptor{ID: AssistantClaudeCode, Name: "Claude Code"}
-	results := InstallAgentConfig([]AssistantDescriptor{a}, PersonaPresets[0], AgentModeOverwrite, emptyFS)
+	results := InstallAgentConfig([]AssistantDescriptor{a}, PersonaPresets[0], map[string]AgentWriteMode{}, emptyFS)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
@@ -109,7 +110,10 @@ func TestInstallAgentConfig_RenderErrorPropagatedToAllAssistants(t *testing.T) {
 func TestInstallAgentConfig_SkipMode_SkipsAllAssistants(t *testing.T) {
 	a1 := AssistantDescriptor{ID: AssistantClaudeCode, Name: "Claude Code"}
 	a2 := AssistantDescriptor{ID: AssistantOpenCode, Name: "OpenCode"}
-	results := InstallAgentConfig([]AssistantDescriptor{a1, a2}, PersonaPresets[0], AgentModeSkip, agentTestFS)
+	results := InstallAgentConfig([]AssistantDescriptor{a1, a2}, PersonaPresets[0], map[string]AgentWriteMode{
+		string(AssistantClaudeCode): AgentModeSkip,
+		string(AssistantOpenCode):   AgentModeSkip,
+	}, agentTestFS)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
 	}

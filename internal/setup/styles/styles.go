@@ -9,6 +9,8 @@ import (
 // Palette groups all named styles used by the installer TUI.
 type Palette struct {
 	// Cursor highlights the currently focused list item.
+	// Uses ColorPrimary so the cursor ► and the box border share the same hue
+	// (Gentle-AI visual unity pattern).
 	Cursor lipgloss.Style
 	// Success indicates a successful operation (green).
 	Success lipgloss.Style
@@ -20,20 +22,15 @@ type Palette struct {
 	Dim lipgloss.Style
 	// Box wraps a screen body in a rounded border with padding.
 	Box lipgloss.Style
-	// StatusBar renders the per-screen key-hint footer with fg/bg colors.
-	StatusBar lipgloss.Style
 }
 
 // Default is the package-level palette used by views.go.
 var Default = Palette{
-	Cursor:  lipgloss.NewStyle().Bold(true).Foreground(panels.ColorSecondary),
+	Cursor:  lipgloss.NewStyle().Bold(true).Foreground(panels.ColorPrimary),
 	Success: lipgloss.NewStyle().Foreground(panels.ColorSuccess),
 	Error:   lipgloss.NewStyle().Foreground(panels.ColorError),
 	Warning: lipgloss.NewStyle().Bold(true).Foreground(panels.ColorWarning),
 	Dim:     lipgloss.NewStyle().Faint(true),
 	Box: panels.FocusBorderStyle(true).
 		Padding(1, 2),
-	StatusBar: lipgloss.NewStyle().
-		Foreground(panels.ColorPrimary).
-		Background(panels.ColorInactive),
 }

@@ -7,69 +7,6 @@ import (
 
 const agentConfigPlaceholder = "detected at project init"
 
-// PersonaPreset is a selectable agent persona shipped with the installer.
-type PersonaPreset struct {
-	ID          string // matches persona filename stem: axiom|sage|forge|lee-palacios
-	Name        string // "Axiom"
-	Description string // one-line summary shown in StateAgentSetup
-	File        string // embedded path: "asdt-init/personas/axiom.md"
-}
-
-// PersonaPresets lists the built-in agent persona presets in display order.
-var PersonaPresets = []PersonaPreset{
-	{
-		ID:          "axiom",
-		Name:        "Axiom",
-		Description: "Precise and structural. Asks \"why\" before every decision.",
-		File:        "asdt-init/personas/axiom.md",
-	},
-	{
-		ID:          "sage",
-		Name:        "Sage",
-		Description: "Patient and educational. Explains concepts before code.",
-		File:        "asdt-init/personas/sage.md",
-	},
-	{
-		ID:          "forge",
-		Name:        "Forge",
-		Description: "Direct and pragmatic. Ships clean code fast.",
-		File:        "asdt-init/personas/forge.md",
-	},
-	{
-		ID:          "lee-palacios",
-		Name:        "Lee Palacios",
-		Description: "Warm and friendly. Your pair-programming companion. Adapts to your language. Loves cats.",
-		File:        "asdt-init/personas/lee-palacios.md",
-	},
-}
-
-// AgentWriteMode controls how an existing global agent config is handled.
-type AgentWriteMode int
-
-const (
-	// AgentModeOverwrite replaces any existing config entirely.
-	AgentModeOverwrite AgentWriteMode = iota
-	// AgentModeAppend adds the new config at the end of the existing file.
-	AgentModeAppend
-	// AgentModeSkip leaves the existing config untouched.
-	AgentModeSkip
-)
-
-// AgentConfigResult is the per-assistant outcome of writing agent config.
-type AgentConfigResult struct {
-	AssistantID AssistantID
-	Written     []string // files written/updated (AGENTS.md, CLAUDE.md)
-	Skipped     bool     // true when a pre-existing file was kept (overwrite declined)
-	Err         error
-}
-
-// AgentConfigAdapterDescriptor declares how one assistant persists agent config.
-type AgentConfigAdapterDescriptor struct {
-	AssistantID       AssistantID
-	AgentConfigExists func() bool
-	Write             func(rendered string, mode AgentWriteMode) (AgentConfigResult, error)
-}
-
 // AgentConfigAdapterFor returns the AgentConfigAdapterDescriptor for id, if one exists.
 func AgentConfigAdapterFor(id AssistantID) (AgentConfigAdapterDescriptor, bool) {
 	for _, adapter := range AgentConfigAdapters {
@@ -107,12 +44,12 @@ func renderAgentConfig(skillsFS fs.FS, preset PersonaPreset) (string, error) {
 
 // InstallAgentConfig renders the AGENTS.md template for the given preset and
 // writes it to the global config location for each selected assistant.
-// mode controls how an existing config is handled (overwrite, append, or skip).
+// modes maps each AssistantID to its AgentWriteMode; assistants absent from
+// the map default to AgentModeOverwrite (clean write, no prior conflict).
 // One result per assistant; per-assistant failure does not abort the others.
-func InstallAgentConfig(assistants []AssistantDescriptor, preset PersonaPreset, mode AgentWriteMode, skillsFS fs.FS) []AgentConfigResult {
+func InstallAgentConfig(assistants []AssistantDescriptor, preset PersonaPreset, modes map[string]AgentWriteMode, skillsFS fs.FS) []AgentConfigResult {
 	rendered, err := renderAgentConfig(skillsFS, preset)
 	if err != nil {
-		// If rendering fails, all adapters fail with the same error.
 		results := make([]AgentConfigResult, len(assistants))
 		for i, a := range assistants {
 			results[i] = AgentConfigResult{AssistantID: a.ID, Err: err}
@@ -122,13 +59,18 @@ func InstallAgentConfig(assistants []AssistantDescriptor, preset PersonaPreset, 
 
 	results := make([]AgentConfigResult, len(assistants))
 	for i, a := range assistants {
+		mode, hasMode := modes[a.ID]
+		if !hasMode {
+			mode = AgentModeOverwrite // non-conflicted assistant: clean write
+		}
+
 		if mode == AgentModeSkip {
 			results[i] = AgentConfigResult{AssistantID: a.ID, Skipped: true}
 			continue
 		}
 
-		adapter, ok := AgentConfigAdapterFor(a.ID)
-		if !ok {
+		adapter, found := AgentConfigAdapterFor(a.ID)
+		if !found {
 			results[i] = AgentConfigResult{AssistantID: a.ID, Skipped: true}
 			continue
 		}
