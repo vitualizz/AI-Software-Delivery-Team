@@ -38,7 +38,7 @@ func TestRenderAgentConfig_AllPresetsSubstituteCorrectly(t *testing.T) {
 			results := installer.InstallAgentConfig(
 				[]installer.AssistantDescriptor{{ID: "no-adapter-for-render-test"}},
 				preset,
-				true,
+				installer.AgentModeOverwrite,
 				agentRenderFS,
 			)
 			if len(results) != 1 {
@@ -67,7 +67,7 @@ func TestRenderAgentConfig_NoPlaceholdersRemain(t *testing.T) {
 	assistants := []installer.AssistantDescriptor{
 		{ID: installer.AssistantClaudeCode, Name: "Claude Code"},
 	}
-	results := installer.InstallAgentConfig(assistants, preset, true, agentRenderFS)
+	results := installer.InstallAgentConfig(assistants, preset, installer.AgentModeOverwrite, agentRenderFS)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
@@ -102,7 +102,3 @@ func TestRenderAgentConfig_NoPlaceholdersRemain(t *testing.T) {
 	}
 }
 
-// readFileForTest is a test helper used by other test files in this package.
-func readFileForTest(path string) ([]byte, error) {
-	return os.ReadFile(path)
-}

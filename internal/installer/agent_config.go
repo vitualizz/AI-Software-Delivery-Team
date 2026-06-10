@@ -43,6 +43,18 @@ var PersonaPresets = []PersonaPreset{
 	},
 }
 
+// AgentWriteMode controls how an existing global agent config is handled.
+type AgentWriteMode int
+
+const (
+	// AgentModeOverwrite replaces any existing config entirely.
+	AgentModeOverwrite AgentWriteMode = iota
+	// AgentModeAppend adds the new config at the end of the existing file.
+	AgentModeAppend
+	// AgentModeSkip leaves the existing config untouched.
+	AgentModeSkip
+)
+
 // AgentConfigResult is the per-assistant outcome of writing agent config.
 type AgentConfigResult struct {
 	AssistantID AssistantID
@@ -52,11 +64,10 @@ type AgentConfigResult struct {
 }
 
 // AgentConfigAdapterDescriptor declares how one assistant persists agent config.
-// overwrite controls whether an existing AGENTS.md is replaced.
 type AgentConfigAdapterDescriptor struct {
 	AssistantID       AssistantID
 	AgentConfigExists func() bool
-	Write             func(rendered string, overwrite bool) (AgentConfigResult, error)
+	Write             func(rendered string, mode AgentWriteMode) (AgentConfigResult, error)
 }
 
 // AgentConfigAdapterFor returns the AgentConfigAdapterDescriptor for id, if one exists.
@@ -96,9 +107,9 @@ func renderAgentConfig(skillsFS fs.FS, preset PersonaPreset) (string, error) {
 
 // InstallAgentConfig renders the AGENTS.md template for the given preset and
 // writes it to the global config location for each selected assistant.
-// overwrite controls whether an existing AGENTS.md is replaced.
+// mode controls how an existing config is handled (overwrite, append, or skip).
 // One result per assistant; per-assistant failure does not abort the others.
-func InstallAgentConfig(assistants []AssistantDescriptor, preset PersonaPreset, overwrite bool, skillsFS fs.FS) []AgentConfigResult {
+func InstallAgentConfig(assistants []AssistantDescriptor, preset PersonaPreset, mode AgentWriteMode, skillsFS fs.FS) []AgentConfigResult {
 	rendered, err := renderAgentConfig(skillsFS, preset)
 	if err != nil {
 		// If rendering fails, all adapters fail with the same error.
@@ -111,13 +122,18 @@ func InstallAgentConfig(assistants []AssistantDescriptor, preset PersonaPreset, 
 
 	results := make([]AgentConfigResult, len(assistants))
 	for i, a := range assistants {
+		if mode == AgentModeSkip {
+			results[i] = AgentConfigResult{AssistantID: a.ID, Skipped: true}
+			continue
+		}
+
 		adapter, ok := AgentConfigAdapterFor(a.ID)
 		if !ok {
 			results[i] = AgentConfigResult{AssistantID: a.ID, Skipped: true}
 			continue
 		}
 
-		r, writeErr := adapter.Write(rendered, overwrite)
+		r, writeErr := adapter.Write(rendered, mode)
 		if writeErr != nil {
 			results[i] = AgentConfigResult{AssistantID: a.ID, Err: writeErr}
 			continue

@@ -2,6 +2,7 @@ package setup_test
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -141,6 +142,14 @@ func stateView(t *testing.T, target string) string {
 		return m.View()
 	}
 
+	// For any state that passes through SelectProvider → AgentSetup, use a
+	// clean HOME so detectAgentConflicts returns empty (no conflicts).
+	// AgentWriteMode intentionally sets up its own HOME with a conflict.
+	if target != "AgentWriteMode" {
+		t.Setenv("HOME", t.TempDir())
+		t.Setenv("XDG_CONFIG_HOME", "")
+	}
+
 	// Install path: cursor-0 Enter → StateEnvironmentCheck → EnvironmentCheckMsg → Enter → StateAssistantList.
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
@@ -165,6 +174,33 @@ func stateView(t *testing.T, target string) string {
 		return m.View()
 	}
 
+	if target == "AgentWriteMode" {
+		// Need a conflict to enter StateAgentWriteMode. Set up a CLAUDE.md with
+		// the asdt block marker so detectAgentConflicts returns a hit.
+		tmpHome := t.TempDir()
+		t.Setenv("HOME", tmpHome)
+		t.Setenv("XDG_CONFIG_HOME", "")
+		claudeDir := tmpHome + "/.claude"
+		if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		marker := "<!-- asdt:agent-config -->"
+		if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		// Re-drive from scratch with the new HOME so detectAgentConflicts fires.
+		m2 := setup.New(fstest.MapFS{}, "dev")
+		m2 = updateKey(t, m2, tea.KeyEnter) // MainMenu → EnvironmentCheck
+		next2, _ := m2.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+		m2 = next2.(setup.Model)
+		m2 = updateKey(t, m2, tea.KeyEnter) // EnvironmentCheck → AssistantList
+		m2 = updateKey(t, m2, tea.KeyEnter) // AssistantList → SelectAssistants
+		m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
+		m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup (conflict detected)
+		m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup preset → AgentWriteMode
+		return m2.View()
+	}
+
 	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Installing
 	if target == "Installing" {
 		return m.View()
@@ -185,6 +221,7 @@ func TestView_AllStatesHaveBorder(t *testing.T) {
 		"SelectAssistants",
 		"SelectProvider",
 		"AgentSetup",
+		"AgentWriteMode",
 		"Installing",
 	}
 

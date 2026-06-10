@@ -7,12 +7,12 @@ import (
 	"testing"
 )
 
-func TestWriteClaudeAgentConfig_WritesAgentsMD(t *testing.T) {
+func TestWriteClaudeAgentConfig_WritesCLAUDEMD(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 
 	rendered := "# Test Agent\nThis is the agent config."
-	result, err := writeClaudeAgentConfig(rendered, true)
+	result, err := writeClaudeAgentConfig(rendered, AgentModeOverwrite)
 	if err != nil {
 		t.Fatalf("writeClaudeAgentConfig: %v", err)
 	}
@@ -20,16 +20,16 @@ func TestWriteClaudeAgentConfig_WritesAgentsMD(t *testing.T) {
 		t.Errorf("expected Skipped=false, got true")
 	}
 
-	agentsPath := filepath.Join(tmpHome, ".claude", "AGENTS.md")
-	data, readErr := os.ReadFile(agentsPath)
+	claudePath := filepath.Join(tmpHome, ".claude", "CLAUDE.md")
+	data, readErr := os.ReadFile(claudePath)
 	if readErr != nil {
-		t.Fatalf("AGENTS.md not found: %v", readErr)
+		t.Fatalf("CLAUDE.md not found: %v", readErr)
 	}
-	if string(data) != rendered {
-		t.Errorf("AGENTS.md content mismatch: got %q, want %q", string(data), rendered)
+	if !strings.Contains(string(data), rendered) {
+		t.Errorf("CLAUDE.md missing rendered content: got %q", string(data))
 	}
-	if !contains(strings.Join(result.Written, ","), agentsPath) {
-		t.Errorf("agentsPath %q not in Written: %v", agentsPath, result.Written)
+	if !contains(strings.Join(result.Written, ","), claudePath) {
+		t.Errorf("claudePath %q not in Written: %v", claudePath, result.Written)
 	}
 }
 
@@ -37,7 +37,7 @@ func TestWriteClaudeAgentConfig_CreatesCLAUDEMD_WhenAbsent(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 
-	_, err := writeClaudeAgentConfig("# Agent", true)
+	_, err := writeClaudeAgentConfig("# Agent", AgentModeOverwrite)
 	if err != nil {
 		t.Fatalf("writeClaudeAgentConfig: %v", err)
 	}
@@ -47,12 +47,12 @@ func TestWriteClaudeAgentConfig_CreatesCLAUDEMD_WhenAbsent(t *testing.T) {
 	if readErr != nil {
 		t.Fatalf("CLAUDE.md should have been created: %v", readErr)
 	}
-	if strings.TrimSpace(string(data)) != "@AGENTS.md" {
-		t.Errorf("CLAUDE.md content = %q, want %q", string(data), "@AGENTS.md")
+	if !strings.Contains(string(data), "# Agent") {
+		t.Errorf("CLAUDE.md content missing rendered block, got %q", string(data))
 	}
 }
 
-func TestWriteClaudeAgentConfig_IdempotentCLAUDEMDInjection(t *testing.T) {
+func TestWriteClaudeAgentConfig_IdempotentBlockReplacement(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 
@@ -61,17 +61,17 @@ func TestWriteClaudeAgentConfig_IdempotentCLAUDEMDInjection(t *testing.T) {
 		t.Fatal(err)
 	}
 	claudePath := filepath.Join(claudeDir, "CLAUDE.md")
-	initial := "# My Config\n\n@AGENTS.md\n"
+	initial := "# My Config\n\nSome existing content.\n"
 	if err := os.WriteFile(claudePath, []byte(initial), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	// Run twice — idempotent: @AGENTS.md should appear only once.
-	_, err := writeClaudeAgentConfig("# Agent", true)
+	// Run twice — idempotent: block should appear only once.
+	_, err := writeClaudeAgentConfig("# Agent", AgentModeOverwrite)
 	if err != nil {
 		t.Fatalf("first run: %v", err)
 	}
-	_, err = writeClaudeAgentConfig("# Agent Updated", true)
+	_, err = writeClaudeAgentConfig("# Agent Updated", AgentModeOverwrite)
 	if err != nil {
 		t.Fatalf("second run: %v", err)
 	}
@@ -80,9 +80,13 @@ func TestWriteClaudeAgentConfig_IdempotentCLAUDEMDInjection(t *testing.T) {
 	if readErr != nil {
 		t.Fatalf("CLAUDE.md read: %v", readErr)
 	}
-	count := strings.Count(string(data), "@AGENTS.md")
+	count := strings.Count(string(data), asdtBlockStart)
 	if count != 1 {
-		t.Errorf("CLAUDE.md contains @AGENTS.md %d time(s), want exactly 1\ncontent:\n%s", count, string(data))
+		t.Errorf("CLAUDE.md contains block start %d time(s), want exactly 1\ncontent:\n%s", count, string(data))
+	}
+	// Updated content must be present.
+	if !strings.Contains(string(data), "# Agent Updated") {
+		t.Errorf("CLAUDE.md missing updated content, got:\n%s", string(data))
 	}
 }
 
@@ -100,7 +104,7 @@ func TestWriteClaudeAgentConfig_AppendsToCLAUDEMD_WhenRefAbsent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := writeClaudeAgentConfig("# Agent", true)
+	result, err := writeClaudeAgentConfig("# Agent", AgentModeOverwrite)
 	if err != nil {
 		t.Fatalf("writeClaudeAgentConfig: %v", err)
 	}
@@ -109,8 +113,8 @@ func TestWriteClaudeAgentConfig_AppendsToCLAUDEMD_WhenRefAbsent(t *testing.T) {
 	if readErr != nil {
 		t.Fatalf("CLAUDE.md read: %v", readErr)
 	}
-	if !strings.Contains(string(data), "@AGENTS.md") {
-		t.Errorf("CLAUDE.md should contain @AGENTS.md after injection, got:\n%s", string(data))
+	if !strings.Contains(string(data), asdtBlockStart) {
+		t.Errorf("CLAUDE.md should contain block after injection, got:\n%s", string(data))
 	}
 	// CLAUDE.md should be in Written list since it was updated.
 	wroteClaudeMD := false
@@ -124,7 +128,7 @@ func TestWriteClaudeAgentConfig_AppendsToCLAUDEMD_WhenRefAbsent(t *testing.T) {
 	}
 }
 
-func TestWriteClaudeAgentConfig_OverwriteFalse_ExistingFileSkipped(t *testing.T) {
+func TestWriteClaudeAgentConfig_SkipMode_ExistingFileUntouched(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 
@@ -132,27 +136,68 @@ func TestWriteClaudeAgentConfig_OverwriteFalse_ExistingFileSkipped(t *testing.T)
 	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	agentsPath := filepath.Join(claudeDir, "AGENTS.md")
+	claudePath := filepath.Join(claudeDir, "CLAUDE.md")
 	originalContent := "# Original Content"
-	if err := os.WriteFile(agentsPath, []byte(originalContent), 0o644); err != nil {
+	if err := os.WriteFile(claudePath, []byte(originalContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	result, err := writeClaudeAgentConfig("# New Content", false)
+	result, err := writeClaudeAgentConfig("# New Content", AgentModeSkip)
 	if err != nil {
 		t.Fatalf("writeClaudeAgentConfig: %v", err)
 	}
 	if !result.Skipped {
-		t.Errorf("expected Skipped=true when overwrite=false and file exists")
+		t.Errorf("expected Skipped=true when mode=AgentModeSkip")
 	}
 
 	// File must be unchanged.
-	data, readErr := os.ReadFile(agentsPath)
+	data, readErr := os.ReadFile(claudePath)
 	if readErr != nil {
-		t.Fatalf("read AGENTS.md: %v", readErr)
+		t.Fatalf("read CLAUDE.md: %v", readErr)
 	}
 	if string(data) != originalContent {
-		t.Errorf("AGENTS.md was modified despite overwrite=false: got %q, want %q", string(data), originalContent)
+		t.Errorf("CLAUDE.md was modified despite AgentModeSkip: got %q, want %q", string(data), originalContent)
+	}
+}
+
+func TestWriteClaudeAgentConfig_AppendMode_AddsSecondBlock(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	claudeDir := filepath.Join(tmpHome, ".claude")
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	claudePath := filepath.Join(claudeDir, "CLAUDE.md")
+
+	// Write an initial block via Overwrite mode.
+	_, err := writeClaudeAgentConfig("# First Agent", AgentModeOverwrite)
+	if err != nil {
+		t.Fatalf("first write: %v", err)
+	}
+
+	// Append a second block.
+	_, err = writeClaudeAgentConfig("# Second Agent", AgentModeAppend)
+	if err != nil {
+		t.Fatalf("append write: %v", err)
+	}
+
+	data, readErr := os.ReadFile(claudePath)
+	if readErr != nil {
+		t.Fatalf("CLAUDE.md read: %v", readErr)
+	}
+	content := string(data)
+
+	// Both blocks must be present.
+	if !strings.Contains(content, "# First Agent") {
+		t.Errorf("CLAUDE.md missing first block content, got:\n%s", content)
+	}
+	if !strings.Contains(content, "# Second Agent") {
+		t.Errorf("CLAUDE.md missing second (appended) block content, got:\n%s", content)
+	}
+	// Block markers should appear twice (once per block).
+	if count := strings.Count(content, asdtBlockStart); count != 2 {
+		t.Errorf("CLAUDE.md should have 2 block start markers after append, got %d\ncontent:\n%s", count, content)
 	}
 }
 
@@ -162,7 +207,7 @@ func TestWriteOpenCodeAgentConfig_WritesAgentsMD(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 
 	rendered := "# Test Agent"
-	result, err := writeOpenCodeAgentConfig(rendered, true)
+	result, err := writeOpenCodeAgentConfig(rendered, AgentModeOverwrite)
 	if err != nil {
 		t.Fatalf("writeOpenCodeAgentConfig: %v", err)
 	}
@@ -186,7 +231,7 @@ func TestWriteOpenCodeAgentConfig_RespectsXDGConfigHome(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", tmpXDG)
 
 	rendered := "# XDG Agent"
-	_, err := writeOpenCodeAgentConfig(rendered, true)
+	_, err := writeOpenCodeAgentConfig(rendered, AgentModeOverwrite)
 	if err != nil {
 		t.Fatalf("writeOpenCodeAgentConfig: %v", err)
 	}
@@ -201,7 +246,7 @@ func TestWriteOpenCodeAgentConfig_RespectsXDGConfigHome(t *testing.T) {
 	}
 }
 
-func TestWriteOpenCodeAgentConfig_OverwriteFalse_ExistingFileSkipped(t *testing.T) {
+func TestWriteOpenCodeAgentConfig_SkipMode_ExistingFileUntouched(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("XDG_CONFIG_HOME", "")
@@ -216,12 +261,12 @@ func TestWriteOpenCodeAgentConfig_OverwriteFalse_ExistingFileSkipped(t *testing.
 		t.Fatal(err)
 	}
 
-	result, err := writeOpenCodeAgentConfig("# New Content", false)
+	result, err := writeOpenCodeAgentConfig("# New Content", AgentModeSkip)
 	if err != nil {
 		t.Fatalf("writeOpenCodeAgentConfig: %v", err)
 	}
 	if !result.Skipped {
-		t.Errorf("expected Skipped=true when overwrite=false and file exists")
+		t.Errorf("expected Skipped=true when mode=AgentModeSkip")
 	}
 
 	data, readErr := os.ReadFile(agentsPath)
@@ -229,27 +274,40 @@ func TestWriteOpenCodeAgentConfig_OverwriteFalse_ExistingFileSkipped(t *testing.
 		t.Fatalf("read AGENTS.md: %v", readErr)
 	}
 	if string(data) != originalContent {
-		t.Errorf("AGENTS.md was modified despite overwrite=false")
+		t.Errorf("AGENTS.md was modified despite AgentModeSkip")
 	}
 }
 
-func TestContainsAgentsRef(t *testing.T) {
-	cases := []struct {
-		content string
-		want    bool
-	}{
-		{"@AGENTS.md", true},
-		{"# Config\n\n@AGENTS.md\n", true},
-		{"# Config\n@AGENTS.md\nmore", true},
-		{"# Config\nNo ref here\n", false},
-		{"@agents.md", false}, // case-sensitive
-		{"  @AGENTS.md  ", true}, // trimmed
-		{"", false},
+func TestWriteOpenCodeAgentConfig_AppendMode_AppendsContent(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	dir := filepath.Join(tmpHome, ".config", "opencode")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
 	}
-	for _, c := range cases {
-		got := containsAgentsRef(c.content)
-		if got != c.want {
-			t.Errorf("containsAgentsRef(%q) = %v, want %v", c.content, got, c.want)
-		}
+	agentsPath := filepath.Join(dir, "AGENTS.md")
+	originalContent := "# Original Agent"
+	if err := os.WriteFile(agentsPath, []byte(originalContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := writeOpenCodeAgentConfig("# Appended Agent", AgentModeAppend)
+	if err != nil {
+		t.Fatalf("writeOpenCodeAgentConfig append: %v", err)
+	}
+
+	data, readErr := os.ReadFile(agentsPath)
+	if readErr != nil {
+		t.Fatalf("read AGENTS.md: %v", readErr)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, originalContent) {
+		t.Errorf("AGENTS.md missing original content after append, got:\n%s", content)
+	}
+	if !strings.Contains(content, "# Appended Agent") {
+		t.Errorf("AGENTS.md missing appended content, got:\n%s", content)
 	}
 }

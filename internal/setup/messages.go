@@ -113,9 +113,9 @@ func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.P
 
 // AgentInstallCmd runs installer.InstallAgentConfig in a goroutine and sends
 // AgentInstallDoneMsg when it completes.
-func AgentInstallCmd(assistants []installer.AssistantDescriptor, preset installer.PersonaPreset, overwrite bool, skillsFS fs.FS) tea.Cmd {
+func AgentInstallCmd(assistants []installer.AssistantDescriptor, preset installer.PersonaPreset, mode installer.AgentWriteMode, skillsFS fs.FS) tea.Cmd {
 	return func() tea.Msg {
-		results := installer.InstallAgentConfig(assistants, preset, overwrite, skillsFS)
+		results := installer.InstallAgentConfig(assistants, preset, mode, skillsFS)
 		return AgentInstallDoneMsg{Results: results}
 	}
 }

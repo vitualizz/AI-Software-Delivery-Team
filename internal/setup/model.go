@@ -32,6 +32,9 @@ const (
 	StateSelectProvider
 	// StateAgentSetup shows the persona selection step (optional).
 	StateAgentSetup
+	// StateAgentWriteMode is shown when conflicts are detected; the user
+	// chooses how to handle the existing config (overwrite, append, or skip).
+	StateAgentWriteMode
 	// StateInstalling shows installation progress.
 	StateInstalling
 	// StateDone is the terminal state shown after installation completes.
@@ -55,11 +58,11 @@ type Model struct {
 	preflightSections []components.SectionGroup
 	preflightDone     bool
 	engramMissing     bool
-	selectedPersona   int  // index into installer.PersonaPresets (0=Axiom,1=Sage,2=Forge,3=Lee Palacios)
-	agentSetupSkip    bool // user chose to skip agent config entirely
-	agentOverwrite    bool // user confirmed overwriting an existing config
-	agentConflicts    []string // target paths that already have AGENTS.md
-	agentConfigExists map[string]bool // assistantID → whether global config already exists
+
+	selectedPersona int                    // index into installer.PersonaPresets (0=Axiom,1=Sage,2=Forge,3=Lee Palacios)
+	agentSetupSkip  bool                   // user chose to skip agent config entirely
+	agentWriteMode  installer.AgentWriteMode // how to handle an existing config
+	agentConflicts  []string               // target paths that already have an existing config
 }
 
 // New constructs an initial Model with the running binary version. Init()
@@ -194,6 +197,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSelectProvider(msg)
 	case StateAgentSetup:
 		return m.handleAgentSetup(msg)
+	case StateAgentWriteMode:
+		return m.handleAgentWriteMode(msg)
 	case StateDone:
 		return m.handleDone(msg)
 	}
@@ -383,16 +388,54 @@ func (m Model) handleAgentSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// User selected a preset.
 			m.selectedPersona = m.cursor
 			m.agentSetupSkip = false
+			// If conflicts exist, ask how to handle the existing config.
+			if len(m.agentConflicts) > 0 {
+				m.state = StateAgentWriteMode
+				m.cursor = 0
+				return m, nil
+			}
+			// No conflicts — clean write.
+			m.agentWriteMode = installer.AgentModeOverwrite
 		} else {
 			// User selected Skip.
 			m.agentSetupSkip = true
 		}
-		m.agentOverwrite = len(m.agentConflicts) == 0 // no conflicts means overwrite is moot; conflicts default to overwrite
 		m.state = StateInstalling
 		m.cursor = 0
 		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
 	case tea.KeyEsc:
 		m.state = StateSelectProvider
+		m.cursor = 0
+	}
+	return m, nil
+}
+
+func (m Model) handleAgentWriteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// 3 options: Overwrite, Append, Do nothing
+	const optionCount = 3
+	switch msg.Type {
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyDown:
+		if m.cursor < optionCount-1 {
+			m.cursor++
+		}
+	case tea.KeyEnter:
+		switch m.cursor {
+		case 0:
+			m.agentWriteMode = installer.AgentModeOverwrite
+		case 1:
+			m.agentWriteMode = installer.AgentModeAppend
+		default:
+			m.agentWriteMode = installer.AgentModeSkip
+		}
+		m.state = StateInstalling
+		m.cursor = 0
+		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
+	case tea.KeyEsc:
+		m.state = StateAgentSetup
 		m.cursor = 0
 	}
 	return m, nil
@@ -417,7 +460,7 @@ func (m Model) buildInstallCmd() tea.Cmd {
 		return installCmd
 	}
 	preset := installer.PersonaPresets[m.selectedPersona]
-	agentCmd := AgentInstallCmd(assistants, preset, m.agentOverwrite, m.skillsFS)
+	agentCmd := AgentInstallCmd(assistants, preset, m.agentWriteMode, m.skillsFS)
 	return tea.Batch(installCmd, agentCmd)
 }
 

@@ -18,9 +18,9 @@ var agentTestFS = fstest.MapFS{
 
 {{persona_block}}
 `)},
-	"asdt-init/personas/axiom.md": &fstest.MapFile{Data: []byte(`You are Axiom. Precise and structural.`)},
-	"asdt-init/personas/sage.md":  &fstest.MapFile{Data: []byte(`You are Sage. Patient and educational.`)},
-	"asdt-init/personas/forge.md": &fstest.MapFile{Data: []byte(`You are Forge. Direct and pragmatic.`)},
+	"asdt-init/personas/axiom.md":        &fstest.MapFile{Data: []byte(`You are Axiom. Precise and structural.`)},
+	"asdt-init/personas/sage.md":         &fstest.MapFile{Data: []byte(`You are Sage. Patient and educational.`)},
+	"asdt-init/personas/forge.md":        &fstest.MapFile{Data: []byte(`You are Forge. Direct and pragmatic.`)},
 	"asdt-init/personas/lee-palacios.md": &fstest.MapFile{Data: []byte(`You are Lee Palacios. Warm and friendly.`)},
 }
 
@@ -66,7 +66,7 @@ func TestRenderAgentConfig_PersonaBlockPresent(t *testing.T) {
 func TestInstallAgentConfig_NoAdapterSkipsSilently(t *testing.T) {
 	// Use an assistant ID that has no registered adapter.
 	unknownAssistant := AssistantDescriptor{ID: "unknown-ai", Name: "Unknown AI"}
-	results := InstallAgentConfig([]AssistantDescriptor{unknownAssistant}, PersonaPresets[0], true, agentTestFS)
+	results := InstallAgentConfig([]AssistantDescriptor{unknownAssistant}, PersonaPresets[0], AgentModeOverwrite, agentTestFS)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
@@ -82,7 +82,7 @@ func TestInstallAgentConfig_PerAssistantIsolation(t *testing.T) {
 	// Two assistants: unknown (skip) + another unknown. Each should have its own result.
 	a1 := AssistantDescriptor{ID: "no-adapter-1", Name: "No Adapter 1"}
 	a2 := AssistantDescriptor{ID: "no-adapter-2", Name: "No Adapter 2"}
-	results := InstallAgentConfig([]AssistantDescriptor{a1, a2}, PersonaPresets[0], true, agentTestFS)
+	results := InstallAgentConfig([]AssistantDescriptor{a1, a2}, PersonaPresets[0], AgentModeOverwrite, agentTestFS)
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
 	}
@@ -97,12 +97,29 @@ func TestInstallAgentConfig_RenderErrorPropagatedToAllAssistants(t *testing.T) {
 	// Use an FS that is missing the template.
 	emptyFS := fstest.MapFS{}
 	a := AssistantDescriptor{ID: AssistantClaudeCode, Name: "Claude Code"}
-	results := InstallAgentConfig([]AssistantDescriptor{a}, PersonaPresets[0], true, emptyFS)
+	results := InstallAgentConfig([]AssistantDescriptor{a}, PersonaPresets[0], AgentModeOverwrite, emptyFS)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
 	if results[0].Err == nil {
 		t.Error("expected error when template is missing, got nil")
+	}
+}
+
+func TestInstallAgentConfig_SkipMode_SkipsAllAssistants(t *testing.T) {
+	a1 := AssistantDescriptor{ID: AssistantClaudeCode, Name: "Claude Code"}
+	a2 := AssistantDescriptor{ID: AssistantOpenCode, Name: "OpenCode"}
+	results := InstallAgentConfig([]AssistantDescriptor{a1, a2}, PersonaPresets[0], AgentModeSkip, agentTestFS)
+	if len(results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(results))
+	}
+	for i, r := range results {
+		if !r.Skipped {
+			t.Errorf("results[%d]: expected Skipped=true for AgentModeSkip, got false", i)
+		}
+		if r.Err != nil {
+			t.Errorf("results[%d]: expected no error for AgentModeSkip, got %v", i, r.Err)
+		}
 	}
 }
 

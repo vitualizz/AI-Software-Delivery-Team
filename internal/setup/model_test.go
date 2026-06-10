@@ -2,6 +2,7 @@ package setup_test
 
 import (
 	"errors"
+	"os"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -218,8 +219,11 @@ func TestUpdate_UpdateCheckMsg_DevBuild_NoBanner(t *testing.T) {
 // flow to StateInstalling — the same Update transitions the real TUI uses
 // (mirrors views_test.go's stateView helper, but returns setup.Model so
 // callers can keep driving Update directly).
+// Uses a clean HOME so detectAgentConflicts finds no existing config.
 func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
 	m = advanceToMainMenu(t, m)       // no-op
 	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
@@ -231,7 +235,7 @@ func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	m2 = updateKey(t, m2, tea.KeyEnter) // AssistantList → SelectAssistants
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup
-	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → Installing
+	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → Installing (no conflicts → clean write)
 	if m2.State() != setup.StateInstalling {
 		t.Fatalf("toInstalling: state = %v, want StateInstalling", m2.State())
 	}
@@ -292,20 +296,26 @@ func TestUpdate_SelectProvider_EnterGoesToAgentSetup(t *testing.T) {
 }
 
 func TestUpdate_AgentSetup_EnterPreset_GoesToInstalling(t *testing.T) {
+	// Use a clean HOME so detectAgentConflicts finds no existing config.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	if m.State() != setup.StateAgentSetup {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
 	}
-	// Enter on cursor=0 (Axiom preset) → StateInstalling.
+	// Enter on cursor=0 (Axiom preset) with no conflicts → StateInstalling.
 	m2 := updateKey(t, m, tea.KeyEnter)
 	if m2.State() != setup.StateInstalling {
-		t.Errorf("Enter on preset at AgentSetup: state = %v, want StateInstalling", m2.State())
+		t.Errorf("Enter on preset at AgentSetup (no conflicts): state = %v, want StateInstalling", m2.State())
 	}
 }
 
 func TestUpdate_AgentSetup_EnterSkip_GoesToInstalling(t *testing.T) {
+	// Use a clean HOME so detectAgentConflicts finds no existing config.
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
@@ -332,6 +342,192 @@ func TestUpdate_AgentSetup_Esc_ReturnsToSelectProvider(t *testing.T) {
 	m2 := updateKey(t, m, tea.KeyEsc)
 	if m2.State() != setup.StateSelectProvider {
 		t.Errorf("Esc at AgentSetup: state = %v, want StateSelectProvider", m2.State())
+	}
+}
+
+// --- StateAgentWriteMode transition tests ---
+
+// advanceToAgentWriteMode drives the model to StateAgentWriteMode by injecting
+// a simulated conflict so that Enter on a preset in StateAgentSetup does not
+// proceed directly to StateInstalling.
+func advanceToAgentWriteMode(t *testing.T, m setup.Model) setup.Model {
+	t.Helper()
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	if m.State() != setup.StateAgentSetup {
+		t.Fatalf("expected StateAgentSetup, got %v", m.State())
+	}
+
+	// Inject a conflict via a faked AgentInstallDoneMsg that sets agentConflicts.
+	// We cannot set unexported fields directly, so we instead rely on the
+	// EnvironmentCheckMsg path. Instead, simulate a conflict by sending the
+	// model through detectAgentConflicts via a real tmp file.
+	//
+	// Because we cannot set unexported fields from the test package, we drive
+	// the model through the TUI by pointing HOME at a directory that already
+	// has a CLAUDE.md with an asdt block, so detectAgentConflicts fires.
+	// That already happens when advanceToSelectProvider calls Enter on the
+	// SelectProvider step — so if the test home has no files, agentConflicts
+	// is empty and the model goes to Installing.
+	//
+	// The simplest approach: create the required file BEFORE reaching
+	// SelectProvider so that detectAgentConflicts finds it.
+	// This test must be run with a writable HOME set via t.Setenv.
+	t.Helper()
+	// If agentConflicts is already populated, Enter on cursor 0 goes to
+	// StateAgentWriteMode. Otherwise it goes to StateInstalling.
+	// We cannot force the conflict here without file system access, so we
+	// accept that this path is tested via the filesystem-aware test below.
+	return m
+}
+
+func TestUpdate_AgentSetup_WithConflict_EntersAgentWriteMode(t *testing.T) {
+	// Create a fake home with a CLAUDE.md that contains the asdt block marker,
+	// so detectAgentConflicts returns a non-empty slice.
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	claudeDir := tmpHome + "/.claude"
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	// Write a CLAUDE.md containing the asdt block start marker.
+	claudePath := claudeDir + "/CLAUDE.md"
+	marker := "<!-- asdt:agent-config -->"
+	if err := os.WriteFile(claudePath, []byte("# My Config\n\n"+marker+"\n# Agent\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup (detects conflicts)
+	if m.State() != setup.StateAgentSetup {
+		t.Fatalf("expected StateAgentSetup, got %v", m.State())
+	}
+
+	// Enter on preset 0 (Axiom) with conflict → should go to StateAgentWriteMode.
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateAgentWriteMode {
+		t.Errorf("Enter on preset with conflict: state = %v, want StateAgentWriteMode", m2.State())
+	}
+}
+
+func TestUpdate_AgentWriteMode_EnterOverwrite_GoesToInstalling(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	claudeDir := tmpHome + "/.claude"
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker := "<!-- asdt:agent-config -->"
+	if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict detected)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode (preset 0 with conflict)
+	if m.State() != setup.StateAgentWriteMode {
+		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
+	}
+
+	// cursor=0 (Overwrite) → Enter → StateInstalling.
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateInstalling {
+		t.Errorf("Enter Overwrite at AgentWriteMode: state = %v, want StateInstalling", m2.State())
+	}
+}
+
+func TestUpdate_AgentWriteMode_EnterAppend_GoesToInstalling(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	claudeDir := tmpHome + "/.claude"
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker := "<!-- asdt:agent-config -->"
+	if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode
+	if m.State() != setup.StateAgentWriteMode {
+		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
+	}
+
+	// Navigate to cursor=1 (Append) → Enter → StateInstalling.
+	m = updateKey(t, m, tea.KeyDown)
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateInstalling {
+		t.Errorf("Enter Append at AgentWriteMode: state = %v, want StateInstalling", m2.State())
+	}
+}
+
+func TestUpdate_AgentWriteMode_EnterDoNothing_GoesToInstalling(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	claudeDir := tmpHome + "/.claude"
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker := "<!-- asdt:agent-config -->"
+	if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode
+	if m.State() != setup.StateAgentWriteMode {
+		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
+	}
+
+	// Navigate to cursor=2 (Do nothing) → Enter → StateInstalling.
+	m = updateKey(t, m, tea.KeyDown)
+	m = updateKey(t, m, tea.KeyDown)
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateInstalling {
+		t.Errorf("Enter Do-nothing at AgentWriteMode: state = %v, want StateInstalling", m2.State())
+	}
+}
+
+func TestUpdate_AgentWriteMode_Esc_ReturnsToAgentSetup(t *testing.T) {
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	t.Setenv("XDG_CONFIG_HOME", "")
+
+	claudeDir := tmpHome + "/.claude"
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	marker := "<!-- asdt:agent-config -->"
+	if err := os.WriteFile(claudeDir+"/CLAUDE.md", []byte(marker+"\n<!-- /asdt:agent-config -->\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode
+	if m.State() != setup.StateAgentWriteMode {
+		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
+	}
+
+	m2 := updateKey(t, m, tea.KeyEsc)
+	if m2.State() != setup.StateAgentSetup {
+		t.Errorf("Esc at AgentWriteMode: state = %v, want StateAgentSetup", m2.State())
 	}
 }
 

@@ -5,7 +5,16 @@ import (
 	"strings"
 )
 
-// claudeAgentDir returns the directory where Claude Code's global agent config lives (~/.claude).
+const (
+	// asdtBlockStart and asdtBlockEnd are the HTML comment markers used to
+	// wrap the ASDT agent config block injected into CLAUDE.md. Using markers
+	// rather than a separate file keeps Claude Code's native config untouched
+	// while allowing idempotent updates and clean removal.
+	asdtBlockStart = "<!-- asdt:agent-config -->"
+	asdtBlockEnd   = "<!-- /asdt:agent-config -->"
+)
+
+// claudeAgentDir returns the directory where Claude Code's global config lives (~/.claude).
 func claudeAgentDir() string {
 	home, _ := os.UserHomeDir()
 	return home + "/.claude"
@@ -20,93 +29,120 @@ func openCodeConfigDir() string {
 	return home + "/.config/opencode"
 }
 
-// writeClaudeAgentConfig writes rendered AGENTS.md to ~/.claude/AGENTS.md and
-// idempotently ensures @AGENTS.md appears in ~/.claude/CLAUDE.md.
-func writeClaudeAgentConfig(rendered string, overwrite bool) (AgentConfigResult, error) {
-	dir := claudeAgentDir()
-	agentsPath := dir + "/AGENTS.md"
-	claudePath := dir + "/CLAUDE.md"
-
+// writeClaudeAgentConfig writes the rendered agent config as a tagged block
+// directly into ~/.claude/CLAUDE.md — Claude Code's native config file.
+//
+// AgentModeOverwrite: replaces the existing block in-place (or appends if absent).
+// AgentModeAppend: always appends a new block at the end of the file.
+// AgentModeSkip: leaves the file untouched and returns Skipped=true.
+func writeClaudeAgentConfig(rendered string, mode AgentWriteMode) (AgentConfigResult, error) {
 	result := AgentConfigResult{AssistantID: AssistantClaudeCode}
 
-	// Check if AGENTS.md already exists.
-	if _, err := os.Stat(agentsPath); err == nil && !overwrite {
+	if mode == AgentModeSkip {
 		result.Skipped = true
 		return result, nil
 	}
 
-	// Ensure target directory exists.
+	dir := claudeAgentDir()
+	claudePath := dir + "/CLAUDE.md"
+
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return result, err
 	}
 
-	// Write AGENTS.md.
-	if err := os.WriteFile(agentsPath, []byte(rendered), 0o644); err != nil {
-		return result, err
-	}
-	result.Written = append(result.Written, agentsPath)
-
-	// Idempotent injection: append @AGENTS.md to CLAUDE.md if not already present.
 	existing, err := os.ReadFile(claudePath)
 	if err != nil && !os.IsNotExist(err) {
 		return result, err
 	}
 
-	if os.IsNotExist(err) {
-		// CLAUDE.md does not exist — create it.
-		if writeErr := os.WriteFile(claudePath, []byte("@AGENTS.md"), 0o644); writeErr != nil {
-			return result, writeErr
+	existingStr := string(existing)
+	block := asdtBlockStart + "\n" + rendered + "\n" + asdtBlockEnd
+
+	var newContent string
+	switch mode {
+	case AgentModeAppend:
+		// Always append at end; do not touch any existing block.
+		switch {
+		case existingStr == "":
+			newContent = block
+		case strings.HasSuffix(existingStr, "\n"):
+			newContent = existingStr + "\n" + block
+		default:
+			newContent = existingStr + "\n\n" + block
 		}
-		result.Written = append(result.Written, claudePath)
-	} else {
-		// CLAUDE.md exists — append only if @AGENTS.md line is absent.
-		if !containsAgentsRef(string(existing)) {
-			appended := string(existing) + "\n@AGENTS.md"
-			if writeErr := os.WriteFile(claudePath, []byte(appended), 0o644); writeErr != nil {
-				return result, writeErr
-			}
-			result.Written = append(result.Written, claudePath)
+	default: // AgentModeOverwrite
+		blockExists := strings.Contains(existingStr, asdtBlockStart)
+		switch {
+		case blockExists:
+			newContent = replaceAsdtBlock(existingStr, block)
+		case existingStr == "":
+			newContent = block
+		case strings.HasSuffix(existingStr, "\n"):
+			newContent = existingStr + "\n" + block
+		default:
+			newContent = existingStr + "\n\n" + block
 		}
 	}
 
+	if err := os.WriteFile(claudePath, []byte(newContent), 0o644); err != nil {
+		return result, err
+	}
+	result.Written = append(result.Written, claudePath)
 	return result, nil
 }
 
-// containsAgentsRef reports whether the CLAUDE.md content already contains an
-// @AGENTS.md reference line (line-equality check, trimming whitespace).
-func containsAgentsRef(content string) bool {
-	for _, line := range strings.Split(content, "\n") {
-		if strings.TrimSpace(line) == "@AGENTS.md" {
-			return true
-		}
+// replaceAsdtBlock replaces the content between asdtBlockStart and asdtBlockEnd
+// with newBlock. If the markers are missing or malformed, newBlock is appended.
+func replaceAsdtBlock(content, newBlock string) string {
+	start := strings.Index(content, asdtBlockStart)
+	end := strings.Index(content, asdtBlockEnd)
+	if start == -1 || end == -1 || end < start {
+		return content + "\n\n" + newBlock
 	}
-	return false
+	return content[:start] + newBlock + content[end+len(asdtBlockEnd):]
 }
 
 // writeOpenCodeAgentConfig writes rendered AGENTS.md to the OpenCode config directory.
-func writeOpenCodeAgentConfig(rendered string, overwrite bool) (AgentConfigResult, error) {
-	dir := openCodeConfigDir()
-	agentsPath := dir + "/AGENTS.md"
-
+// OpenCode reads AGENTS.md natively as its global agent config.
+//
+// AgentModeOverwrite: replaces the file entirely.
+// AgentModeAppend: reads existing content (if any) and appends the rendered block.
+// AgentModeSkip: leaves the file untouched and returns Skipped=true.
+func writeOpenCodeAgentConfig(rendered string, mode AgentWriteMode) (AgentConfigResult, error) {
 	result := AgentConfigResult{AssistantID: AssistantOpenCode}
 
-	// Check if AGENTS.md already exists.
-	if _, err := os.Stat(agentsPath); err == nil && !overwrite {
+	if mode == AgentModeSkip {
 		result.Skipped = true
 		return result, nil
 	}
 
-	// Ensure target directory exists.
+	dir := openCodeConfigDir()
+	agentsPath := dir + "/AGENTS.md"
+
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return result, err
 	}
 
-	// Write AGENTS.md.
-	if err := os.WriteFile(agentsPath, []byte(rendered), 0o644); err != nil {
+	var content string
+	if mode == AgentModeAppend {
+		existing, err := os.ReadFile(agentsPath)
+		if err != nil && !os.IsNotExist(err) {
+			return result, err
+		}
+		existingStr := string(existing)
+		if existingStr == "" {
+			content = rendered
+		} else {
+			content = existingStr + "\n\n" + rendered
+		}
+	} else { // AgentModeOverwrite
+		content = rendered
+	}
+
+	if err := os.WriteFile(agentsPath, []byte(content), 0o644); err != nil {
 		return result, err
 	}
 	result.Written = append(result.Written, agentsPath)
-
 	return result, nil
 }
 
@@ -115,8 +151,11 @@ var AgentConfigAdapters = []AgentConfigAdapterDescriptor{
 	{
 		AssistantID: AssistantClaudeCode,
 		AgentConfigExists: func() bool {
-			_, err := os.Stat(claudeAgentDir() + "/AGENTS.md")
-			return err == nil
+			data, err := os.ReadFile(claudeAgentDir() + "/CLAUDE.md")
+			if err != nil {
+				return false
+			}
+			return strings.Contains(string(data), asdtBlockStart)
 		},
 		Write: writeClaudeAgentConfig,
 	},

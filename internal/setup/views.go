@@ -28,6 +28,8 @@ func renderState(m Model) string {
 		return renderSelectProvider(m)
 	case StateAgentSetup:
 		return renderAgentSetup(m)
+	case StateAgentWriteMode:
+		return renderAgentWriteMode(m)
 	case StateInstalling:
 		return renderInstalling(m)
 	case StateDone:
@@ -211,6 +213,40 @@ func renderAgentSetup(m Model) string {
 		{Label: "Actions", Hints: []panels.Hint{{Key: "↑↓", Description: "navigate"}, {Key: "enter", Description: "select"}, {Key: "esc", Description: "back"}, {Key: "q", Description: "quit"}}},
 	}, m.width)
 	return frame("Agent Persona", body, footer, true)
+}
+
+func renderAgentWriteMode(m Model) string {
+	var b strings.Builder
+
+	type option struct {
+		name        string
+		description string
+	}
+	options := []option{
+		{name: "Overwrite", description: "Replace the existing config entirely"},
+		{name: "Append", description: "Add the new config at the end of the file"},
+		{name: "Do nothing", description: "Leave the existing config untouched"},
+	}
+
+	for i, opt := range options {
+		cursor := "  "
+		var nameStr string
+		if i == m.cursor {
+			cursor = cursorChar + " "
+			nameStr = styles.Default.Cursor.Render(opt.name)
+		} else {
+			nameStr = styles.Default.Dim.Render(opt.name)
+		}
+		fmt.Fprintf(&b, "  %s%s — %s\n", cursor, nameStr, opt.description)
+	}
+
+	subtitle := styles.Default.Dim.Render("Choose how to handle the existing agent config")
+	body := lipgloss.JoinVertical(lipgloss.Left, subtitle, "", strings.TrimRight(b.String(), "\n"))
+
+	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
+		{Label: "Actions", Hints: []panels.Hint{{Key: "↑↓", Description: "navigate"}, {Key: "enter", Description: "select"}, {Key: "esc", Description: "back"}}},
+	}, m.width)
+	return frame("Existing Config Detected", body, footer, true)
 }
 
 func renderInstalling(m Model) string {
