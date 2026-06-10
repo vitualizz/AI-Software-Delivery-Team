@@ -81,6 +81,14 @@ func InstallAgentConfig(assistants []AssistantDescriptor, preset PersonaPreset, 
 			continue
 		}
 		results[i] = r
+
+		// Best-effort: persist persona name so the dashboard can display it.
+		if !r.Skipped {
+			if meta, merr := ReadInstallMeta(a); merr == nil {
+				meta.Persona = preset.Name
+				_ = WriteInstallMeta(a, meta)
+			}
+		}
 	}
 
 	return results

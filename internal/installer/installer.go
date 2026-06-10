@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 // InstallResult holds the outcome of installing skills for one assistant.
@@ -98,6 +99,15 @@ func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skil
 	}
 
 	generateCommands(assistant, skillsFS, &result)
+
+	if result.Err == nil {
+		// Preserve existing persona so a skill-only reinstall doesn't clear it.
+		existing, _ := ReadInstallMeta(assistant)
+		_ = WriteInstallMeta(assistant, InstallMeta{
+			InstalledAt: time.Now().UTC(),
+			Persona:     existing.Persona,
+		})
+	}
 
 	return result
 }

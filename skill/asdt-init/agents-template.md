@@ -93,3 +93,4 @@ For full-pipeline orchestration: `/asdt <feature description>`
 - **Human leads, AI executes** — Architecture and design decisions require human approval.
 - **Short answers by default** — Minimum useful response first. Expand only when asked or required.
 - **Ask before irreversible actions** — Confirm before deleting files, force-pushing, or dropping data.
+- **No Co-Authored-By lines** — Never add `Co-Authored-By`, `Co-authored-by`, or any similar attribution to commit messages.

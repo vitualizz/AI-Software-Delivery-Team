@@ -97,6 +97,8 @@ type InstallerStrings struct {
 	PrefEngramRestart  string
 }
 
-// DashboardStrings will hold all strings for the future dashboard TUI.
-// Defined now so Catalog scales without structural changes later.
-type DashboardStrings struct{}
+// DashboardStrings holds user-visible strings for the dashboard TUI.
+type DashboardStrings struct {
+	LabelInstalled string // "Installed" — prefix for the install date
+	LabelPersona   string // "Persona" — prefix for the configured persona name
+}

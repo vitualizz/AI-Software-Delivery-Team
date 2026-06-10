@@ -60,6 +60,11 @@ type wizardState struct {
 	agentDone       bool // true once AgentInstallDoneMsg arrives (or skip)
 }
 
+// dashboardState holds metadata loaded when the user enters StateDashboard.
+type dashboardState struct {
+	meta map[installer.AssistantID]installer.InstallMeta
+}
+
 // agentConfigState holds per-assistant agent config state across AgentSetup and AgentWriteMode.
 type agentConfigState struct {
 	selectedPersona int
@@ -84,6 +89,7 @@ type Model struct {
 	preflight   preflightState
 	wizard      wizardState
 	agentConfig agentConfigState
+	dashboard   dashboardState
 }
 
 // New constructs an initial Model with the running binary version. Init()
@@ -295,6 +301,7 @@ func (m Model) handleMainMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case 1: // Dashboard
 			m.state = StateDashboard
 			m.cursor = 0
+			m.dashboard = loadDashboardState()
 		default: // Quit
 			return m, tea.Quit
 		}
@@ -553,6 +560,19 @@ func (m Model) AgentWriteModes() map[string]installer.AgentWriteMode {
 // View renders the current state.
 func (m Model) View() string {
 	return renderState(m)
+}
+
+// loadDashboardState reads install metadata for all known assistants.
+// Called once when the user navigates to StateDashboard so the render path
+// never performs I/O.
+func loadDashboardState() dashboardState {
+	meta := make(map[installer.AssistantID]installer.InstallMeta, len(installer.Descriptors))
+	for _, d := range installer.Descriptors {
+		if m, err := installer.ReadInstallMeta(d); err == nil {
+			meta[d.ID] = m
+		}
+	}
+	return dashboardState{meta: meta}
 }
 
 // allInstallsDone reports whether both the per-assistant installs and the agent

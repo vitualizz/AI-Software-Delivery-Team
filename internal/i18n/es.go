@@ -75,4 +75,8 @@ var Spanish = Catalog{
 		PrefEngramInstall:  "Instalá: https://github.com/Gentleman-Programming/engram",
 		PrefEngramRestart:  "Después de instalarlo, reiniciá asdt-tui.",
 	},
+	Dashboard: DashboardStrings{
+		LabelInstalled: "Instalado",
+		LabelPersona:   "Persona",
+	},
 }

@@ -434,9 +434,11 @@ func renderInstalling(m Model) string {
 
 func renderDashboard(m Model) string {
 	s := m.catalog.Installer
+	d := m.catalog.Dashboard
 	var b strings.Builder
-	for _, d := range installer.Descriptors {
-		b.WriteString(renderSummaryLine(d))
+	for _, desc := range installer.Descriptors {
+		meta := m.dashboard.meta[desc.ID]
+		b.WriteString(renderSummaryLine(desc, meta, d))
 		b.WriteString("\n")
 	}
 
@@ -446,9 +448,12 @@ func renderDashboard(m Model) string {
 	return frame(s.TitleDashboard, strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
-// renderSummaryLine renders a single assistant summary line for the dashboard.
-func renderSummaryLine(d installer.AssistantDescriptor) string {
+// renderSummaryLine renders a dashboard row for one assistant.
+// First line: name + binary/skills badges.
+// Second line (when install metadata exists): install date and persona.
+func renderSummaryLine(d installer.AssistantDescriptor, meta installer.InstallMeta, s i18n.DashboardStrings) string {
 	bp, sp, _ := installer.Detect(d)
+
 	var parts []string
 	parts = append(parts, d.Name)
 	if bp {
@@ -461,7 +466,19 @@ func renderSummaryLine(d installer.AssistantDescriptor) string {
 	} else {
 		parts = append(parts, panels.NewBadge("skills", panels.ColorError).Render())
 	}
-	return "  " + strings.Join(parts, " ")
+	line := "  " + strings.Join(parts, " ")
+
+	if meta.InstalledAt.IsZero() {
+		return line
+	}
+
+	var metaParts []string
+	metaParts = append(metaParts, s.LabelInstalled+": "+meta.InstalledAt.Format("2006-01-02"))
+	if meta.Persona != "" {
+		metaParts = append(metaParts, s.LabelPersona+": "+meta.Persona)
+	}
+	metaLine := "    " + styles.Default.Dim.Render(strings.Join(metaParts, "  ·  "))
+	return line + "\n" + metaLine
 }
 
 func renderDone(m Model) string {
