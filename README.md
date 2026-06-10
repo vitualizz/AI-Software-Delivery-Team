@@ -1,13 +1,29 @@
 # AI Software Delivery Team
 
-ASDT is a skill package manager for AI assistants. It installs a team of software specialists — architect, developer, QA, security, UX/UI — into Claude Code or OpenCode, giving the assistant a structured, repeatable workflow for delivering software features.
+Ship features the way a real team would — architect, developer, QA, security, UX — even when you're building alone.
 
-Without ASDT, AI assistants have no enforced discipline around how a feature gets designed, implemented, tested, or reviewed. ASDT installs that discipline as slash commands the assistant can invoke.
+ASDT installs a team of AI specialists into Claude Code or OpenCode. Each specialist owns a distinct discipline and hands its work to the next through structured artifacts — the architect's decision informs the developer's plan, the developer's code informs the QA's tests. Without ASDT, AI assistants have no enforced discipline around how a feature gets designed, built, or reviewed.
+
+## How It Works
+
+```mermaid
+flowchart TD
+    req([Feature request]) --> asdt
+    asdt["/asdt\nroutes — never executes"]
+    asdt -->|user confirms| specialists
+    specialists["Specialists run in suggested order\n/asdt-ux-ui · /asdt-architect · /asdt-developer · …"]
+    specialists -->|each launches isolated steps| steps
+    steps["Step sub-agents\none artifact per step"]
+    steps -->|saved to| engram[(Engram\npersistent memory)]
+    engram -->|next specialist reads automatically| specialists
+```
+
+Each specialist orchestrates its own isolated steps. Steps that produce artifacts run as separate sub-agents so they don't pollute each other's context. Artifacts are saved to [Engram](https://github.com/Gentleman-Programming/engram) — not to files on disk — so specialists can run minutes or days apart and still pick up where the last one left off.
 
 ## Requirements
 
 - Claude Code (`claude`) or OpenCode (`opencode`) installed
-- [Engram MCP server](https://github.com/Gentleman-Programming/engram) installed and running (persistent memory provider)
+- [Engram MCP server](https://github.com/Gentleman-Programming/engram) installed and running
 - Go 1.22+ to install from source
 
 ## Installation
@@ -26,7 +42,7 @@ Downloads the pre-built binary for your platform (Linux/macOS, x86_64/arm64) and
 asdt-tui
 ```
 
-Interactive TUI that checks Engram is installed, lets you choose which AI assistant(s) to target, and copies the ASDT skills into them. Each skill (the `asdt` consultant, every specialist, and the shared fragment library) is installed as its own top-level sibling directory directly under `~/.claude/skills/` (Claude Code) or `~/.config/opencode/skills/` (OpenCode) — e.g. `~/.claude/skills/asdt-architect/`, `~/.claude/skills/asdt-shared/` — so each specialist is independently invocable (`asdt-architect`, `asdt-developer`, …) alongside `/asdt`.
+Interactive TUI that checks Engram is installed, lets you choose which AI assistant(s) to target, and copies the ASDT skills into them. Each specialist is installed as its own top-level directory — e.g. `~/.claude/skills/asdt-architect/` — so each is independently invocable.
 
 **2. Initialize your project**
 
@@ -38,7 +54,11 @@ Open your AI assistant in the project directory and run:
 
 The assistant will detect your project stack, ask a few configuration questions, and write `.asdt/config.yaml` and `.asdt/knowledge/platform.yaml`.
 
-**3. Start the Engram MCP server**, then use the specialists.
+**3. Start Engram, then use the specialists**
+
+ASDT uses [Engram](https://github.com/Gentleman-Programming/engram) as its memory layer. Each specialist saves its artifacts there, and the next specialist retrieves them by change name. Engram must be running before you invoke any specialist — artifacts from one run must survive until the next.
+
+Follow the [Engram setup guide](https://github.com/Gentleman-Programming/engram) to install and start the MCP server, then configure it in your assistant's MCP settings.
 
 ## Using the Specialists
 
@@ -46,33 +66,14 @@ Invoke from inside your AI assistant:
 
 | Command | What it does | Produces |
 |---|---|---|
-| `/asdt` | Meta-orchestrator — analyzes your request, recommends which specialists to run and in what order | — |
+| `/asdt` | Meta-orchestrator — analyzes your request, recommends which specialists to run and in what order | Routing suggestion |
 | `/asdt-init` | Initialize ASDT for the project — detects stack, writes config | `.asdt/config.yaml`, `platform.yaml` |
-| `/asdt-architect` | ADRs, system design, risk analysis | `architectural-decision.yaml`, `system-design.yaml` |
-| `/asdt-developer` | Implementation plan with code | `implementation-plan.yaml` |
-| `/asdt-qa` | Test plan | `test-plan.yaml` |
-| `/asdt-security` | Threat model and hardening checklist | `security-findings.yaml`, `hardening-checklist.yaml` |
-| `/asdt-ux-ui` | UX brief and component specs | `ux-brief.yaml`, `component-spec.yaml` |
+| `/asdt-architect` | Architecture decisions, system design, risk analysis | Architecture Decision Record + system design |
+| `/asdt-developer` | Implementation plan with code and test snippets | Step-by-step implementation plan |
+| `/asdt-qa` | Test plan and acceptance criteria | Test cases, quality report |
+| `/asdt-security` | Threat model and hardening checklist | Security findings, hardening checklist |
+| `/asdt-ux-ui` | User flows, component specs, responsive strategy | UX brief, component spec |
 
-Each specialist reads prior decisions from Engram memory, analyzes the current context, produces its artifacts, and saves the decision back to memory for the next specialist to build on.
+Each specialist reads prior artifacts from Engram automatically — the developer finds the architect's decisions, the QA finds the developer's plan.
 
-Start with `/asdt` if you are unsure which specialist to invoke — it will tell you.
-
-## Project Layout
-
-```
-cmd/
-  asdt-tui/    Installer TUI — the only user-facing binary
-internal/
-  installer/   Skill detection and installation logic
-  setup/       Installer TUI (Bubbletea + Lipgloss styles)
-  setup/styles/ Centralized color palette and style definitions
-  tui/         Status observer: specialists panel + artifacts browser
-  config/      Read/write .asdt/config.yaml, walk-up discovery
-  knowledge/   Project stack detection (no LLM)
-  artifact/    YAML artifact store under .asdt/artifacts/{change}/
-  memory/      Provider interface for cross-session memory
-  prompt/      Layered prompt assembly (role + skills + artifacts + platform)
-  pipeline/    FSM tracking which specialists have run per change
-skill/         SKILL.md files embedded in the binary, copied to the assistant on install
-```
+Start with `/asdt` if you are unsure which specialist to invoke.
