@@ -6,7 +6,7 @@ steps:
     execution: inline
 
   - name: platform-analysis
-    skill: ../asdt-shared/skills/platform-analysis.md
+    skill: ../asdt-shared/skills/platform-context.md
     description: Load and inject platform conventions and design fingerprint from platform.yaml
     execution: inline
 
@@ -84,7 +84,6 @@ steps:
     # `architect/system-design` produced earlier by the system-design step).
     reference_skills:
       - ../asdt-shared/skills/report.md
-      - ../asdt-shared/skills/context-extraction.md
 
   - name: decision-preservation
     skill: ../asdt-shared/skills/decision-preservation.md

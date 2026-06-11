@@ -14,6 +14,7 @@ var Spanish = Catalog{
 		TitleInstalling:       "Instalando...",
 		TitleDone:             "Instalación Completa",
 		TitleDashboard:        "Dashboard",
+		TitleLanguageSelect:   "Idioma",
 
 		StepWord:   "paso",
 		StepOfWord: "de",
@@ -44,10 +45,11 @@ var Spanish = Catalog{
 		BtnSkip:     "[ Omitir → ]",
 		BtnInstall:  "[ Instalar → ]",
 
-		BodyAgentSetupSubtitle: "Configurá cómo se comportan tus asistentes de IA en todas las herramientas",
-		BodyEmojiPrefSubtitle:  "¿Querés que tus asistentes usen emojis en sus respuestas?",
-		BodyAgentWriteMode:     "Elegí cómo manejar cada config existente:",
-		BodyInstalling:         "Instalando asistentes y skills...",
+		BodyAgentSetupSubtitle:     "Configurá cómo se comportan tus asistentes de IA en todas las herramientas",
+		BodyEmojiPrefSubtitle:      "¿Querés que tus asistentes usen emojis en sus respuestas?",
+		BodyAgentWriteMode:         "Elegí cómo manejar cada config existente:",
+		BodyInstalling:             "Instalando asistentes y skills...",
+		BodyLanguageSelectSubtitle: "¿En qué idioma querés usar el instalador?",
 
 		OptionEmojiYes: "Sí — usar emojis",
 		OptionEmojiNo:  "No — solo texto plano",
@@ -84,5 +86,12 @@ var Spanish = Catalog{
 	Dashboard: DashboardStrings{
 		LabelInstalled: "Instalado",
 		LabelPersona:   "Persona",
+	},
+	Personas: PersonaStrings{
+		Sky:         "Aguda y minuciosa. Destroza las malas prácticas con ingenio, y después te explica todo.",
+		Toffy:       "Cálida y entusiasta. Respuestas simples, sarcasmo accidental.",
+		Atreus:      "Audaz y temerario. Shipea primero la solución poco convencional — y funciona.",
+		Babi:        "Tu fan número uno. Cálida, rápida, y celebra todo a los gritos.",
+		LeePalacios: "Amante de los gatos, coder, otaku. Tu compañero de pair programming para todo el viaje.",
 	},
 }

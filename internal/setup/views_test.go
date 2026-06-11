@@ -61,7 +61,8 @@ func TestView_MainMenuShowsUpdateBanner(t *testing.T) {
 func TestView_SelectAssistantsShowsBothNames(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)         // no-op, already at MainMenu
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
@@ -76,7 +77,8 @@ func TestView_SelectAssistantsShowsBothNames(t *testing.T) {
 func TestView_SelectAssistantsSelectedItemHasCursor(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)         // no-op, already at MainMenu
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
@@ -94,7 +96,8 @@ func TestView_SelectAssistantsUsesBadgeForStatus(t *testing.T) {
 
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)         // no-op, already at MainMenu
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
@@ -111,7 +114,8 @@ func TestView_SelectAssistantsUsesBadgeForStatus(t *testing.T) {
 func TestView_SelectAssistantsShowsCheckboxes(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = sendEngramFound(t, m)
-	m = updateKey(t, m, tea.KeyEnter) // → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m2 := updateKey(t, m, tea.KeyEnter) // → StateSelectAssistants
@@ -145,8 +149,10 @@ func stateView(t *testing.T, target string) string {
 	m := setup.New(fstest.MapFS{}, "dev")
 
 	if target == "PreflightCheck" {
-		// Trigger preflight by pressing Enter at cursor-0 (Install).
-		m = updateKey(t, m, tea.KeyEnter) // cursor-0 → StateEnvironmentCheck
+		// Trigger preflight by pressing Enter at cursor-0 (Install), then
+		// Enter again through the language screen.
+		m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+		m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 		return m.View()
 	}
 
@@ -164,7 +170,8 @@ func stateView(t *testing.T, target string) string {
 	}
 
 	// Install path: cursor-0 Enter → StateEnvironmentCheck → EnvironmentCheckMsg → Enter → StateSelectAssistants.
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
@@ -208,7 +215,8 @@ func stateView(t *testing.T, target string) string {
 		}
 		// Re-drive from scratch with the new HOME so detectAgentConflicts fires.
 		m2 := setup.New(fstest.MapFS{}, "dev")
-		m2 = updateKey(t, m2, tea.KeyEnter) // MainMenu → EnvironmentCheck
+		m2 = updateKey(t, m2, tea.KeyEnter) // MainMenu → LanguageSelect
+		m2 = updateKey(t, m2, tea.KeyEnter) // LanguageSelect → EnvironmentCheck
 		next2, _ := m2.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 		m2 = next2.(setup.Model)
 		m2 = updateKey(t, m2, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
@@ -362,7 +370,8 @@ func TestView_InstallingShowsSpinner(t *testing.T) {
 
 func TestView_PreflightCheckShowsTitle(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	view := m.View()
 	if !strings.Contains(view, "Pre-flight Check") {
 		t.Errorf("preflight view should contain 'Pre-flight Check', got:\n%s", view)
@@ -371,7 +380,8 @@ func TestView_PreflightCheckShowsTitle(t *testing.T) {
 
 func TestView_PreflightCheckShowsSections(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	view := m.View()
 	if !strings.Contains(view, "Memory Provider") {
 		t.Errorf("preflight view missing 'Memory Provider' section, got:\n%s", view)
@@ -380,7 +390,8 @@ func TestView_PreflightCheckShowsSections(t *testing.T) {
 
 func TestView_PreflightCheckShowsShellRow(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	view := m.View()
 	if !strings.Contains(view, "Shell") {
 		t.Errorf("preflight view missing 'Shell' row, got:\n%s", view)
@@ -464,7 +475,8 @@ func TestView_ReviewOmitsEmojiRowWhenSkipped(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	// Drive the skip path to Review: EmojiPref is bypassed entirely.
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // MainMenu → EnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → LanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → EnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
@@ -497,7 +509,8 @@ func TestView_AgentSetupShowsRadioIndicator(t *testing.T) {
 
 func TestView_PreflightCheckShowsEngramRecovery(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	// Inject EnvironmentCheckMsg with Engram missing
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: false})
 	m2 := next.(setup.Model)

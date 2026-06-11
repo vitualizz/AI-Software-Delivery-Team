@@ -28,7 +28,8 @@ func TestNew_StartsAtMainMenu(t *testing.T) {
 func TestUpdate_EnvironmentCheckMsg_EngramFound_EntersSelectAssistantsOnEnter(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	// Navigate from MainMenu to StateEnvironmentCheck via cursor-0 Enter.
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m2 := next.(setup.Model)
 	m3 := updateKey(t, m2, tea.KeyEnter)
@@ -39,7 +40,8 @@ func TestUpdate_EnvironmentCheckMsg_EngramFound_EntersSelectAssistantsOnEnter(t 
 
 func TestUpdate_EnvironmentCheckMsg_EngramMissing_BlocksContinue(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: false})
 	m2 := next.(setup.Model)
 	m3 := updateKey(t, m2, tea.KeyEnter)
@@ -50,7 +52,8 @@ func TestUpdate_EnvironmentCheckMsg_EngramMissing_BlocksContinue(t *testing.T) {
 
 func TestUpdate_EnvironmentCheckProgressMsg_UpdatesSection(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckProgressMsg{
 		RowLabel: "Engram",
 		Status:   components.CheckStatusOK,
@@ -62,7 +65,8 @@ func TestUpdate_EnvironmentCheckProgressMsg_UpdatesSection(t *testing.T) {
 
 func TestUpdate_PreflightQQuits(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}}
 	_, cmd := m.Update(msg)
 	if cmd == nil {
@@ -72,7 +76,8 @@ func TestUpdate_PreflightQQuits(t *testing.T) {
 
 func TestUpdate_PreflightCtrlCQuits(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	_, cmd := m.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
 	if cmd == nil {
 		t.Error("ctrl+c in StateEnvironmentCheck: expected non-nil cmd (tea.Quit), got nil")
@@ -83,7 +88,8 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	// Navigate to StateSelectAssistants via the full install flow.
 	m = advanceToMainMenu(t, m)       // no-op, already at StateMainMenu
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m = updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
@@ -105,7 +111,8 @@ func TestUpdate_SpaceToggleSelectsItem(t *testing.T) {
 
 func TestUpdate_SelectAssistants_AKeySelectsAll(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter) // MainMenu → EnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → LanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → EnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants (all pre-selected)
@@ -123,7 +130,8 @@ func TestUpdate_SelectAssistants_AKeySelectsAll(t *testing.T) {
 
 func TestUpdate_SelectAssistants_PreSelectsAllOnFirstEntry(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
-	m = updateKey(t, m, tea.KeyEnter)
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → LanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → EnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
@@ -140,11 +148,16 @@ func TestUpdate_SelectAssistants_PreSelectsAllOnFirstEntry(t *testing.T) {
 func TestUpdate_EnterOnInstallTriggersEnvironmentCheck(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToMainMenu(t, m) // no-op
-	// Cursor starts at 0 = "Install / Update Skills".
+	// Cursor starts at 0 = "Install / Update Skills". Install now passes
+	// through StateLanguageSelect before the environment check.
 	next, _ := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	m2 := next.(setup.Model)
-	if m2.State() != setup.StateEnvironmentCheck {
-		t.Errorf("Enter at cursor 0 (Install): state = %v, want StateEnvironmentCheck", m2.State())
+	if m2.State() != setup.StateLanguageSelect {
+		t.Fatalf("Enter at cursor 0 (Install): state = %v, want StateLanguageSelect", m2.State())
+	}
+	m3 := updateKey(t, m2, tea.KeyEnter)
+	if m3.State() != setup.StateEnvironmentCheck {
+		t.Errorf("Enter at LanguageSelect: state = %v, want StateEnvironmentCheck", m3.State())
 	}
 }
 
@@ -173,7 +186,8 @@ func TestUpdate_EscFromDashboardReturnsToMenu(t *testing.T) {
 func TestUpdate_ESCAtSelectAssistantsGoesBack(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToMainMenu(t, m)       // no-op
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m2 := updateKey(t, m, tea.KeyEnter) // preflightDone → StateSelectAssistants
@@ -338,7 +352,8 @@ func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m = advanceToMainMenu(t, m)       // no-op
-	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateEnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // cursor-0 (Install) → StateLanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → StateEnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m2, ok := next.(setup.Model)
 	if !ok {
@@ -734,7 +749,8 @@ func TestUpdate_AgentWriteMode_Esc_ReturnsToEmojiPref(t *testing.T) {
 // advanceToSelectProvider drives the model to StateSelectProvider.
 func advanceToSelectProvider(t *testing.T, m setup.Model) setup.Model {
 	t.Helper()
-	m = updateKey(t, m, tea.KeyEnter) // MainMenu → EnvironmentCheck
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → LanguageSelect
+	m = updateKey(t, m, tea.KeyEnter) // LanguageSelect → EnvironmentCheck
 	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
 	m = next.(setup.Model)
 	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants

@@ -44,6 +44,11 @@ const (
 	StateInstalling
 	// StateDone is the terminal state shown after installation completes.
 	StateDone
+	// StateLanguageSelect asks which language the installer (and the installed
+	// experience) should use. Entered from MainMenu's Install action, before
+	// the environment check. Appended at the END of the iota block so existing
+	// state values never shift.
+	StateLanguageSelect
 )
 
 // preflightState holds state for the StateEnvironmentCheck screen.
@@ -66,6 +71,34 @@ type wizardState struct {
 // dashboardState holds metadata loaded when the user enters StateDashboard.
 type dashboardState struct {
 	meta map[installer.AssistantID]installer.InstallMeta
+}
+
+// languageState holds state for the StateLanguageSelect screen.
+type languageState struct {
+	selected int  // index into languageOptions
+	touched  bool // true once the user moved the selection; guards late LanguagePrefMsg
+}
+
+// languageOptions lists the selectable installer languages. Labels are the
+// languages' NATIVE names — deliberately not catalog strings, so each option
+// is readable regardless of the currently active language.
+var languageOptions = []struct {
+	Code  string
+	Label string
+}{
+	{Code: "en", Label: "English"},
+	{Code: "es", Label: "Español"},
+}
+
+// languageIndex returns the languageOptions index for code, or -1 when the
+// code has no option.
+func languageIndex(code string) int {
+	for i, opt := range languageOptions {
+		if opt.Code == code {
+			return i
+		}
+	}
+	return -1
 }
 
 // agentConfigState holds per-assistant agent config state across AgentSetup,
@@ -95,6 +128,7 @@ type Model struct {
 	wizard      wizardState
 	agentConfig agentConfigState
 	dashboard   dashboardState
+	language    languageState
 }
 
 // New constructs an initial Model with the running binary version. Init()
@@ -108,6 +142,10 @@ type Model struct {
 // instead of each hand-rolling its own and risking drift.
 func New(skillsFS fs.FS, version string) Model {
 	str := i18n.Active()
+	selected := languageIndex(i18n.ActiveCode())
+	if selected < 0 {
+		selected = 0
+	}
 	return Model{
 		wizard:         wizardState{selected: make(map[int]bool)},
 		skillsFS:       skillsFS,
@@ -116,6 +154,7 @@ func New(skillsFS fs.FS, version string) Model {
 		spinner:        panels.NewSpinner(),
 		preflight:      preflightState{sections: initialPreflightSections(str.Installer)},
 		catalog:        str,
+		language:       languageState{selected: selected},
 	}
 }
 
@@ -152,6 +191,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case EnvironmentCheckMsg:
 		m.preflight.done = true
 		m.preflight.engramMissing = !msg.EngramFound
+		return m, nil
+
+	case LanguagePrefMsg:
+		// Apply the persisted language only while the user hasn't moved the
+		// selection — a late-arriving message must never override an explicit
+		// choice.
+		if m.language.touched {
+			return m, nil
+		}
+		if idx := languageIndex(msg.Code); idx >= 0 {
+			m.language.selected = idx
+			m.catalog = i18n.ForCode(msg.Code)
+			if m.state == StateLanguageSelect {
+				m.cursor = idx
+			}
+		}
 		return m, nil
 
 	case UpdateCheckMsg:
@@ -236,6 +291,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleDashboard(msg)
 	case StateMainMenu:
 		return m.handleMainMenu(msg)
+	case StateLanguageSelect:
+		return m.handleLanguageSelect(msg)
 	case StateSelectAssistants:
 		return m.handleSelectAssistants(msg)
 	case StateSelectProvider:
@@ -298,13 +355,10 @@ func (m Model) handleMainMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		switch m.cursor {
-		case 0: // Install / Update Skills → trigger preflight
-			m.preflight.sections = initialPreflightSections(m.catalog.Installer)
-			m.preflight.done = false
-			m.preflight.engramMissing = false
-			m.state = StateEnvironmentCheck
-			m.cursor = 0
-			return m, tea.Batch(EnvironmentCheckCmd(), m.spinner.Tick)
+		case 0: // Install / Update Skills → choose language first
+			m.state = StateLanguageSelect
+			m.cursor = m.language.selected
+			return m, LanguagePrefCmd()
 		case 1: // Dashboard
 			m.state = StateDashboard
 			m.cursor = 0
@@ -316,6 +370,46 @@ func (m Model) handleMainMenu(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		// No-op at MainMenu.
 	}
 	return m, nil
+}
+
+// handleLanguageSelect handles keys for the language selection screen.
+// Up/Down move the radio selection and re-resolve the catalog live so the
+// whole TUI switches language immediately. Enter triggers the preflight
+// bootstrap (previously fired straight from MainMenu); Esc returns to MainMenu.
+func (m Model) handleLanguageSelect(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+			m = m.syncLanguageSelection()
+		}
+	case tea.KeyDown:
+		if m.cursor < len(languageOptions)-1 {
+			m.cursor++
+			m = m.syncLanguageSelection()
+		}
+	case tea.KeyEnter:
+		m.preflight.sections = initialPreflightSections(m.catalog.Installer)
+		m.preflight.done = false
+		m.preflight.engramMissing = false
+		m.state = StateEnvironmentCheck
+		m.cursor = 0
+		return m, tea.Batch(EnvironmentCheckCmd(), m.spinner.Tick)
+	case tea.KeyEsc:
+		m.state = StateMainMenu
+		m.cursor = 0
+	}
+	return m, nil
+}
+
+// syncLanguageSelection returns a Model with the language selection following
+// the cursor, the touched guard set, and the catalog re-resolved for the
+// newly selected language.
+func (m Model) syncLanguageSelection() Model {
+	m.language.selected = m.cursor
+	m.language.touched = true
+	m.catalog = i18n.ForCode(languageOptions[m.language.selected].Code)
+	return m
 }
 
 func (m Model) handleDashboard(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -584,7 +678,7 @@ func (m Model) handleDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) buildInstallCmd() tea.Cmd {
 	assistants := m.selectedAssistants()
 	provider := installer.Providers[m.wizard.provider]
-	installCmd := InstallCmd(assistants, provider, m.skillsFS)
+	installCmd := InstallCmd(assistants, provider, m.skillsFS, languageOptions[m.language.selected].Code)
 	if m.agentConfig.skip {
 		return installCmd
 	}
@@ -601,6 +695,11 @@ func (m Model) AgentWriteModes() map[string]installer.AgentWriteMode {
 // UseEmojis returns the chosen emoji preference. Exported for tests.
 func (m Model) UseEmojis() bool {
 	return m.agentConfig.useEmojis
+}
+
+// LanguageCode returns the currently selected language code. Exported for tests.
+func (m Model) LanguageCode() string {
+	return languageOptions[m.language.selected].Code
 }
 
 // View renders the current state.

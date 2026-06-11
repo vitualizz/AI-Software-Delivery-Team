@@ -111,15 +111,36 @@ func newerAvailable(current, latest string) bool {
 	return l != c
 }
 
+// LanguagePrefMsg carries the language preference persisted in install
+// metadata. An empty Code means no preference was found.
+type LanguagePrefMsg struct {
+	Code string
+}
+
+// LanguagePrefCmd returns a tea.Cmd that scans the known assistants' install
+// metadata and reports the first non-empty persisted language preference via
+// LanguagePrefMsg. All metadata I/O stays inside the Cmd — never in Update.
+func LanguagePrefCmd() tea.Cmd {
+	return func() tea.Msg {
+		for _, d := range installer.Descriptors {
+			if meta, err := installer.ReadInstallMeta(d); err == nil && meta.Language != "" {
+				return LanguagePrefMsg{Code: meta.Language}
+			}
+		}
+		return LanguagePrefMsg{}
+	}
+}
+
 // InstallCmd returns a tea.Batch of per-assistant Cmds, each emitting one
 // AssistantInstallProgressMsg when that assistant's install completes.
 // Running concurrently lets the TUI update row-by-row as each finishes.
-func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.ProviderDescriptor, skillsFS fs.FS) tea.Cmd {
+// lang is the language code chosen in the wizard, recorded in install metadata.
+func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.ProviderDescriptor, skillsFS fs.FS, lang string) tea.Cmd {
 	cmds := make([]tea.Cmd, len(assistants))
 	for i, a := range assistants {
 		a := a // capture loop variable
 		cmds[i] = func() tea.Msg {
-			results := installer.Install([]installer.AssistantDescriptor{a}, provider, skillsFS)
+			results := installer.Install([]installer.AssistantDescriptor{a}, provider, skillsFS, lang)
 			if len(results) > 0 {
 				return AssistantInstallProgressMsg{Result: results[0]}
 			}

@@ -56,7 +56,6 @@ steps:
       - "{project}/{change}/pm/prioritization"
     output_topic_key: "{project}/{change}/pm/backlog-entry"
     reference_skills:
-      - ../asdt-shared/skills/context-extraction.md
       - ../asdt-shared/skills/report.md
 
   - name: decision-preservation

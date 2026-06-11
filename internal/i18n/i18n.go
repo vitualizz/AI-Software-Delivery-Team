@@ -13,17 +13,42 @@ var catalogs = map[string]Catalog{
 	"es": Spanish,
 }
 
-// Active returns the Catalog for the user's locale.
+// resolve returns the supported language tag for the current environment.
 // ASDT_LANG takes priority over system locale detection so it can be
 // overridden without changing the system locale (e.g. ASDT_LANG=es).
-func Active() Catalog {
+func resolve() language.Tag {
 	if override := os.Getenv("ASDT_LANG"); override != "" {
 		if tag, err := language.Parse(override); err == nil {
 			matched, _, _ := supported.Match(tag)
-			return catalogFor(matched)
+			return matched
 		}
 	}
-	return catalogFor(detect())
+	return detect()
+}
+
+// Active returns the Catalog for the user's locale.
+func Active() Catalog {
+	return catalogFor(resolve())
+}
+
+// ActiveCode returns the resolved base language code for the user's locale
+// (e.g. "en", "es"). Codes without a registered catalog resolve to "en".
+func ActiveCode() string {
+	base, _ := resolve().Base()
+	if _, ok := catalogs[base.String()]; ok {
+		return base.String()
+	}
+	return "en"
+}
+
+// ForCode returns the Catalog registered for the given base language code,
+// falling back to English for unknown codes. Useful when the language choice
+// comes from persisted state or UI selection instead of env detection.
+func ForCode(code string) Catalog {
+	if c, ok := catalogs[code]; ok {
+		return c
+	}
+	return English
 }
 
 // For returns the Catalog for the given language tag, falling back to English.

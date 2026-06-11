@@ -38,6 +38,8 @@ func renderState(m Model) string {
 		return renderDashboard(m)
 	case StateMainMenu:
 		return renderMainMenu(m)
+	case StateLanguageSelect:
+		return renderLanguageSelect(m)
 	case StateReview:
 		return renderReview(m)
 	case StateSelectAssistants:
@@ -112,6 +114,55 @@ func renderMainMenu(m Model) string {
 		}},
 	}, m.width)
 	return frame(s.TitleMainMenu, body, footer, true)
+}
+
+// renderLanguageSelect renders the language selection screen: one radio row
+// per languageOptions entry, following renderEmojiPref's pattern but WITHOUT
+// a step indicator — like MainMenu, it sits before the numbered wizard steps.
+// Option labels are the languages' native names, deliberately not catalog
+// strings.
+func renderLanguageSelect(m Model) string {
+	s := m.catalog.Installer
+	var b strings.Builder
+
+	for i, opt := range languageOptions {
+		focused := i == m.cursor
+		selected := i == m.language.selected
+
+		cursor := "  "
+		if focused {
+			cursor = cursorChar + " "
+		}
+
+		var radioStr string
+		if selected {
+			radioStr = styles.Default.Cursor.Render("(•)")
+		} else {
+			radioStr = styles.Default.Dim.Render("( )")
+		}
+
+		var nameStr string
+		if focused {
+			nameStr = styles.Default.Cursor.Render(opt.Label)
+		} else {
+			nameStr = styles.Default.Dim.Render(opt.Label)
+		}
+
+		fmt.Fprintf(&b, "  %s%s %s\n", cursor, radioStr, nameStr)
+	}
+
+	subtitle := styles.Default.Dim.Render(s.BodyLanguageSelectSubtitle)
+	body := lipgloss.JoinVertical(lipgloss.Left, subtitle, "", strings.TrimRight(b.String(), "\n"))
+
+	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "↑↓", Description: s.HintNavigate},
+			{Key: "enter", Description: s.HintContinue},
+			{Key: "esc", Description: s.HintBack},
+			{Key: "q", Description: s.HintQuit},
+		}},
+	}, m.width)
+	return frame(s.TitleLanguageSelect, body, footer, true)
 }
 
 func renderSelectAssistants(m Model) string {
@@ -243,13 +294,18 @@ func renderAgentSetup(m Model) string {
 			radioStr = styles.Default.Dim.Render("( )")
 		}
 
+		desc := m.catalog.PersonaDescription(p.ID)
+		if desc == "" {
+			desc = p.Description
+		}
+
 		var nameStr, descStr string
 		if focused {
 			nameStr = styles.Default.Cursor.Render(p.Name)
-			descStr = p.Description
+			descStr = desc
 		} else {
 			nameStr = styles.Default.Dim.Render(p.Name)
-			descStr = styles.Default.Dim.Render(p.Description)
+			descStr = styles.Default.Dim.Render(desc)
 		}
 		fmt.Fprintf(&b, "  %s%s %s — %s\n", cursor, radioStr, nameStr, descStr)
 	}
@@ -405,7 +461,11 @@ func renderReview(m Model) string {
 		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelPersona), styles.Default.Dim.Render(s.LabelSkipped))
 	} else if m.agentConfig.selectedPersona < len(installer.PersonaPresets) {
 		preset := installer.PersonaPresets[m.agentConfig.selectedPersona]
-		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelPersona), preset.Name+" — "+preset.Description)
+		desc := m.catalog.PersonaDescription(preset.ID)
+		if desc == "" {
+			desc = preset.Description
+		}
+		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelPersona), preset.Name+" — "+desc)
 	}
 
 	if !m.agentConfig.skip {

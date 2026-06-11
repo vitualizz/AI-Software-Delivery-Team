@@ -11,7 +11,7 @@ component-spec (for implementation). Apply the report shared skill.
 - `ux-ui/components`: component inventory
 - `ux-ui/responsive`: breakpoint behavior
 
-Apply context-extraction to each: keep only fields relevant to implementation handoff.
+Apply the extraction rules in the report shared skill to each: keep only fields relevant to implementation handoff.
 
 ## Context budget
 All inputs context-extracted to max 200 tokens each = max 1,000 tokens total.

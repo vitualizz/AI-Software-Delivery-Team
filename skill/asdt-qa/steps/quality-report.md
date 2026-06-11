@@ -8,7 +8,7 @@ test cases and AC validation into a coherent quality document.
 - `qa/test-cases`: all test cases
 - `qa/ac-gaps`: AC validation results
 
-Apply context-extraction: from test-cases keep counts + critical cases only.
+Apply the extraction rules in the report shared skill: from test-cases keep counts + critical cases only.
 From ac-gaps keep gap_count + open_items only.
 
 ## Context budget

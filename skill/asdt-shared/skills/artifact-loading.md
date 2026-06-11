@@ -1,10 +1,10 @@
-# Artifact Loading — Developer Skill
+# Artifact Loading — Shared Skill
 
 ## Purpose
 
-Guide the Developer specialist through retrieving existing upstream artifacts from Engram, extracting relevant fields from each artifact type, and recording absent artifacts in `open_items[]`.
+Guide a specialist through retrieving existing upstream artifacts from Engram, extracting relevant fields from each artifact type, and recording absent artifacts in `open_items[]`.
 
-This skill is invoked at Step 1 (Artifact Loading) of the Developer workflow.
+This skill is invoked at the first artifact-consuming step of a specialist workflow (Developer, QA, Architect, and Security all use it there). It applies ONLY to steps declared with `inputs: []` in `workflow.yaml` — steps with declared inputs receive them ALREADY INJECTED as `### INPUT {topic_key}` blocks per `parallel-retrieval.md`, and must never self-fetch those.
 
 ---
 
@@ -85,7 +85,7 @@ When an expected artifact is not found, do NOT stop or error. Follow this protoc
 
 ## Summary Guideline
 
-After loading all found artifacts, produce an internal summary (not written to the artifact) before proceeding to Step 3:
+After loading all found artifacts, produce an internal summary (not written to the artifact) before proceeding to the next step:
 
 ```
 Loaded:
@@ -101,4 +101,4 @@ open_items to carry forward:
   - "ux-brief.yaml absent — ..."
 ```
 
-This summary becomes the grounding context for Steps 3–7.
+This summary becomes the grounding context for subsequent steps.

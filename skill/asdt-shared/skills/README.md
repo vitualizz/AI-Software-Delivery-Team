@@ -20,22 +20,19 @@ These are **reference text injected into the active context**, not independently
 
 | File | Purpose |
 |---|---|
-| `artifact-envelope.md` | Defines the required YAML envelope every artifact must conform to (`schema_version`, `agent`, `change_id`, `input_refs`, `payload`, `open_items`). |
-| `artifact-loading.md` | How to retrieve upstream artifacts from Engram (`mem_search` → `mem_get_observation`), extract relevant fields, and record missing artifacts in `open_items[]`. |
+| `artifact-envelope.md` | Defines the required YAML envelope every artifact must conform to (`schema_version`, `agent`, `change_id`, `input_refs` as Engram topic_keys per ADR-011, `payload`, `open_items`). |
+| `artifact-loading.md` | How a specialist's first artifact-consuming step (declared `inputs: []`) retrieves upstream artifacts from Engram (`mem_search` → `mem_get_observation`), extracts relevant fields, and records missing artifacts in `open_items[]`. |
 | `parallel-retrieval.md` | The canonical orchestrator fetch-once cache pattern — prevents duplicate Engram lookups when multiple steps need the same artifact. |
-| `context-extraction.md` | How to extract only the fields relevant to the current step from a large artifact, preventing full YAML dumps from bloating context. |
 
 ### Workflow utilities
 
 | File | Purpose |
 |---|---|
 | `knowledge-recall.md` | Queries organizational memory for prior decisions relevant to the current change. Used as the first inline step in most specialists. |
-| `platform-analysis.md` | Transforms raw `platform.yaml` into a focused `platform-summary` (≤ 500 tokens) for injection into specialist context. |
-| `platform-context.md` | Injects the project's detected platform knowledge (stack, conventions, design fingerprint) into a specialist's context. |
+| `platform-context.md` | Injects the project's detected platform knowledge (stack, conventions, design fingerprint) into a specialist's context. Includes the project-level reuse guard (prefer `.asdt/knowledge/platform-summary.yaml`) and the fallback extraction rules; also backs the inline `platform-analysis` workflow step. |
 | `decision-preservation.md` | Saves a permanent organizational knowledge record after a significant decision is produced. Used as the final inline step in most specialists. |
 | `scope-definition.md` | Guidelines for defining explicit, unambiguous project scope. Used by Architect and Developer. |
-| `report.md` | Generates a structured handoff document from multiple intermediate artifacts. Used as the consolidation step in UX/UI, Architect, QA, and Security. |
-| `review.md` | Generic self-review step — checks completeness, correctness, and convention compliance. |
+| `report.md` | Generates a structured handoff document from multiple intermediate artifacts; includes the extraction rules (200-token budget per artifact). Used as the consolidation step in UX/UI, Architect, QA, Security, and PM. |
 
 ## How to Reference
 

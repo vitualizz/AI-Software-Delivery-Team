@@ -8,7 +8,6 @@ shared-skills:
   - platform-context
   - artifact-envelope
   - artifact-loading
-  - context-extraction
   - report
 metadata:
   author: "Lee Palacios (vitualizz)"

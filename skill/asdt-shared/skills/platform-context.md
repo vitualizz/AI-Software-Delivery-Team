@@ -2,11 +2,23 @@
 
 ## Purpose
 
-Inject the project's detected platform knowledge into any specialist's context. This skill is consumed by every specialist at the start of their workflow to ground code generation, component suggestions, and design decisions in the project's actual conventions.
+Inject the project's detected platform knowledge into any specialist's context. This skill is consumed by every specialist at the start of their workflow to ground code generation, component suggestions, and design decisions in the project's actual conventions. It also serves the inline `platform-analysis` workflow step declared by several specialists — that step points here.
+
+---
+
+## Reuse Guard (project-level)
+
+Before any analysis, check if `.asdt/knowledge/platform-summary.yaml` exists.
+
+If it does, **do not re-analyze**. Read that file and inject its contents as context, as-is. The `asdt init` command produces this file deterministically using the Go scanner; re-deriving it with the LLM wastes tokens and yields non-deterministic stack interpretations.
+
+Only if `.asdt/knowledge/platform-summary.yaml` is **absent**, fall back to finding and reading `.asdt/knowledge/platform.yaml` (next section) and injecting the extracted fields described below.
 
 ---
 
 ## How to Find platform.yaml
+
+> Fallback path — used only when the Reuse Guard above found no `platform-summary.yaml`.
 
 Walk up from CWD until you find `.asdt/knowledge/platform.yaml`. This is the same nearest-ancestor search used for `.asdt/` itself.
 
@@ -24,6 +36,10 @@ When `platform.yaml` is found, extract and inject the following fields into the 
 | `conventions.naming` | Naming conventions in use (e.g. "snake_case for files, PascalCase for exported Go types") |
 | `conventions.file_structure` | Directory layout pattern (e.g. "internal/ for packages, cmd/ for binaries") |
 | `design_fingerprint` | Architectural pattern in use (e.g. "Hexagonal architecture, ports in internal/") |
+| `design_fingerprint.component_library` | Component library in use — if present |
+| `design_fingerprint.css_approach` | CSS approach in use — if present |
+
+Discard: full file listings, raw config, `layout_patterns`, `scanned_at`, `schema_version`. If the extracted content exceeds 500 tokens, summarize each field to its single most important fact.
 
 Do not inject the entire `platform.yaml` verbatim. Summarize only the fields relevant to the specialist's current step.
 

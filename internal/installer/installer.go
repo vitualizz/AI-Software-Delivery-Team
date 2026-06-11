@@ -19,11 +19,13 @@ type InstallResult struct {
 // Install copies skill files from skillsFS into each assistant's SkillsDir,
 // applies provider.CustomizeSkill to each file's content, and returns one
 // result per assistant. A failure for one assistant does not abort the others.
-func Install(assistants []AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS) []InstallResult {
+// lang is the language code chosen in the TUI; it is recorded in each
+// assistant's install metadata (an empty lang preserves the existing value).
+func Install(assistants []AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS, lang string) []InstallResult {
 	results := make([]InstallResult, len(assistants))
 
 	for i, assistant := range assistants {
-		results[i] = installOne(assistant, provider, skillsFS)
+		results[i] = installOne(assistant, provider, skillsFS, lang)
 	}
 
 	return results
@@ -65,7 +67,7 @@ func SiblingDestName(entry string) string {
 //   - loose files directly at the embedded tree root (e.g. "SKILL.md") —
 //     they belong to the consultant and are copied to
 //     {SkillsDir}/asdt/{filename}
-func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS) InstallResult {
+func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS, lang string) InstallResult {
 	result := InstallResult{AssistantID: assistant.ID}
 
 	if err := os.MkdirAll(assistant.SkillsDir, 0o755); err != nil {
@@ -102,14 +104,19 @@ func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skil
 	generateAgents(assistant, skillsFS, &result)
 
 	if result.Err == nil {
-		// Preserve existing persona and emoji preference so a skill-only
-		// reinstall doesn't clear them. AgentTypes is set to the canonical list
-		// on every successful install — that is what the install just provisioned.
+		// Preserve existing persona, emoji preference, and language so a
+		// skill-only reinstall doesn't clear them. AgentTypes is set to the
+		// canonical list on every successful install — that is what the
+		// install just provisioned.
 		existing, _ := ReadInstallMeta(assistant)
+		if lang == "" {
+			lang = existing.Language
+		}
 		_ = WriteInstallMeta(assistant, InstallMeta{
 			InstalledAt: time.Now().UTC(),
 			Persona:     existing.Persona,
 			Emojis:      existing.Emojis,
+			Language:    lang,
 			AgentTypes:  AgentTypeNames,
 		})
 	}

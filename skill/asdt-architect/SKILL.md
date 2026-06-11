@@ -7,9 +7,7 @@ shared-skills:
   - specialist-header
   - platform-context
   - artifact-envelope
-  - platform-analysis
   - scope-definition
-  - context-extraction
   - report
 metadata:
   author: "Lee Palacios (vitualizz)"

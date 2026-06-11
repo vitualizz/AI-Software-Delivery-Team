@@ -9,7 +9,7 @@ Apply the report shared skill. Surface key constraints the Developer MUST respec
 - `architect/system-design`: data model, API surface
 - `architect/risks`: top risks and mitigations
 
-Apply context-extraction: keep what Developer needs, discard architect-internal reasoning.
+Apply the extraction rules in the report shared skill: keep what Developer needs, discard architect-internal reasoning.
 
 ## Context budget
 All inputs context-extracted to max 300 tokens each = max 900 tokens total.

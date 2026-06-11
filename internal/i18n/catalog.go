@@ -7,6 +7,43 @@ package i18n
 type Catalog struct {
 	Installer InstallerStrings
 	Dashboard DashboardStrings
+	Personas  PersonaStrings
+}
+
+// PersonaStrings holds the localized one-line descriptions for the built-in
+// persona presets shown in StateAgentSetup and StateReview. Persona names are
+// proper nouns and never translated — only their descriptions are.
+type PersonaStrings struct {
+	Sky         string
+	Toffy       string
+	Atreus      string
+	Babi        string
+	LeePalacios string
+}
+
+// PersonaDescription returns the localized description for the given persona
+// preset ID. An empty field falls back to the English catalog's same field;
+// an unknown ID returns "".
+func (c Catalog) PersonaDescription(presetID string) string {
+	pick := func(p PersonaStrings) string {
+		switch presetID {
+		case "sky":
+			return p.Sky
+		case "toffy":
+			return p.Toffy
+		case "atreus":
+			return p.Atreus
+		case "babi":
+			return p.Babi
+		case "lee-palacios":
+			return p.LeePalacios
+		}
+		return ""
+	}
+	if s := pick(c.Personas); s != "" {
+		return s
+	}
+	return pick(English.Personas)
 }
 
 // InstallerStrings holds every user-visible string in the wizard TUI.
@@ -23,6 +60,7 @@ type InstallerStrings struct {
 	TitleInstalling       string
 	TitleDone             string
 	TitleDashboard        string
+	TitleLanguageSelect   string
 
 	// Step indicator words ("step 1 of 5" / "paso 1 de 5")
 	StepWord   string
@@ -59,10 +97,11 @@ type InstallerStrings struct {
 	BtnInstall  string
 
 	// Body / subtitle text
-	BodyAgentSetupSubtitle string
-	BodyEmojiPrefSubtitle  string
-	BodyAgentWriteMode     string
-	BodyInstalling         string
+	BodyAgentSetupSubtitle     string
+	BodyEmojiPrefSubtitle      string
+	BodyAgentWriteMode         string
+	BodyInstalling             string
+	BodyLanguageSelectSubtitle string
 
 	// Emoji preference options (radio rows + Review value)
 	OptionEmojiYes string

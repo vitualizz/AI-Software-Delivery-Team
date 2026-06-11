@@ -17,7 +17,7 @@ change_id: {change}
 created_at: {ISO 8601 timestamp, e.g. "2026-06-04T10:30:00Z"}
 prompt_version: {version hash of the prompt fragments used}
 input_refs:
-  - {relative path to each artifact read, under .asdt/}
+  - {Engram topic_key of each artifact read: "{project}/{change}/{specialist}/{artifact-type}" — per ADR-011}
 payload:
   # specialist-specific fields
   open_items: []  # always present; populated when expected inputs were absent
@@ -34,7 +34,7 @@ payload:
 | `change_id` | string | Yes | The active change name (e.g. `"add-password-reset"`) |
 | `created_at` | string | Yes | ISO 8601 UTC timestamp of when the artifact was written |
 | `prompt_version` | string | Yes | Hash or version identifier of the prompt fragments active at write time (for drift detection) |
-| `input_refs` | []string | Yes | List of relative paths (under `.asdt/`) to every artifact read as input. Empty list `[]` when no inputs were read |
+| `input_refs` | []string | Yes | List of Engram topic_keys (`{project}/{change}/{specialist}/{artifact-type}`, per ADR-011) for every artifact read as input. Filesystem knowledge files (e.g. `.asdt/knowledge/platform.yaml`) keep their relative-path form — the only non-topic-key allowance. Empty list `[]` when no inputs were read |
 | `payload` | map | Yes | Specialist-specific content. Must contain at minimum an `open_items` key |
 
 ---
@@ -82,16 +82,18 @@ If any validation rule fails, do NOT write the artifact. Record the failure and 
 
 ## Input Refs Convention
 
-`input_refs` contains relative paths from the `.asdt/` root. Examples:
+`input_refs` contains the Engram topic_key of each artifact read as input, in the canonical form `{project}/{change}/{specialist}/{artifact-type}` (per ADR-011 — Engram is the authoritative artifact store). Examples:
 
 ```yaml
 input_refs:
-  - artifacts/add-password-reset/requirements-spec.yaml
-  - artifacts/add-password-reset/ux-brief.yaml
+  - my-app/add-password-reset/pm/requirements-spec
+  - my-app/add-password-reset/ux-ui/ux-brief
   - knowledge/platform.yaml
 ```
 
-When a specialist reads an artifact but it is absent (degraded run), do NOT include the absent path in `input_refs`. Record the absence in `open_items[]` instead.
+Filesystem knowledge files under `.asdt/` (e.g. `.asdt/knowledge/platform.yaml`) are the ONLY non-topic-key allowance — reference them by their relative path from the `.asdt/` root, as in the last example above.
+
+When a specialist expects an artifact but it is absent (degraded run), do NOT include the absent reference in `input_refs`. Record the absence in `open_items[]` instead.
 
 ---
 
@@ -104,7 +106,7 @@ change_id: add-password-reset
 created_at: "2026-06-04T10:30:00Z"
 prompt_version: "sha256:a1b2c3d4"
 input_refs:
-  - artifacts/add-password-reset/requirements-spec.yaml
+  - my-app/add-password-reset/pm/requirements-spec
   - knowledge/platform.yaml
 payload:
   complexity_estimate: M

@@ -69,7 +69,6 @@ steps:
       - "{project}/{change}/qa/ac-gaps"
     output_topic_key: "{project}/{change}/qa/test-plan"
     reference_skills:
-      - ../asdt-shared/skills/context-extraction.md
       - ../asdt-shared/skills/report.md
 
   - name: decision-preservation

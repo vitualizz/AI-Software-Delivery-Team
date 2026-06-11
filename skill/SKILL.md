@@ -273,6 +273,7 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 - PM: `knowledge-recall`, `decision-preservation`
 - Architect: `knowledge-recall`, `platform-analysis`, `decision-preservation`
 - QA: `knowledge-recall`, `decision-preservation`
+- Security: `knowledge-recall`, `platform-analysis`, `decision-preservation`
 - UX/UI: `knowledge-recall`, `platform-analysis`, `decision-preservation`
 - Developer: `knowledge-recall`, `decision-preservation`
 
@@ -291,7 +292,6 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 | `knowledge-recall` | Included when change touches previously-modified code areas (model discretion) |
 | `decision-preservation` | Included when complexity ≥ moderate OR user request contains explicit decisions |
 | `test` | Included ONLY if `strict_tdd: true` in `.asdt/config.yaml` |
-| `review` | NEVER included in Developer (QA's responsibility) |
 | `design` | Included based on complexity level (see per-specialist rules) |
 | `tasks` | Included based on complexity level (see per-specialist rules) |
 

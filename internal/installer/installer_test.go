@@ -41,7 +41,7 @@ func TestInstallOne_SiblingLayout(t *testing.T) {
 	}
 	provider := installer.Providers[0]
 
-	results := installer.Install(assistants, provider, siblingFS)
+	results := installer.Install(assistants, provider, siblingFS, "")
 	if results[0].Err != nil {
 		t.Fatalf("install failed: %v", results[0].Err)
 	}
@@ -91,7 +91,7 @@ func TestInstallOne_ProductionShapedSiblingLayout(t *testing.T) {
 	}
 	provider := installer.Providers[0]
 
-	results := installer.Install(assistants, provider, productionShapedFS)
+	results := installer.Install(assistants, provider, productionShapedFS, "")
 	if results[0].Err != nil {
 		t.Fatalf("install failed: %v", results[0].Err)
 	}
@@ -148,7 +148,7 @@ func TestInstall_SuccessForTwoAssistants(t *testing.T) {
 	}
 	provider := installer.Providers[0] // engram
 
-	results := installer.Install(assistants, provider, testFS)
+	results := installer.Install(assistants, provider, testFS, "")
 
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -181,7 +181,7 @@ func TestInstall_PartialFailure(t *testing.T) {
 	}
 	provider := installer.Providers[0]
 
-	results := installer.Install(assistants, provider, testFS)
+	results := installer.Install(assistants, provider, testFS, "")
 
 	if len(results) != 2 {
 		t.Fatalf("expected 2 results, got %d", len(results))
@@ -201,12 +201,12 @@ func TestInstall_Idempotent(t *testing.T) {
 	}
 	provider := installer.Providers[0]
 
-	results1 := installer.Install(assistants, provider, testFS)
+	results1 := installer.Install(assistants, provider, testFS, "")
 	if results1[0].Err != nil {
 		t.Fatalf("first install failed: %v", results1[0].Err)
 	}
 
-	results2 := installer.Install(assistants, provider, testFS)
+	results2 := installer.Install(assistants, provider, testFS, "")
 	if results2[0].Err != nil {
 		t.Errorf("second install (idempotent) failed: %v", results2[0].Err)
 	}
@@ -254,7 +254,7 @@ func TestInstall_AgentGenFailureIsolation(t *testing.T) {
 	}
 	provider := installer.Providers[0]
 
-	results := installer.Install(assistants, provider, agentEnabledFS)
+	results := installer.Install(assistants, provider, agentEnabledFS, "")
 
 	if results[0].Err == nil {
 		t.Error("results[0].Err should be non-nil when the agent root is unwritable")
@@ -288,7 +288,7 @@ func TestInstall_ReinstallPreservesPersonaAndSetsAgentTypes(t *testing.T) {
 	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: filepath.Join(dir, "skills")}
 	provider := installer.Providers[0]
 
-	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS)
+	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS, "")
 	if results[0].Err != nil {
 		t.Fatalf("first install failed: %v", results[0].Err)
 	}
@@ -308,7 +308,7 @@ func TestInstall_ReinstallPreservesPersonaAndSetsAgentTypes(t *testing.T) {
 		t.Fatalf("write meta: %v", err)
 	}
 
-	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS)
+	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS, "")
 	if results[0].Err != nil {
 		t.Fatalf("reinstall failed: %v", results[0].Err)
 	}
@@ -326,6 +326,61 @@ func TestInstall_ReinstallPreservesPersonaAndSetsAgentTypes(t *testing.T) {
 	assertAgentTypesCanonical(t, meta.AgentTypes)
 	if meta.InstalledAt.IsZero() {
 		t.Error("meta.InstalledAt is zero after reinstall, want a fresh timestamp")
+	}
+}
+
+// TestInstall_WritesLanguageToAllAssistantsMeta verifies that the language
+// chosen in the TUI is recorded in every assistant's install metadata.
+// Uses agentEnabledFS: its root-level SKILL.md materializes the asdt/
+// directory the install-meta file lives in.
+func TestInstall_WritesLanguageToAllAssistantsMeta(t *testing.T) {
+	assistants := []installer.AssistantDescriptor{
+		{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: filepath.Join(t.TempDir(), "skills")},
+		{ID: "a2", Name: "A2", BinaryName: "sh", SkillsDir: filepath.Join(t.TempDir(), "skills")},
+	}
+	provider := installer.Providers[0]
+
+	results := installer.Install(assistants, provider, agentEnabledFS, "es")
+	for i, r := range results {
+		if r.Err != nil {
+			t.Fatalf("install failed for assistant %d: %v", i, r.Err)
+		}
+	}
+
+	for _, a := range assistants {
+		meta, err := installer.ReadInstallMeta(a)
+		if err != nil {
+			t.Fatalf("read meta for %s: %v", a.ID, err)
+		}
+		if meta.Language != "es" {
+			t.Errorf("meta.Language for %s = %q, want %q", a.ID, meta.Language, "es")
+		}
+	}
+}
+
+// TestInstall_ReinstallWithEmptyLangPreservesLanguage verifies the
+// wipe-prevention guard: a reinstall that passes lang="" must keep the
+// previously recorded language (mirroring the Persona handling).
+func TestInstall_ReinstallWithEmptyLangPreservesLanguage(t *testing.T) {
+	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: filepath.Join(t.TempDir(), "skills")}
+	provider := installer.Providers[0]
+
+	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS, "es")
+	if results[0].Err != nil {
+		t.Fatalf("first install failed: %v", results[0].Err)
+	}
+
+	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS, "")
+	if results[0].Err != nil {
+		t.Fatalf("reinstall failed: %v", results[0].Err)
+	}
+
+	meta, err := installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta after reinstall: %v", err)
+	}
+	if meta.Language != "es" {
+		t.Errorf("meta.Language = %q after reinstall with lang=\"\", want %q (must be preserved)", meta.Language, "es")
 	}
 }
 

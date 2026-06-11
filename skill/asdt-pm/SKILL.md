@@ -6,7 +6,6 @@ specialist-id: pm
 shared-skills:
   - specialist-header
   - knowledge-recall
-  - context-extraction
   - report
   - decision-preservation
 metadata:

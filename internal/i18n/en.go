@@ -14,6 +14,7 @@ var English = Catalog{
 		TitleInstalling:       "Installing...",
 		TitleDone:             "Installation Complete",
 		TitleDashboard:        "Dashboard",
+		TitleLanguageSelect:   "Language",
 
 		StepWord:   "step",
 		StepOfWord: "of",
@@ -44,10 +45,11 @@ var English = Catalog{
 		BtnSkip:     "[ Skip → ]",
 		BtnInstall:  "[ Install → ]",
 
-		BodyAgentSetupSubtitle: "Configure how AI assistants behave across all tools",
-		BodyEmojiPrefSubtitle:  "Should your assistants use emojis in their responses?",
-		BodyAgentWriteMode:     "Choose how to handle each existing config:",
-		BodyInstalling:         "Installing assistants and skills...",
+		BodyAgentSetupSubtitle:     "Configure how AI assistants behave across all tools",
+		BodyEmojiPrefSubtitle:      "Should your assistants use emojis in their responses?",
+		BodyAgentWriteMode:         "Choose how to handle each existing config:",
+		BodyInstalling:             "Installing assistants and skills...",
+		BodyLanguageSelectSubtitle: "Which language should the installer use?",
 
 		OptionEmojiYes: "Yes — use emojis",
 		OptionEmojiNo:  "No — plain text only",
@@ -84,5 +86,12 @@ var English = Catalog{
 	Dashboard: DashboardStrings{
 		LabelInstalled: "Installed",
 		LabelPersona:   "Persona",
+	},
+	Personas: PersonaStrings{
+		Sky:         "Sharp and thorough. Roasts bad practices with wit, then explains everything.",
+		Toffy:       "Warm and enthusiastic. Simple answers, accidental sarcasm.",
+		Atreus:      "Bold and reckless. Ships the unconventional solution first — and it works.",
+		Babi:        "Your biggest fan. Warm, fast, and celebrates everything loudly.",
+		LeePalacios: "Cat lover, coder, otaku. Your pair-programming companion for the whole journey.",
 	},
 }
