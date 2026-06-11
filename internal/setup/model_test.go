@@ -260,7 +260,8 @@ func TestUpdate_AssistantInstallProgress_WaitsForAgentConfig(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (no conflicts in clean HOME)
-	m = updateKey(t, m, tea.KeyEnter) // preset 0 → Review
+	m = updateKey(t, m, tea.KeyEnter) // preset 0 → EmojiPref
+	m = updateKey(t, m, tea.KeyEnter) // EmojiPref (Yes) → Review
 	m = updateKey(t, m, tea.KeyEnter) // Review → Installing (agentDone=false)
 	if m.State() != setup.StateInstalling {
 		t.Fatalf("expected StateInstalling, got %v", m.State())
@@ -346,7 +347,8 @@ func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	m2 = updateKey(t, m2, tea.KeyEnter) // preflightDone → StateSelectAssistants
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup
-	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → Review (no conflicts)
+	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → EmojiPref
+	m2 = updateKey(t, m2, tea.KeyEnter) // EmojiPref (Yes) → Review (no conflicts)
 	m2 = updateKey(t, m2, tea.KeyEnter) // Review → Installing
 	if m2.State() != setup.StateInstalling {
 		t.Fatalf("toInstalling: state = %v, want StateInstalling", m2.State())
@@ -407,7 +409,7 @@ func TestUpdate_SelectProvider_EnterGoesToAgentSetup(t *testing.T) {
 	}
 }
 
-func TestUpdate_AgentSetup_EnterPreset_GoesToReview(t *testing.T) {
+func TestUpdate_AgentSetup_EnterPreset_GoesToEmojiPrefThenReview(t *testing.T) {
 	// Use a clean HOME so detectAgentConflicts finds no existing config.
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
@@ -417,10 +419,82 @@ func TestUpdate_AgentSetup_EnterPreset_GoesToReview(t *testing.T) {
 	if m.State() != setup.StateAgentSetup {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
 	}
-	// Enter on cursor=0 (Sky preset) with no conflicts → StateReview.
+	// Enter on cursor=0 (Sky preset) → StateEmojiPref.
 	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateEmojiPref {
+		t.Errorf("Enter on preset at AgentSetup: state = %v, want StateEmojiPref", m2.State())
+	}
+	// Enter at EmojiPref with no conflicts → StateReview.
+	m3 := updateKey(t, m2, tea.KeyEnter)
+	if m3.State() != setup.StateReview {
+		t.Errorf("Enter at EmojiPref (no conflicts): state = %v, want StateReview", m3.State())
+	}
+}
+
+// --- StateEmojiPref transition tests ---
+
+func TestUpdate_EmojiPref_DefaultsToYes(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup preset → EmojiPref
+	if m.State() != setup.StateEmojiPref {
+		t.Fatalf("expected StateEmojiPref, got %v", m.State())
+	}
+	if !m.UseEmojis() {
+		t.Error("UseEmojis() = false on EmojiPref entry, want true (default Yes)")
+	}
+}
+
+func TestUpdate_EmojiPref_DownTogglesNo_UpTogglesYes(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup preset → EmojiPref
+
+	m = updateKey(t, m, tea.KeyDown) // cursor 1 = No
+	if m.UseEmojis() {
+		t.Error("after Down: UseEmojis() = true, want false (No selected)")
+	}
+	m = updateKey(t, m, tea.KeyUp) // cursor 0 = Yes
+	if !m.UseEmojis() {
+		t.Error("after Up: UseEmojis() = false, want true (Yes selected)")
+	}
+}
+
+func TestUpdate_EmojiPref_Esc_ReturnsToAgentSetup(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup preset → EmojiPref
+	if m.State() != setup.StateEmojiPref {
+		t.Fatalf("expected StateEmojiPref, got %v", m.State())
+	}
+	m2 := updateKey(t, m, tea.KeyEsc)
+	if m2.State() != setup.StateAgentSetup {
+		t.Errorf("Esc at EmojiPref: state = %v, want StateAgentSetup", m2.State())
+	}
+}
+
+func TestUpdate_AgentSetup_Skip_BypassesEmojiPref(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	// Navigate to Skip (cursor=5 = 5 presets).
+	for range installer.PersonaPresets {
+		m = updateKey(t, m, tea.KeyDown)
+	}
+	m2 := updateKey(t, m, tea.KeyEnter) // Skip → Review (EmojiPref never entered)
 	if m2.State() != setup.StateReview {
-		t.Errorf("Enter on preset at AgentSetup (no conflicts): state = %v, want StateReview", m2.State())
+		t.Errorf("Enter on Skip: state = %v, want StateReview (EmojiPref bypassed)", m2.State())
 	}
 }
 
@@ -430,7 +504,8 @@ func TestUpdate_Review_EnterGoesToInstalling(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
-	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Review
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → EmojiPref
+	m = updateKey(t, m, tea.KeyEnter) // EmojiPref → Review
 	if m.State() != setup.StateReview {
 		t.Fatalf("expected StateReview, got %v", m.State())
 	}
@@ -440,19 +515,39 @@ func TestUpdate_Review_EnterGoesToInstalling(t *testing.T) {
 	}
 }
 
-func TestUpdate_Review_EscGoesToAgentSetup(t *testing.T) {
+func TestUpdate_Review_EscGoesToEmojiPref(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
-	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Review (no conflicts)
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → EmojiPref
+	m = updateKey(t, m, tea.KeyEnter) // EmojiPref → Review (no conflicts)
+	if m.State() != setup.StateReview {
+		t.Fatalf("expected StateReview, got %v", m.State())
+	}
+	m2 := updateKey(t, m, tea.KeyEsc)
+	if m2.State() != setup.StateEmojiPref {
+		t.Errorf("Esc at Review (no conflicts, not skipped): state = %v, want StateEmojiPref", m2.State())
+	}
+}
+
+func TestUpdate_Review_Skip_EscGoesToAgentSetup(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	for range installer.PersonaPresets {
+		m = updateKey(t, m, tea.KeyDown)
+	}
+	m = updateKey(t, m, tea.KeyEnter) // Skip → Review
 	if m.State() != setup.StateReview {
 		t.Fatalf("expected StateReview, got %v", m.State())
 	}
 	m2 := updateKey(t, m, tea.KeyEsc)
 	if m2.State() != setup.StateAgentSetup {
-		t.Errorf("Esc at Review (no conflicts): state = %v, want StateAgentSetup", m2.State())
+		t.Errorf("Esc at Review (skipped): state = %v, want StateAgentSetup", m2.State())
 	}
 }
 
@@ -517,10 +612,15 @@ func TestUpdate_AgentSetup_WithConflict_EntersAgentWriteMode(t *testing.T) {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
 	}
 
-	// Enter on preset 0 (Sky) with conflict → should go to StateAgentWriteMode.
+	// Enter on preset 0 (Sky) → EmojiPref; Enter there with conflict →
+	// should go to StateAgentWriteMode.
 	m2 := updateKey(t, m, tea.KeyEnter)
-	if m2.State() != setup.StateAgentWriteMode {
-		t.Errorf("Enter on preset with conflict: state = %v, want StateAgentWriteMode", m2.State())
+	if m2.State() != setup.StateEmojiPref {
+		t.Fatalf("Enter on preset: state = %v, want StateEmojiPref", m2.State())
+	}
+	m3 := updateKey(t, m2, tea.KeyEnter)
+	if m3.State() != setup.StateAgentWriteMode {
+		t.Errorf("Enter at EmojiPref with conflict: state = %v, want StateAgentWriteMode", m3.State())
 	}
 }
 
@@ -545,7 +645,8 @@ func advanceToAgentWriteMode(t *testing.T) setup.Model {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict detected)
-	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode (preset 0 with conflict)
+	m = updateKey(t, m, tea.KeyEnter) // → EmojiPref (preset 0)
+	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode (conflict)
 	if m.State() != setup.StateAgentWriteMode {
 		t.Fatalf("advanceToAgentWriteMode: state = %v, want StateAgentWriteMode", m.State())
 	}
@@ -601,7 +702,7 @@ func TestUpdate_AgentWriteMode_ReviewEscGoesBackToAgentWriteMode(t *testing.T) {
 	}
 }
 
-func TestUpdate_AgentWriteMode_Esc_ReturnsToAgentSetup(t *testing.T) {
+func TestUpdate_AgentWriteMode_Esc_ReturnsToEmojiPref(t *testing.T) {
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	t.Setenv("XDG_CONFIG_HOME", "")
@@ -618,14 +719,15 @@ func TestUpdate_AgentWriteMode_Esc_ReturnsToAgentSetup(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict)
+	m = updateKey(t, m, tea.KeyEnter) // → EmojiPref
 	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode
 	if m.State() != setup.StateAgentWriteMode {
 		t.Fatalf("expected StateAgentWriteMode, got %v", m.State())
 	}
 
 	m2 := updateKey(t, m, tea.KeyEsc)
-	if m2.State() != setup.StateAgentSetup {
-		t.Errorf("Esc at AgentWriteMode: state = %v, want StateAgentSetup", m2.State())
+	if m2.State() != setup.StateEmojiPref {
+		t.Errorf("Esc at AgentWriteMode: state = %v, want StateEmojiPref", m2.State())
 	}
 }
 

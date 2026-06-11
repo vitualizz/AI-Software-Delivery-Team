@@ -39,4 +39,11 @@ produces no artifact of its own and only injects context for the next step
 
 > Canonical protocol: `asdt-shared/skills/parallel-retrieval.md` — Cache Ledger Rule, Injection Format, UNRESOLVED degradation. Do not restate it here.
 
+> **Agent type**: launch each `subagent` step with the agent type its
+> `workflow.yaml` entry declares — `agent: analyst` maps to the installed
+> `asdt-analyst` agent, `agent: builder` to `asdt-builder`. Fallback is
+> MANDATORY: when the named type is not available in your harness, launch with
+> the harness default (general-purpose) agent AND prepend the injected
+> executor header per `parallel-retrieval.md`.
+
 `inline` steps fold into your own orchestrator context — no launch.

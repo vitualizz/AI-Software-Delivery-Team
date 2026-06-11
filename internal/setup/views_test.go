@@ -182,7 +182,12 @@ func stateView(t *testing.T, target string) string {
 		return m.View()
 	}
 
-	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → Review
+	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → EmojiPref
+	if target == "EmojiPref" {
+		return m.View()
+	}
+
+	m = updateKey(t, m, tea.KeyEnter) // EmojiPref → Review
 	if target == "Review" {
 		return m.View()
 	}
@@ -209,7 +214,8 @@ func stateView(t *testing.T, target string) string {
 		m2 = updateKey(t, m2, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
 		m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
 		m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup (conflict detected)
-		m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup preset → AgentWriteMode
+		m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup preset → EmojiPref
+		m2 = updateKey(t, m2, tea.KeyEnter) // EmojiPref → AgentWriteMode (conflict)
 		return m2.View()
 	}
 
@@ -232,6 +238,7 @@ func TestView_AllStatesHaveBorder(t *testing.T) {
 		"SelectAssistants",
 		"SelectProvider",
 		"AgentSetup",
+		"EmojiPref",
 		"Review",
 		"AgentWriteMode",
 		"Installing",
@@ -280,6 +287,7 @@ func TestView_FooterRendersHintText(t *testing.T) {
 		{"MainMenu", "↑↓"},
 		{"SelectAssistants", "space"},
 		{"SelectProvider", "esc"},
+		{"EmojiPref", "↑↓"},
 		{"Review", "esc"},
 		{"Installing", "q"},
 	}
@@ -403,6 +411,75 @@ func TestView_SelectProviderShowsRadioIndicator(t *testing.T) {
 	// Unselected radio only appears when there is more than one provider.
 	if len(installer.Providers) > 1 && !strings.Contains(view, "( )") {
 		t.Errorf("SelectProvider missing unselected radio indicator '( )', got:\n%s", view)
+	}
+}
+
+func TestView_EmojiPrefShowsRadioOptionsAndSubtitle(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "EmojiPref")
+	if !strings.Contains(view, "Emoji Preference") {
+		t.Errorf("EmojiPref missing title 'Emoji Preference', got:\n%s", view)
+	}
+	if !strings.Contains(view, "Should your assistants use emojis in their responses?") {
+		t.Errorf("EmojiPref missing subtitle question, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Yes — use emojis") {
+		t.Errorf("EmojiPref missing Yes option, got:\n%s", view)
+	}
+	if !strings.Contains(view, "No — plain text only") {
+		t.Errorf("EmojiPref missing No option, got:\n%s", view)
+	}
+	if !strings.Contains(view, "(•)") {
+		t.Errorf("EmojiPref missing selected radio indicator '(•)', got:\n%s", view)
+	}
+	if !strings.Contains(view, "( )") {
+		t.Errorf("EmojiPref missing unselected radio indicator '( )', got:\n%s", view)
+	}
+}
+
+func TestView_EmojiPrefSharesStepFour(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "EmojiPref")
+	if !strings.Contains(view, "step 4 of 5") {
+		t.Errorf("EmojiPref should share step 4 of 5 with AgentSetup, got:\n%s", view)
+	}
+}
+
+func TestView_ReviewShowsEmojiRowWhenNotSkipped(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "Review")
+	if !strings.Contains(view, "Emojis:") {
+		t.Errorf("review view missing 'Emojis:' label, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Yes — use emojis") {
+		t.Errorf("review view missing emoji value 'Yes — use emojis' (default), got:\n%s", view)
+	}
+}
+
+func TestView_ReviewOmitsEmojiRowWhenSkipped(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	// Drive the skip path to Review: EmojiPref is bypassed entirely.
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = updateKey(t, m, tea.KeyEnter) // MainMenu → EnvironmentCheck
+	next, _ := m.Update(setup.EnvironmentCheckMsg{EngramFound: true})
+	m = next.(setup.Model)
+	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
+	m = updateKey(t, m, tea.KeyEnter) // SelectAssistants → SelectProvider
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	for range installer.PersonaPresets {
+		m = updateKey(t, m, tea.KeyDown) // navigate to [ Skip → ]
+	}
+	m = updateKey(t, m, tea.KeyEnter) // Skip → Review
+	if m.State() != setup.StateReview {
+		t.Fatalf("expected StateReview, got %v", m.State())
+	}
+	view := m.View()
+	if strings.Contains(view, "Emojis:") {
+		t.Errorf("review view must omit 'Emojis:' row when persona was skipped, got:\n%s", view)
 	}
 }
 

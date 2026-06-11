@@ -13,7 +13,9 @@ const installMetaFile = ".install-meta.json"
 // All fields are optional — callers must treat zero values as "not yet installed".
 type InstallMeta struct {
 	InstalledAt time.Time `json:"installed_at,omitempty"`
-	Persona     string    `json:"persona,omitempty"` // PersonaPreset.Name; empty when skipped
+	Persona     string    `json:"persona,omitempty"`     // PersonaPreset.Name; empty when skipped
+	Emojis      string    `json:"emojis,omitempty"`      // "yes"/"no" emoji preference; empty when never chosen
+	AgentTypes  []string  `json:"agent_types,omitempty"` // installed executor agent type IDs (AgentTypeNames)
 }
 
 func metaPath(d AssistantDescriptor) string {

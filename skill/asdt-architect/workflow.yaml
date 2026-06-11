@@ -14,6 +14,7 @@ steps:
     skill: steps/load-constraints.md
     description: Load architectural constraints from platform context into the constraints artifact
     execution: subagent
+    agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/architect/constraints-analysis"
     reference_skills:
@@ -24,6 +25,7 @@ steps:
     skill: steps/evaluate-approaches.md
     description: Evaluate candidate architectural approaches against the loaded constraints
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/architect/constraints-analysis"
     output_topic_key: "{project}/{change}/architect/approaches"
@@ -33,6 +35,7 @@ steps:
     skill: steps/decision-record.md
     description: Select the winning approach and produce an Architecture Decision Record
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/architect/approaches"
     output_topic_key: "{project}/{change}/architect/adr"
@@ -42,6 +45,7 @@ steps:
     skill: steps/system-design.md
     description: Produce the full system design artifact (data model + API surface) from the ADR
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/architect/adr"
     output_topic_key: "{project}/{change}/architect/system-design"
@@ -55,6 +59,7 @@ steps:
     skill: steps/risk-analysis.md
     description: Identify risks introduced by the system design and rate them by severity
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/architect/system-design"
     output_topic_key: "{project}/{change}/architect/risks"
@@ -64,6 +69,7 @@ steps:
     skill: steps/technical-handoff.md
     description: Consolidate ADR, system-design, and risks into the final architectural-decision + system-design artifacts
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/architect/adr"
       - "{project}/{change}/architect/system-design"

@@ -9,12 +9,17 @@ The most impactful contributions are specialist SKILL.md files and workflow defi
 ### 1. Create the directory structure
 
 ```
-skill/{name}/
+skill/asdt-{name}/
   SKILL.md          # specialist definition and workflow
   workflow.yaml     # step sequence and metadata
   steps/            # one .md per workflow step
   skills/           # specialist-scoped capability fragments (optional)
 ```
+
+The directory name MUST start with `asdt-`. The binary embeds the skill tree via
+`//go:embed SKILL.md asdt-*` in `skill/embedded.go` — any directory matching
+`asdt-*` ships automatically on the next build; a directory named anything else
+is silently left out of the installer.
 
 ### 2. Write the skill file
 
@@ -86,7 +91,21 @@ If a fragment is useful across multiple specialists, create `skill/asdt-shared/s
 
 Add a row to the specialists table with the command, role, and what it produces.
 
-No Go code changes are needed to add a specialist.
+### 8. Verify the specialist is embedded
+
+```
+go test ./skill/...
+```
+
+`skill/embedded_test.go` checks that every `asdt-*` directory on disk is present
+in the embedded FS (and carries its `SKILL.md`). If your specialist is missing
+from the build, this test fails naming the directory. Two gotchas it guards
+against: the directory not matching the `asdt-*` glob, and `go:embed` silently
+skipping files whose names start with `.` or `_`.
+
+No Go code changes are needed to add a specialist — the `asdt-*` embed glob in
+`skill/embedded.go` is the registry, and the installer copies whatever the
+embedded FS contains.
 
 ---
 
@@ -101,7 +120,7 @@ No Go code changes are needed to add a specialist.
 ## How to improve a specialist prompt
 
 1. Edit `skill/{specialist}/SKILL.md` or any file under `skill/{specialist}/steps/` or `skill/{specialist}/skills/`.
-2. Run `go test ./internal/prompt/...` — the `go:embed` registry picks up changes automatically.
+2. Run `go test ./skill/...` — the `go:embed` registry picks up changes automatically on rebuild.
 3. Prompt-only PRs are first-class contributions.
 
 ---

@@ -212,6 +212,137 @@ func TestInstall_Idempotent(t *testing.T) {
 	}
 }
 
+// agentEnabledFS models an embedded tree complete enough for BOTH generated
+// artifact kinds: a specialist SKILL.md with valid frontmatter (command
+// wrappers) and the shared executor header (agent definitions).
+var agentEnabledFS = fstest.MapFS{
+	"SKILL.md": &fstest.MapFile{Data: []byte("# ASDT consultant")},
+	"asdt-developer/SKILL.md": &fstest.MapFile{Data: []byte(`---
+name: asdt-developer
+description: "Turns specs and designs into working code."
+user-invocable: true
+specialist-id: developer
+---
+
+# Developer specialist
+`)},
+	"asdt-shared/skills/executor-header.md": &fstest.MapFile{Data: []byte("# Executor Header\n\n> **EXECUTOR**: test header.\n")},
+}
+
+// TestInstall_AgentGenFailureIsolation verifies that a failure generating
+// agent definitions (unwritable agent root) sets result.Err for that
+// assistant, suppresses its install-meta write, and leaves the other
+// assistant's install untouched.
+func TestInstall_AgentGenFailureIsolation(t *testing.T) {
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+
+	// Commands root stays writable; the agents root is blocked by a FILE at
+	// its path so MkdirAll fails for agent generation only.
+	if err := os.MkdirAll(filepath.Join(xdg, "opencode", "commands"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(xdg, "opencode", "agents"), []byte("blocker"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	openCodeSkills := filepath.Join(t.TempDir(), "skills")
+	otherSkills := filepath.Join(t.TempDir(), "skills")
+	assistants := []installer.AssistantDescriptor{
+		{ID: installer.AssistantOpenCode, Name: "OpenCode", BinaryName: "opencode", SkillsDir: openCodeSkills},
+		{ID: "a2", Name: "A2", BinaryName: "sh", SkillsDir: otherSkills},
+	}
+	provider := installer.Providers[0]
+
+	results := installer.Install(assistants, provider, agentEnabledFS)
+
+	if results[0].Err == nil {
+		t.Error("results[0].Err should be non-nil when the agent root is unwritable")
+	}
+	meta, err := installer.ReadInstallMeta(assistants[0])
+	if err != nil {
+		t.Fatalf("read opencode meta: %v", err)
+	}
+	if !meta.InstalledAt.IsZero() {
+		t.Error("install meta was written for the failed assistant; failure must suppress the meta write")
+	}
+
+	if results[1].Err != nil {
+		t.Errorf("results[1].Err = %v, want nil (other assistant must be unaffected)", results[1].Err)
+	}
+	otherMeta, err := installer.ReadInstallMeta(assistants[1])
+	if err != nil {
+		t.Fatalf("read other meta: %v", err)
+	}
+	if otherMeta.InstalledAt.IsZero() {
+		t.Error("install meta missing for the unaffected assistant")
+	}
+}
+
+// TestInstall_ReinstallPreservesPersonaAndSetsAgentTypes verifies the
+// preserve-or-set meta discipline: a reinstall keeps the previously recorded
+// persona and emoji preference but always (re)sets AgentTypes to the
+// canonical list.
+func TestInstall_ReinstallPreservesPersonaAndSetsAgentTypes(t *testing.T) {
+	dir := t.TempDir()
+	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: filepath.Join(dir, "skills")}
+	provider := installer.Providers[0]
+
+	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS)
+	if results[0].Err != nil {
+		t.Fatalf("first install failed: %v", results[0].Err)
+	}
+
+	meta, err := installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta after first install: %v", err)
+	}
+	assertAgentTypesCanonical(t, meta.AgentTypes)
+
+	// Simulate a persona and emoji preference chosen after install, alongside
+	// stale agent types.
+	meta.Persona = "Sky"
+	meta.Emojis = "yes"
+	meta.AgentTypes = []string{"stale"}
+	if err := installer.WriteInstallMeta(assistant, meta); err != nil {
+		t.Fatalf("write meta: %v", err)
+	}
+
+	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, agentEnabledFS)
+	if results[0].Err != nil {
+		t.Fatalf("reinstall failed: %v", results[0].Err)
+	}
+
+	meta, err = installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta after reinstall: %v", err)
+	}
+	if meta.Persona != "Sky" {
+		t.Errorf("meta.Persona = %q after reinstall, want %q (must be preserved)", meta.Persona, "Sky")
+	}
+	if meta.Emojis != "yes" {
+		t.Errorf("meta.Emojis = %q after reinstall, want %q (must be preserved)", meta.Emojis, "yes")
+	}
+	assertAgentTypesCanonical(t, meta.AgentTypes)
+	if meta.InstalledAt.IsZero() {
+		t.Error("meta.InstalledAt is zero after reinstall, want a fresh timestamp")
+	}
+}
+
+func assertAgentTypesCanonical(t *testing.T, got []string) {
+	t.Helper()
+	want := installer.AgentTypeNames
+	if len(got) != len(want) {
+		t.Errorf("meta.AgentTypes = %v, want canonical %v", got, want)
+		return
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("meta.AgentTypes[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
 func checkFile(t *testing.T, path string) {
 	t.Helper()
 	if _, err := os.Stat(path); err != nil {

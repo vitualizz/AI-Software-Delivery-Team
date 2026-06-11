@@ -17,6 +17,7 @@ type InstallerStrings struct {
 	TitleSelectAssistants string
 	TitleSelectProvider   string
 	TitleAgentSetup       string
+	TitleEmojiPref        string
 	TitleAgentWriteMode   string
 	TitleReview           string
 	TitleInstalling       string
@@ -59,8 +60,13 @@ type InstallerStrings struct {
 
 	// Body / subtitle text
 	BodyAgentSetupSubtitle string
+	BodyEmojiPrefSubtitle  string
 	BodyAgentWriteMode     string
 	BodyInstalling         string
+
+	// Emoji preference options (radio rows + Review value)
+	OptionEmojiYes string
+	OptionEmojiNo  string
 
 	// AgentSetup state messages
 	WarnExistingConfig     string
@@ -71,6 +77,7 @@ type InstallerStrings struct {
 	LabelAssistants string
 	LabelProvider   string
 	LabelPersona    string
+	LabelEmojis     string
 	LabelConfig     string
 	LabelSkipped    string
 

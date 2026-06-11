@@ -10,6 +10,8 @@
 
 {{persona_block}}
 
+{{emoji_preference}}
+
 ## Session Protocol
 
 When opening a new session:

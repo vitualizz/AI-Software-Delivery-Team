@@ -46,6 +46,8 @@ func renderState(m Model) string {
 		return renderSelectProvider(m)
 	case StateAgentSetup:
 		return renderAgentSetup(m)
+	case StateEmojiPref:
+		return renderEmojiPref(m)
 	case StateAgentWriteMode:
 		return renderAgentWriteMode(m)
 	case StateInstalling:
@@ -272,6 +274,55 @@ func renderAgentSetup(m Model) string {
 	return frame(s.TitleAgentSetup, body, footer, true)
 }
 
+// renderEmojiPref renders the emoji preference screen: two radio rows
+// (Yes / No) following renderSelectProvider's pattern. It shares step 4 with
+// the persona screen — both belong to the same agent-config wizard step.
+func renderEmojiPref(m Model) string {
+	s := m.catalog.Installer
+	var b strings.Builder
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 4, 5))
+
+	options := []string{s.OptionEmojiYes, s.OptionEmojiNo}
+	for i, opt := range options {
+		focused := i == m.cursor
+		selected := (i == 0) == m.agentConfig.useEmojis
+
+		cursor := "  "
+		if focused {
+			cursor = cursorChar + " "
+		}
+
+		var radioStr string
+		if selected {
+			radioStr = styles.Default.Cursor.Render("(•)")
+		} else {
+			radioStr = styles.Default.Dim.Render("( )")
+		}
+
+		var nameStr string
+		if focused {
+			nameStr = styles.Default.Cursor.Render(opt)
+		} else {
+			nameStr = styles.Default.Dim.Render(opt)
+		}
+
+		fmt.Fprintf(&b, "  %s%s %s\n", cursor, radioStr, nameStr)
+	}
+
+	subtitle := styles.Default.Dim.Render(s.BodyEmojiPrefSubtitle)
+	body := lipgloss.JoinVertical(lipgloss.Left, subtitle, "", strings.TrimRight(b.String(), "\n"))
+
+	footer := panels.RenderKeyboardFooter([]panels.HintGroup{
+		{Label: s.HintGroupActions, Hints: []panels.Hint{
+			{Key: "↑↓", Description: s.HintNavigate},
+			{Key: "enter", Description: s.HintContinue},
+			{Key: "esc", Description: s.HintBack},
+			{Key: "q", Description: s.HintQuit},
+		}},
+	}, m.width)
+	return frame(s.TitleEmojiPref, body, footer, true)
+}
+
 func renderAgentWriteMode(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
@@ -355,6 +406,14 @@ func renderReview(m Model) string {
 	} else if m.agentConfig.selectedPersona < len(installer.PersonaPresets) {
 		preset := installer.PersonaPresets[m.agentConfig.selectedPersona]
 		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelPersona), preset.Name+" — "+preset.Description)
+	}
+
+	if !m.agentConfig.skip {
+		emojiVal := s.OptionEmojiNo
+		if m.agentConfig.useEmojis {
+			emojiVal = s.OptionEmojiYes
+		}
+		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelEmojis), emojiVal)
 	}
 
 	if !m.agentConfig.skip && len(m.agentConfig.conflicts) > 0 {

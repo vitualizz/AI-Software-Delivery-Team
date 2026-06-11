@@ -22,6 +22,8 @@ var agentRenderFS = fstest.MapFS{
 ## Identity
 
 {{persona_block}}
+
+{{emoji_preference}}
 `)},
 	"asdt-init/personas/sky.md":          &fstest.MapFile{Data: []byte(`You are Sky. Sharp and thorough.`)},
 	"asdt-init/personas/toffy.md":        &fstest.MapFile{Data: []byte(`You are Toffy. Warm and enthusiastic.`)},
@@ -39,6 +41,7 @@ func TestRenderAgentConfig_AllPresetsSubstituteCorrectly(t *testing.T) {
 			results := installer.InstallAgentConfig(
 				[]installer.AssistantDescriptor{{ID: "no-adapter-for-render-test"}},
 				preset,
+				true,
 				map[string]installer.AgentWriteMode{},
 				agentRenderFS,
 			)
@@ -68,7 +71,7 @@ func TestRenderAgentConfig_NoPlaceholdersRemain(t *testing.T) {
 	assistants := []installer.AssistantDescriptor{
 		{ID: installer.AssistantClaudeCode, Name: "Claude Code"},
 	}
-	results := installer.InstallAgentConfig(assistants, preset, map[string]installer.AgentWriteMode{}, agentRenderFS)
+	results := installer.InstallAgentConfig(assistants, preset, true, map[string]installer.AgentWriteMode{}, agentRenderFS)
 	if len(results) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(results))
 	}
@@ -87,10 +90,13 @@ func TestRenderAgentConfig_NoPlaceholdersRemain(t *testing.T) {
 	}
 	content := string(data)
 
-	for _, ph := range []string{"{{agent_name}}", "{{agent_description}}", "{{persona_block}}", "{{stack}}", "{{architectural_style}}"} {
+	for _, ph := range []string{"{{agent_name}}", "{{agent_description}}", "{{persona_block}}", "{{emoji_preference}}", "{{stack}}", "{{architectural_style}}"} {
 		if strings.Contains(content, ph) {
 			t.Errorf("AGENTS.md still contains placeholder %q", ph)
 		}
+	}
+	if got := strings.Count(content, "- **Emojis**:"); got != 1 {
+		t.Errorf("AGENTS.md contains %d '- **Emojis**:' bullets, want exactly 1", got)
 	}
 	if !strings.Contains(content, "Sky") {
 		t.Errorf("AGENTS.md missing preset name 'Sky', got:\n%s", content)

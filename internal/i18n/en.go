@@ -8,6 +8,7 @@ var English = Catalog{
 		TitleSelectAssistants: "Select Assistants",
 		TitleSelectProvider:   "Select Memory Provider",
 		TitleAgentSetup:       "Agent Persona",
+		TitleEmojiPref:        "Emoji Preference",
 		TitleAgentWriteMode:   "Existing Configs Detected",
 		TitleReview:           "Review & Confirm",
 		TitleInstalling:       "Installing...",
@@ -44,8 +45,12 @@ var English = Catalog{
 		BtnInstall:  "[ Install → ]",
 
 		BodyAgentSetupSubtitle: "Configure how AI assistants behave across all tools",
+		BodyEmojiPrefSubtitle:  "Should your assistants use emojis in their responses?",
 		BodyAgentWriteMode:     "Choose how to handle each existing config:",
 		BodyInstalling:         "Installing assistants and skills...",
+
+		OptionEmojiYes: "Yes — use emojis",
+		OptionEmojiNo:  "No — plain text only",
 
 		WarnExistingConfig:     "⚠  Existing global agent config detected — will be overwritten.",
 		WarnExistingConfigNote: "   Proceed at your own risk.",
@@ -54,6 +59,7 @@ var English = Catalog{
 		LabelAssistants: "Assistants:",
 		LabelProvider:   "Provider:  ",
 		LabelPersona:    "Persona:   ",
+		LabelEmojis:     "Emojis:    ",
 		LabelConfig:     "Config:",
 		LabelSkipped:    "skipped",
 

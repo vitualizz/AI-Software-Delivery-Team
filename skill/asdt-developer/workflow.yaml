@@ -9,6 +9,7 @@ steps:
     skill: steps/explore.md
     description: Explore the request and platform context to produce a development exploration artifact
     execution: subagent
+    agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/developer/dev-exploration"
     reference_skills:
@@ -19,6 +20,7 @@ steps:
     skill: steps/spec.md
     description: Transform the exploration into a structured development specification
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/developer/dev-exploration"
     output_topic_key: "{project}/{change}/developer/dev-spec"
@@ -29,6 +31,7 @@ steps:
     skill: steps/design.md
     description: Produce a technical design from the spec (data model, API surface, component boundaries)
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/developer/dev-spec"
     output_topic_key: "{project}/{change}/developer/dev-design"
@@ -38,6 +41,7 @@ steps:
     skill: steps/tasks.md
     description: Break the design into an ordered task list with dependency graph
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/developer/dev-spec"
       - "{project}/{change}/developer/dev-design"
@@ -48,6 +52,7 @@ steps:
     skill: steps/implement.md
     description: Generate the concrete implementation from the task list and design
     execution: subagent
+    agent: builder
     inputs:
       - "{project}/{change}/developer/dev-tasks"
       - "{project}/{change}/developer/dev-design"
@@ -60,6 +65,7 @@ steps:
     skill: steps/test.md
     description: Write tests covering the implementation tasks and edge cases
     execution: subagent
+    agent: builder
     inputs:
       - "{project}/{change}/developer/dev-tasks"
       - "{project}/{change}/developer/dev-implementation"

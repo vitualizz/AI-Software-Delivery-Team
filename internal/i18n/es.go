@@ -8,6 +8,7 @@ var Spanish = Catalog{
 		TitleSelectAssistants: "Seleccionar Asistentes",
 		TitleSelectProvider:   "Seleccionar Proveedor de Memoria",
 		TitleAgentSetup:       "Personalidad del Agente",
+		TitleEmojiPref:        "Preferencia de Emojis",
 		TitleAgentWriteMode:   "Configs Existentes Detectadas",
 		TitleReview:           "Revisar y Confirmar",
 		TitleInstalling:       "Instalando...",
@@ -44,8 +45,12 @@ var Spanish = Catalog{
 		BtnInstall:  "[ Instalar → ]",
 
 		BodyAgentSetupSubtitle: "Configurá cómo se comportan tus asistentes de IA en todas las herramientas",
+		BodyEmojiPrefSubtitle:  "¿Querés que tus asistentes usen emojis en sus respuestas?",
 		BodyAgentWriteMode:     "Elegí cómo manejar cada config existente:",
 		BodyInstalling:         "Instalando asistentes y skills...",
+
+		OptionEmojiYes: "Sí — usar emojis",
+		OptionEmojiNo:  "No — solo texto plano",
 
 		WarnExistingConfig:     "⚠  Se detectó una config global de agente existente — será sobreescrita.",
 		WarnExistingConfigNote: "   Continuá bajo tu responsabilidad.",
@@ -54,6 +59,7 @@ var Spanish = Catalog{
 		LabelAssistants: "Asistentes:",
 		LabelProvider:   "Proveedor: ",
 		LabelPersona:    "Persona:   ",
+		LabelEmojis:     "Emojis:    ",
 		LabelConfig:     "Config:",
 		LabelSkipped:    "omitido",
 

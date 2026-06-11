@@ -32,6 +32,9 @@ const (
 	StateSelectProvider
 	// StateAgentSetup shows the persona selection step (optional).
 	StateAgentSetup
+	// StateEmojiPref asks whether the assistants should use emojis. Only
+	// reached on the non-skip path out of StateAgentSetup.
+	StateEmojiPref
 	// StateAgentWriteMode is shown when conflicts are detected; the user
 	// chooses per-assistant how to handle existing configs (cycle with space).
 	StateAgentWriteMode
@@ -65,10 +68,12 @@ type dashboardState struct {
 	meta map[installer.AssistantID]installer.InstallMeta
 }
 
-// agentConfigState holds per-assistant agent config state across AgentSetup and AgentWriteMode.
+// agentConfigState holds per-assistant agent config state across AgentSetup,
+// EmojiPref, and AgentWriteMode.
 type agentConfigState struct {
 	selectedPersona int
 	skip            bool
+	useEmojis       bool
 	writeModes      map[string]installer.AgentWriteMode
 	conflicts       []string
 }
@@ -237,6 +242,8 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSelectProvider(msg)
 	case StateAgentSetup:
 		return m.handleAgentSetup(msg)
+	case StateEmojiPref:
+		return m.handleEmojiPref(msg)
 	case StateAgentWriteMode:
 		return m.handleAgentWriteMode(msg)
 	case StateReview:
@@ -436,11 +443,42 @@ func (m Model) handleAgentSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		if m.cursor == presets {
-			// User pressed Enter on the [ Skip → ] button.
+			// User pressed Enter on the [ Skip → ] button — bypass EmojiPref.
 			m.agentConfig.skip = true
+			m.state = StateReview
+			m.cursor = 0
+			return m, nil
 		}
-		// m.agentConfig.selectedPersona / m.agentConfig.skip reflect the current choice.
-		if !m.agentConfig.skip && len(m.agentConfig.conflicts) > 0 {
+		// m.agentConfig.selectedPersona reflects the current choice; ask the
+		// emoji preference next, defaulting to Yes (cursor 0).
+		m.agentConfig.useEmojis = true
+		m.state = StateEmojiPref
+		m.cursor = 0
+		return m, nil
+	case tea.KeyEsc:
+		m.state = StateSelectProvider
+		m.cursor = 0
+	}
+	return m, nil
+}
+
+// handleEmojiPref handles keys for the emoji preference screen. Two radio rows:
+// cursor 0 = Yes, cursor 1 = No; useEmojis stays in sync with the cursor.
+// Enter continues to AgentWriteMode when conflicts exist, otherwise to Review.
+func (m Model) handleEmojiPref(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+			m.agentConfig.useEmojis = m.cursor == 0
+		}
+	case tea.KeyDown:
+		if m.cursor < 1 {
+			m.cursor++
+			m.agentConfig.useEmojis = m.cursor == 0
+		}
+	case tea.KeyEnter:
+		if len(m.agentConfig.conflicts) > 0 {
 			m.agentConfig.writeModes = make(map[string]installer.AgentWriteMode)
 			for _, id := range m.agentConfig.conflicts {
 				m.agentConfig.writeModes[id] = installer.AgentModeSkip // safe default: Keep
@@ -453,7 +491,7 @@ func (m Model) handleAgentSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cursor = 0
 		return m, nil
 	case tea.KeyEsc:
-		m.state = StateSelectProvider
+		m.state = StateAgentSetup
 		m.cursor = 0
 	}
 	return m, nil
@@ -491,7 +529,7 @@ func (m Model) handleAgentWriteMode(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.state = StateReview
 		m.cursor = 0
 	case tea.KeyEsc:
-		m.state = StateAgentSetup
+		m.state = StateEmojiPref
 		m.cursor = 0
 	}
 	return m, nil
@@ -516,9 +554,12 @@ func (m Model) handleReview(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Batch(m.buildInstallCmd(), m.spinner.Tick)
 	case tea.KeyEsc:
-		if len(m.agentConfig.conflicts) > 0 && !m.agentConfig.skip {
+		switch {
+		case len(m.agentConfig.conflicts) > 0 && !m.agentConfig.skip:
 			m.state = StateAgentWriteMode
-		} else {
+		case !m.agentConfig.skip:
+			m.state = StateEmojiPref
+		default:
 			m.state = StateAgentSetup
 		}
 		m.cursor = 0
@@ -548,13 +589,18 @@ func (m Model) buildInstallCmd() tea.Cmd {
 		return installCmd
 	}
 	preset := installer.PersonaPresets[m.agentConfig.selectedPersona]
-	agentCmd := AgentInstallCmd(assistants, preset, m.agentConfig.writeModes, m.skillsFS)
+	agentCmd := AgentInstallCmd(assistants, preset, m.agentConfig.useEmojis, m.agentConfig.writeModes, m.skillsFS)
 	return tea.Batch(installCmd, agentCmd)
 }
 
 // AgentWriteModes returns the per-assistant write mode map. Exported for tests.
 func (m Model) AgentWriteModes() map[string]installer.AgentWriteMode {
 	return m.agentConfig.writeModes
+}
+
+// UseEmojis returns the chosen emoji preference. Exported for tests.
+func (m Model) UseEmojis() bool {
+	return m.agentConfig.useEmojis
 }
 
 // View renders the current state.

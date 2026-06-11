@@ -14,6 +14,7 @@ steps:
     skill: steps/feature-brief.md
     description: Transform the user request and platform summary into a structured feature brief
     execution: subagent
+    agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/ux-ui/feature-brief"
     reference_skills: []
@@ -22,6 +23,7 @@ steps:
     skill: steps/information-architecture.md
     description: Define the information architecture (navigation, hierarchy, content model) from the feature brief
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/feature-brief"
     output_topic_key: "{project}/{change}/ux-ui/ia"
@@ -32,6 +34,7 @@ steps:
     skill: steps/user-flows.md
     description: Map user flows from the information architecture artifact
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/ia"
     output_topic_key: "{project}/{change}/ux-ui/flows"
@@ -41,6 +44,7 @@ steps:
     skill: steps/component-mapping.md
     description: Map user flows to design system components and identify gaps
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/flows"
     output_topic_key: "{project}/{change}/ux-ui/components"
@@ -50,6 +54,7 @@ steps:
     skill: steps/responsive-strategy.md
     description: Define the responsive layout strategy for the mapped components
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/components"
     output_topic_key: "{project}/{change}/ux-ui/responsive"
@@ -60,6 +65,7 @@ steps:
     skill: steps/ux-handoff.md
     description: Consolidate feature-brief, IA, flows, components, and responsive into the final ux-brief + component-spec artifacts
     execution: subagent
+    agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/feature-brief"
       - "{project}/{change}/ux-ui/ia"

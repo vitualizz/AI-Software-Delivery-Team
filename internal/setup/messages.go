@@ -132,11 +132,12 @@ func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.P
 }
 
 // AgentInstallCmd runs installer.InstallAgentConfig in a goroutine and sends
-// AgentInstallDoneMsg when it completes. modes maps each AssistantID to its
-// write mode; a nil or empty map defaults all assistants to AgentModeOverwrite.
-func AgentInstallCmd(assistants []installer.AssistantDescriptor, preset installer.PersonaPreset, modes map[string]installer.AgentWriteMode, skillsFS fs.FS) tea.Cmd {
+// AgentInstallDoneMsg when it completes. useEmojis selects the rendered
+// {{emoji_preference}} bullet. modes maps each AssistantID to its write mode;
+// a nil or empty map defaults all assistants to AgentModeOverwrite.
+func AgentInstallCmd(assistants []installer.AssistantDescriptor, preset installer.PersonaPreset, useEmojis bool, modes map[string]installer.AgentWriteMode, skillsFS fs.FS) tea.Cmd {
 	return func() tea.Msg {
-		results := installer.InstallAgentConfig(assistants, preset, modes, skillsFS)
+		results := installer.InstallAgentConfig(assistants, preset, useEmojis, modes, skillsFS)
 		return AgentInstallDoneMsg{Results: results}
 	}
 }

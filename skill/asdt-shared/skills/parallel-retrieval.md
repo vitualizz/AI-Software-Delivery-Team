@@ -17,13 +17,25 @@ explanation inline anywhere else — edit it here and every pointer stays correc
   your own declared inputs** — that work has already been done for you and
   repeating it wastes MCP round trips.
 
-## Executor Header Injection (orchestrator, mandatory)
+## Executor Header Injection (orchestrator, conditional)
 
-Before building any sub-agent prompt, prepend the content of
-`asdt-shared/skills/executor-header.md` as the first block. This ensures every
-sub-agent receives its executor guardrails regardless of which step file is
-being launched. The step file itself no longer contains the EXECUTOR block —
-the orchestrator owns injection.
+Injection is conditional on how the step is launched. Before building any
+sub-agent prompt, check the step's `agent:` field in `workflow.yaml`:
+
+- **SKIP injection** when the step declares `agent: analyst` or
+  `agent: builder` AND you are launching it with the matching installed agent
+  type (`asdt-analyst` / `asdt-builder`): the executor header is baked into
+  that agent's definition, and prepending it again would duplicate the
+  guardrails.
+- **Inject as before** in every other case — the step has no `agent:` field,
+  the value is unrecognized, or the named agent type is not available in your
+  harness: prepend the content of `asdt-shared/skills/executor-header.md` as
+  the first block of the sub-agent prompt.
+
+Either way, every sub-agent receives its executor guardrails exactly once,
+regardless of which step file is being launched. The step file itself never
+contains the EXECUTOR block — it lives in the agent definition or in the
+injected header, and the orchestrator owns that choice.
 
 ## Cache Ledger Rule (orchestrator)
 

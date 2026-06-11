@@ -99,13 +99,18 @@ func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skil
 	}
 
 	generateCommands(assistant, skillsFS, &result)
+	generateAgents(assistant, skillsFS, &result)
 
 	if result.Err == nil {
-		// Preserve existing persona so a skill-only reinstall doesn't clear it.
+		// Preserve existing persona and emoji preference so a skill-only
+		// reinstall doesn't clear them. AgentTypes is set to the canonical list
+		// on every successful install — that is what the install just provisioned.
 		existing, _ := ReadInstallMeta(assistant)
 		_ = WriteInstallMeta(assistant, InstallMeta{
 			InstalledAt: time.Now().UTC(),
 			Persona:     existing.Persona,
+			Emojis:      existing.Emojis,
+			AgentTypes:  AgentTypeNames,
 		})
 	}
 
