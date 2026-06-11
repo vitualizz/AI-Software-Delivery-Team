@@ -404,3 +404,202 @@ func checkFile(t *testing.T, path string) {
 		t.Errorf("expected file %q to exist: %v", path, err)
 	}
 }
+
+// pruneV1FS and pruneV2FS model two releases of the embedded skill tree:
+// v2 drops sample/old/extra.md, so upgrading from v1 must prune it.
+var pruneV1FS = fstest.MapFS{
+	"SKILL.md":            &fstest.MapFile{Data: []byte("# ASDT consultant")},
+	"sample/SKILL.md":     &fstest.MapFile{Data: []byte("# Sample skill v1")},
+	"sample/old/extra.md": &fstest.MapFile{Data: []byte("# Dropped in v2")},
+}
+
+var pruneV2FS = fstest.MapFS{
+	"SKILL.md":        &fstest.MapFile{Data: []byte("# ASDT consultant")},
+	"sample/SKILL.md": &fstest.MapFile{Data: []byte("# Sample skill v2")},
+}
+
+// TestInstall_PrunesStaleFilesOnUpgrade verifies the manifest-based prune:
+// upgrading to an embedded tree that no longer contains a file removes that
+// file from disk, reports it in Removed, and records the fresh manifest.
+func TestInstall_PrunesStaleFilesOnUpgrade(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "skills")
+	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: root}
+	provider := installer.Providers[0]
+
+	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV1FS, "")
+	if results[0].Err != nil {
+		t.Fatalf("v1 install failed: %v", results[0].Err)
+	}
+	checkFile(t, filepath.Join(root, "sample", "old", "extra.md"))
+
+	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "")
+	if results[0].Err != nil {
+		t.Fatalf("v2 install failed: %v", results[0].Err)
+	}
+
+	checkFileAbsent(t, filepath.Join(root, "sample", "old", "extra.md"))
+	checkFileAbsent(t, filepath.Join(root, "sample", "old")) // emptied dir cleaned up
+	checkFile(t, filepath.Join(root, "sample", "SKILL.md"))
+
+	want := filepath.Join("sample", "old", "extra.md")
+	if len(results[0].Removed) != 1 || results[0].Removed[0] != want {
+		t.Errorf("Removed = %v, want [%s]", results[0].Removed, want)
+	}
+
+	meta, err := installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta: %v", err)
+	}
+	wantFiles := map[string]bool{
+		filepath.Join("asdt", "SKILL.md"):   true,
+		filepath.Join("sample", "SKILL.md"): true,
+	}
+	if len(meta.Files) != len(wantFiles) {
+		t.Fatalf("meta.Files = %v, want exactly %v", meta.Files, wantFiles)
+	}
+	for _, f := range meta.Files {
+		if !wantFiles[f] {
+			t.Errorf("meta.Files contains unexpected entry %q", f)
+		}
+	}
+}
+
+// TestInstall_LegacyMetaFallbackPrune verifies the fallback scan: when the
+// existing meta predates the Files manifest, stale files inside managed
+// roots are still detected by walking the disk.
+func TestInstall_LegacyMetaFallbackPrune(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "skills")
+	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: root}
+	provider := installer.Providers[0]
+
+	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "")
+	if results[0].Err != nil {
+		t.Fatalf("install failed: %v", results[0].Err)
+	}
+
+	// Simulate a legacy install: meta without the Files manifest, plus a
+	// stale file inside a managed root.
+	meta, err := installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta: %v", err)
+	}
+	meta.Files = nil
+	if err := installer.WriteInstallMeta(assistant, meta); err != nil {
+		t.Fatalf("write legacy meta: %v", err)
+	}
+	stale := filepath.Join(root, "sample", "stale.md")
+	if err := os.WriteFile(stale, []byte("old"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "")
+	if results[0].Err != nil {
+		t.Fatalf("reinstall failed: %v", results[0].Err)
+	}
+
+	checkFileAbsent(t, stale)
+	want := filepath.Join("sample", "stale.md")
+	if len(results[0].Removed) != 1 || results[0].Removed[0] != want {
+		t.Errorf("Removed = %v, want [%s]", results[0].Removed, want)
+	}
+	// The meta dotfile must survive the fallback scan.
+	meta, err = installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta after fallback prune: %v", err)
+	}
+	if len(meta.Files) == 0 {
+		t.Error("meta.Files is empty after reinstall; the fresh manifest must be recorded")
+	}
+}
+
+// TestInstall_SecondIdenticalInstallRemovesNothing verifies prune idempotency:
+// reinstalling the same tree yields an empty Removed.
+func TestInstall_SecondIdenticalInstallRemovesNothing(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "skills")
+	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: root}
+	provider := installer.Providers[0]
+
+	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "")
+	if results[0].Err != nil {
+		t.Fatalf("first install failed: %v", results[0].Err)
+	}
+	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "")
+	if results[0].Err != nil {
+		t.Fatalf("second install failed: %v", results[0].Err)
+	}
+	if len(results[0].Removed) != 0 {
+		t.Errorf("Removed = %v after identical reinstall, want empty", results[0].Removed)
+	}
+}
+
+// TestInstall_PruneLeavesNonManagedSiblingsAlone verifies that user content
+// living next to the managed roots is never touched by the prune.
+func TestInstall_PruneLeavesNonManagedSiblingsAlone(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "skills")
+	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: root}
+	provider := installer.Providers[0]
+
+	userFile := filepath.Join(root, "my-skills", "notes.md")
+	if err := os.MkdirAll(filepath.Dir(userFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(userFile, []byte("mine"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for range 2 { // first install + reinstall, both must leave it alone
+		results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "")
+		if results[0].Err != nil {
+			t.Fatalf("install failed: %v", results[0].Err)
+		}
+		if len(results[0].Removed) != 0 {
+			t.Errorf("Removed = %v, want empty", results[0].Removed)
+		}
+	}
+	checkFile(t, userFile)
+}
+
+// TestInstall_MetaPreservedFieldsSurvivePruneManifest verifies that adding
+// the Files manifest does not disturb the preserve-or-set meta discipline.
+func TestInstall_MetaPreservedFieldsSurvivePruneManifest(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "skills")
+	assistant := installer.AssistantDescriptor{ID: "a1", Name: "A1", BinaryName: "sh", SkillsDir: root}
+	provider := installer.Providers[0]
+
+	results := installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "es")
+	if results[0].Err != nil {
+		t.Fatalf("first install failed: %v", results[0].Err)
+	}
+
+	meta, err := installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta: %v", err)
+	}
+	meta.Persona = "Sky"
+	meta.Emojis = "yes"
+	if err := installer.WriteInstallMeta(assistant, meta); err != nil {
+		t.Fatalf("write meta: %v", err)
+	}
+
+	results = installer.Install([]installer.AssistantDescriptor{assistant}, provider, pruneV2FS, "")
+	if results[0].Err != nil {
+		t.Fatalf("reinstall failed: %v", results[0].Err)
+	}
+
+	meta, err = installer.ReadInstallMeta(assistant)
+	if err != nil {
+		t.Fatalf("read meta after reinstall: %v", err)
+	}
+	if meta.Persona != "Sky" {
+		t.Errorf("meta.Persona = %q, want %q (must be preserved)", meta.Persona, "Sky")
+	}
+	if meta.Emojis != "yes" {
+		t.Errorf("meta.Emojis = %q, want %q (must be preserved)", meta.Emojis, "yes")
+	}
+	if meta.Language != "es" {
+		t.Errorf("meta.Language = %q, want %q (must be preserved)", meta.Language, "es")
+	}
+	if len(meta.Files) == 0 {
+		t.Error("meta.Files is empty after reinstall, want the recorded manifest")
+	}
+}

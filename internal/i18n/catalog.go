@@ -131,6 +131,7 @@ type InstallerStrings struct {
 	MsgAgentConfigSkipped string // printf format: first %s = assistant name
 	MsgOpenCodeNote       string
 	MsgGetStarted         string
+	MsgStaleRemoved       string // printf format: %d = count of pruned stale files
 
 	// Preflight section group titles (display only; row labels are lookup keys)
 	SectionYourEnvironment string

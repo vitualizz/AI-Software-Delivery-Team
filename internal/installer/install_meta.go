@@ -17,6 +17,7 @@ type InstallMeta struct {
 	Emojis      string    `json:"emojis,omitempty"`      // "yes"/"no" emoji preference; empty when never chosen
 	Language    string    `json:"language,omitempty"`    // base language code ("en"/"es"); empty when never chosen
 	AgentTypes  []string  `json:"agent_types,omitempty"` // installed executor agent type IDs (AgentTypeNames)
+	Files       []string  `json:"files,omitempty"`       // SkillsDir-relative paths written by the last install; nil on legacy meta
 }
 
 func metaPath(d AssistantDescriptor) string {

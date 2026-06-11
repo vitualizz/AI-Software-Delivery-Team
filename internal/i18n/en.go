@@ -74,6 +74,7 @@ var English = Catalog{
 		MsgAgentConfigSkipped: "– %s: skipped (existing config kept)",
 		MsgOpenCodeNote:       "Note: OpenCode reads this as a global override for all projects.",
 		MsgGetStarted:         "Open a project and run /asdt to get started.",
+		MsgStaleRemoved:       "%d stale file(s) cleaned up",
 
 		SectionYourEnvironment: "Your Environment",
 		SectionMemoryProvider:  "Memory Provider",

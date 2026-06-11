@@ -74,6 +74,7 @@ var Spanish = Catalog{
 		MsgAgentConfigSkipped: "– %s: omitido (se mantuvo la config existente)",
 		MsgOpenCodeNote:       "Nota: OpenCode usa esto como override global para todos los proyectos.",
 		MsgGetStarted:         "Abrí un proyecto y ejecutá /asdt para arrancar.",
+		MsgStaleRemoved:       "se limpiaron %d archivo(s) obsoleto(s)",
 
 		SectionYourEnvironment: "Tu Entorno",
 		SectionMemoryProvider:  "Proveedor de Memoria",

@@ -539,6 +539,36 @@ func TestView_DoneScreenShowsNextStepHint(t *testing.T) {
 	}
 }
 
+// TestView_DoneScreenShowsStaleRemovedLine verifies that a result carrying
+// pruned files renders the dim "stale file(s) cleaned up" sub-line under the
+// assistant's success row.
+func TestView_DoneScreenShowsStaleRemovedLine(t *testing.T) {
+	result := installer.InstallResult{
+		AssistantID: installer.AssistantClaudeCode,
+		Removed:     []string{"asdt/old.md", "asdt-shared/skills/gone.md"},
+	}
+	m := setup.New(fstest.MapFS{}, "dev")
+	next, _ := m.Update(setup.InstallDoneMsg{Results: []installer.InstallResult{result}})
+	m2 := next.(setup.Model)
+	view := m2.View()
+	if !strings.Contains(view, "2 stale file(s) cleaned up") {
+		t.Errorf("done screen missing stale-removed line for 2 pruned files, got:\n%s", view)
+	}
+}
+
+// TestView_DoneScreenOmitsStaleRemovedLineWhenNothingPruned verifies the
+// sub-line is absent when no files were pruned.
+func TestView_DoneScreenOmitsStaleRemovedLineWhenNothingPruned(t *testing.T) {
+	result := installer.InstallResult{AssistantID: installer.AssistantClaudeCode}
+	m := setup.New(fstest.MapFS{}, "dev")
+	next, _ := m.Update(setup.InstallDoneMsg{Results: []installer.InstallResult{result}})
+	m2 := next.(setup.Model)
+	view := m2.View()
+	if strings.Contains(view, "stale file(s) cleaned up") {
+		t.Errorf("done screen must omit the stale-removed line when Removed is empty, got:\n%s", view)
+	}
+}
+
 // sendEngramFound is a no-op helper kept for caller compatibility.
 // New() already starts at StateMainMenu, so no navigation is needed.
 func sendEngramFound(_ *testing.T, m setup.Model) setup.Model {

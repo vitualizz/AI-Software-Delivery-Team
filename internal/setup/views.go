@@ -616,6 +616,9 @@ func renderDone(m Model) string {
 		}
 		if r.Err == nil {
 			fmt.Fprintf(&b, "  %s\n", styles.Default.Success.Render("✓ "+name))
+			if len(r.Removed) > 0 {
+				fmt.Fprintf(&b, "    %s\n", styles.Default.Dim.Render(fmt.Sprintf(s.MsgStaleRemoved, len(r.Removed))))
+			}
 		} else {
 			fmt.Fprintf(&b, "  %s\n", styles.Default.Error.Render(fmt.Sprintf("✗ %s: %v", name, r.Err)))
 		}

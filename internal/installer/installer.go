@@ -13,6 +13,7 @@ type InstallResult struct {
 	AssistantID     AssistantID
 	Written         []string
 	WrittenCommands []string
+	Removed         []string // SkillsDir-relative paths pruned as stale; never affects Err
 	Err             error
 }
 
@@ -112,12 +113,18 @@ func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skil
 		if lang == "" {
 			lang = existing.Language
 		}
+		// Prune files a previous install wrote that this one no longer
+		// provides, then record the fresh manifest. Prune is best-effort and
+		// never fails the install.
+		relWritten := relativizeWritten(assistant.SkillsDir, result.Written)
+		result.Removed = pruneStale(assistant.SkillsDir, managedRootsFor(skillsFS), existing.Files, relWritten)
 		_ = WriteInstallMeta(assistant, InstallMeta{
 			InstalledAt: time.Now().UTC(),
 			Persona:     existing.Persona,
 			Emojis:      existing.Emojis,
 			Language:    lang,
 			AgentTypes:  AgentTypeNames,
+			Files:       relWritten,
 		})
 	}
 
