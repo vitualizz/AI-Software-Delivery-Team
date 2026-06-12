@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/pipeline"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // TestComputeStepDurationsEmptyForZeroSteps verifies that ComputeStepDurations

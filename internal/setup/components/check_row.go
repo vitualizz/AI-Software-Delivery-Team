@@ -3,7 +3,7 @@ package components
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // CheckStatus represents the resolution state of a single pre-flight check row.

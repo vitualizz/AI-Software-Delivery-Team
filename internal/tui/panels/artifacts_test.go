@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // TestArtifactPanelEmptyFilesRendersPlaceholder verifies that a panel with no

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="vitualizz/ai-software-delivery-team"
+REPO="vitualizz/asdt"
 BIN_NAME="asdt-tui"
 INSTALL_DIR="${HOME}/.local/bin"
 

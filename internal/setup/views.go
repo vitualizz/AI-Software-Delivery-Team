@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/i18n"
+	"github.com/vitualizz/asdt/internal/installer"
+	"github.com/vitualizz/asdt/internal/setup/styles"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 const cursorChar = "►"
@@ -103,7 +103,7 @@ func renderMainMenu(m Model) string {
 	if m.updateAvailable {
 		fmt.Fprintf(&b, "\n%s\n",
 			styles.Default.Cursor.Render(
-				fmt.Sprintf("↑ asdt-tui %s available — https://github.com/vitualizz/ai-software-delivery-team/releases", m.latestVersion),
+				fmt.Sprintf("↑ asdt-tui %s available — https://github.com/vitualizz/asdt/releases", m.latestVersion),
 			))
 	}
 

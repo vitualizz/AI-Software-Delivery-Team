@@ -2,7 +2,7 @@
 # Artifacts are NOT written to the filesystem during specialist execution.
 # Use mem_save with this structure as the content shape.
 $schema: "http://json-schema.org/draft-07/schema#"
-$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/risk-register.schema.yaml"
+$id: "https://github.com/vitualizz/asdt/schemas/risk-register.schema.yaml"
 title: RiskRegister
 description: >
   Payload produced by the Architect specialist's risk-analysis step.

@@ -3,7 +3,7 @@ package installer_test
 import (
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/asdt/internal/installer"
 )
 
 func TestClassifyMapsSourceDefaultsToTiers(t *testing.T) {

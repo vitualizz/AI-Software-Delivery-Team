@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/asdt/internal/installer"
 )
 
 func TestDetect_BothAbsent(t *testing.T) {

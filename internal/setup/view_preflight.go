@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/i18n"
+	"github.com/vitualizz/asdt/internal/setup/components"
+	"github.com/vitualizz/asdt/internal/setup/styles"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // initialPreflightSections returns the seed state for the pre-flight check screen.

@@ -14,8 +14,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
+	"github.com/vitualizz/asdt/internal/installer"
+	"github.com/vitualizz/asdt/internal/setup/components"
 )
 
 // AssistantInstallProgressMsg is sent per-assistant as each install completes,
@@ -62,7 +62,7 @@ type UpdateCheckMsg struct {
 }
 
 const (
-	latestReleaseURL   = "https://api.github.com/repos/vitualizz/ai-software-delivery-team/releases/latest"
+	latestReleaseURL   = "https://api.github.com/repos/vitualizz/asdt/releases/latest"
 	updateCheckTimeout = 3 * time.Second
 )
 

@@ -12,7 +12,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
+	"github.com/vitualizz/asdt/internal/pipeline"
 )
 
 // Shared panel styles used across the panels package.

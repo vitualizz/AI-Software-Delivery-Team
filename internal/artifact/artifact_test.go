@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
+	"github.com/vitualizz/asdt/internal/artifact"
 )
 
 // examplePayload is a simple struct used for round-trip tests.

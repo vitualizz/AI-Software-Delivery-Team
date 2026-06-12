@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
+	"github.com/vitualizz/asdt/internal/pipeline"
 )
 
 // StepDuration is a pure, presentation-only value pairing two consecutive

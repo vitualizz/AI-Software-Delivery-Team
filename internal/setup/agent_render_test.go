@@ -6,7 +6,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/asdt/internal/installer"
 )
 
 // agentRenderFS is a minimal embedded FS for testing agent config rendering.

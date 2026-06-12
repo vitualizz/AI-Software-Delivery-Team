@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 func TestKeyboardFooterRendersFullHintsAbove80(t *testing.T) {

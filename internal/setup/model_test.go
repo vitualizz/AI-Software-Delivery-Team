@@ -9,9 +9,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
+	"github.com/vitualizz/asdt/internal/installer"
+	"github.com/vitualizz/asdt/internal/setup"
+	"github.com/vitualizz/asdt/internal/setup/components"
 )
 
 func TestNew_StartsAtMainMenu(t *testing.T) {

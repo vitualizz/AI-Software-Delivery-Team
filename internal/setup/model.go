@@ -5,10 +5,10 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/i18n"
+	"github.com/vitualizz/asdt/internal/installer"
+	"github.com/vitualizz/asdt/internal/setup/components"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // ViewState represents the current screen shown by the TUI.

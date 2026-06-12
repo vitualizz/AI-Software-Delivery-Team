@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
+	"github.com/vitualizz/asdt/internal/setup/components"
 )
 
 func TestSectionGroup_Render_ContainsTitle(t *testing.T) {

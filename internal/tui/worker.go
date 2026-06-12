@@ -9,9 +9,9 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
-	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
+	"github.com/vitualizz/asdt/internal/artifact"
+	"github.com/vitualizz/asdt/internal/config"
+	"github.com/vitualizz/asdt/internal/pipeline"
 )
 
 // LoadSpecialistsCmd reads pipeline-state.yaml as a StateV2 document

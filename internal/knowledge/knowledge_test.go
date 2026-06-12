@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
-	"github.com/vitualizz/ai-software-delivery-team/internal/knowledge"
+	"github.com/vitualizz/asdt/internal/config"
+	"github.com/vitualizz/asdt/internal/knowledge"
 	"gopkg.in/yaml.v3"
 )
 

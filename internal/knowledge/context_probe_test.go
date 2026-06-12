@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/knowledge"
+	"github.com/vitualizz/asdt/internal/knowledge"
 )
 
 // --- helpers ---

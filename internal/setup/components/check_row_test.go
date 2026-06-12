@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/components"
+	"github.com/vitualizz/asdt/internal/setup/components"
 )
 
 func TestCheckRow_Render_OKContainsCheckmark(t *testing.T) {

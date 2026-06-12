@@ -1,6 +1,6 @@
 package tui
 
-import "github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
+import "github.com/vitualizz/asdt/internal/pipeline"
 
 // SpecialistsLoadedMsg is sent when pipeline-state.yaml (v2) is successfully read.
 type SpecialistsLoadedMsg struct {

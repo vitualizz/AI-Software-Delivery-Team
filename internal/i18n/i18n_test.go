@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
+	"github.com/vitualizz/asdt/internal/i18n"
 )
 
 func TestActive_DefaultsToEnglish(t *testing.T) {

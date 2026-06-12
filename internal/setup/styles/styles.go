@@ -3,7 +3,7 @@ package styles
 
 import (
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // Palette groups all named styles used by the installer TUI.

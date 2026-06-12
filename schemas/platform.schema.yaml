@@ -3,7 +3,7 @@
 # Use mem_save with this structure as the content shape.
 # JSON Schema (draft-07) for the Platform knowledge artifact.
 $schema: "http://json-schema.org/draft-07/schema#"
-$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/platform.schema.yaml"
+$id: "https://github.com/vitualizz/asdt/schemas/platform.schema.yaml"
 title: Platform
 description: >
   Describes the detected technology stack and project conventions.

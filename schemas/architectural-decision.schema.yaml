@@ -2,7 +2,7 @@
 # Artifacts are NOT written to the filesystem during specialist execution.
 # Use mem_save with this structure as the content shape.
 $schema: "http://json-schema.org/draft-07/schema#"
-$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/architectural-decision.schema.yaml"
+$id: "https://github.com/vitualizz/asdt/schemas/architectural-decision.schema.yaml"
 title: ArchitecturalDecision
 description: >
   Payload produced by the Architect specialist's decision-record step.

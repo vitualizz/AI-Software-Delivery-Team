@@ -3,8 +3,8 @@
 package tui
 
 import (
-	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
+	"github.com/vitualizz/asdt/internal/artifact"
+	"github.com/vitualizz/asdt/internal/config"
 )
 
 // Dependencies holds the injected ports the TUI requires.

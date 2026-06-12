@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
+	"github.com/vitualizz/asdt/internal/config"
 	"gopkg.in/yaml.v3"
 )
 

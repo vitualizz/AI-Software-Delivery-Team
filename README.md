@@ -29,7 +29,7 @@ Each specialist orchestrates its own isolated steps. Steps that produce artifact
 ## Installation
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/vitualizz/ai-software-delivery-team/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vitualizz/asdt/main/install.sh | bash
 ```
 
 Downloads the pre-built binary for your platform (Linux/macOS, x86_64/arm64) and installs it to `~/.local/bin/`. No Go required.

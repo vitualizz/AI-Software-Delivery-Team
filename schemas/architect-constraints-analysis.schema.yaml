@@ -2,7 +2,7 @@
 # Artifacts are NOT written to the filesystem during specialist execution.
 # Use mem_save with this structure as the content shape.
 $schema: "http://json-schema.org/draft-07/schema#"
-$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/architect-constraints-analysis.schema.yaml"
+$id: "https://github.com/vitualizz/asdt/schemas/architect-constraints-analysis.schema.yaml"
 title: ArchitectConstraintsAnalysis
 description: >
   Intermediate artifact produced by the Architect specialist's load-constraints step.

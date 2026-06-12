@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/i18n"
+	"github.com/vitualizz/asdt/internal/installer"
+	"github.com/vitualizz/asdt/internal/setup/styles"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // presetOptionLabels returns the six gate radio labels in choice order

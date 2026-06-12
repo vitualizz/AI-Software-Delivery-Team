@@ -7,8 +7,8 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup"
-	"github.com/vitualizz/ai-software-delivery-team/skill"
+	"github.com/vitualizz/asdt/internal/setup"
+	"github.com/vitualizz/asdt/skill"
 )
 
 // version is the running binary's version string. It defaults to "dev" for

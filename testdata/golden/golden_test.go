@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
+	"github.com/vitualizz/asdt/internal/artifact"
 	"gopkg.in/yaml.v3"
 )
 

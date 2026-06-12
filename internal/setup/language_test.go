@@ -6,7 +6,7 @@ import (
 	"testing/fstest"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup"
+	"github.com/vitualizz/asdt/internal/setup"
 )
 
 // Subtitle questions asserted below pin the live catalog switch: the English

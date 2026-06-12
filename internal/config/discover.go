@@ -76,7 +76,7 @@ func Discover(startDir string) (Root, error) {
 // Returns 0 on platforms where Sys() does not return *syscall.Stat_t.
 func deviceID(info os.FileInfo) uint64 {
 	if sys, ok := info.Sys().(*syscall.Stat_t); ok {
-		return sys.Dev
+		return uint64(sys.Dev)
 	}
 	return 0
 }

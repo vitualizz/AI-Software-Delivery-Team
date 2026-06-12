@@ -7,8 +7,8 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui"
+	"github.com/vitualizz/asdt/internal/pipeline"
+	"github.com/vitualizz/asdt/internal/tui"
 )
 
 // TestModelInitNoPanic verifies that New() and Init() do not panic when

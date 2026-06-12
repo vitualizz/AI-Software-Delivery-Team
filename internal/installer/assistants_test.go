@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
+	"github.com/vitualizz/asdt/internal/installer"
 )
 
 func TestDescriptors_Length(t *testing.T) {

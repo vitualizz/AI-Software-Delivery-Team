@@ -21,7 +21,7 @@ ASDT (AI Software Delivery Team) installs a team of AI specialists into Claude C
 | Package mgr  | Bun                               |
 | Language     | TypeScript (strict)               |
 | Deploy       | GitHub Pages via Actions          |
-| Base URL     | `/ai-software-delivery-team`      |
+| Base URL     | `/asdt`                           |
 
 ## Project structure
 

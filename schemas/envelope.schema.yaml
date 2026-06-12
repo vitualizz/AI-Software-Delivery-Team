@@ -4,7 +4,7 @@
 # Historical context: this was the ArtifactEnvelope header for filesystem YAML artifacts.
 # With the org-knowledge change, artifacts are persisted via mem_save to the memory provider.
 $schema: "http://json-schema.org/draft-07/schema#"
-$id: "https://github.com/vitualizz/ai-software-delivery-team/schemas/envelope.schema.yaml"
+$id: "https://github.com/vitualizz/asdt/schemas/envelope.schema.yaml"
 title: ArtifactEnvelope
 description: >
   Uniform header describing the structure of artifact content passed to mem_save.

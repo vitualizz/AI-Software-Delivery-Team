@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
-	"github.com/vitualizz/ai-software-delivery-team/internal/pipeline"
+	"github.com/vitualizz/asdt/internal/artifact"
+	"github.com/vitualizz/asdt/internal/config"
+	"github.com/vitualizz/asdt/internal/pipeline"
 )
 
 func newMachine(t *testing.T) *pipeline.FSMachine {

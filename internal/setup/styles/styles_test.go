@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
-	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
+	"github.com/vitualizz/asdt/internal/setup/styles"
+	"github.com/vitualizz/asdt/internal/tui/panels"
 )
 
 // noFg is the zero-value foreground (NoColor{}).

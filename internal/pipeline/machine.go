@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/artifact"
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
+	"github.com/vitualizz/asdt/internal/artifact"
+	"github.com/vitualizz/asdt/internal/config"
 )
 
 const (

@@ -1,4 +1,4 @@
-module github.com/vitualizz/ai-software-delivery-team
+module github.com/vitualizz/asdt
 
 go 1.26.2
 

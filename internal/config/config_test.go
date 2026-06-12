@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/internal/config"
+	"github.com/vitualizz/asdt/internal/config"
 )
 
 // fixturesDir returns the absolute path to the testdata/projects directory.

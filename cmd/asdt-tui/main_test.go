@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"testing"
 
-	"github.com/vitualizz/ai-software-delivery-team/skill"
+	"github.com/vitualizz/asdt/skill"
 )
 
 func TestBuild_ExitsZero(t *testing.T) {
