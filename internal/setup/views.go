@@ -103,7 +103,8 @@ func renderMainMenu(m Model) string {
 	if m.updateAvailable {
 		fmt.Fprintf(&b, "\n%s\n",
 			styles.Default.Cursor.Render(
-				fmt.Sprintf("↑ asdt-tui %s available — https://github.com/vitualizz/ai-software-delivery-team/releases", m.latestVersion)))
+				fmt.Sprintf("↑ asdt-tui %s available — https://github.com/vitualizz/ai-software-delivery-team/releases", m.latestVersion),
+			))
 	}
 
 	hero := panels.RenderHero(m.currentVersion)
@@ -439,6 +440,32 @@ func renderAgentWriteMode(m Model) string {
 	return frame(s.TitleAgentWriteMode, strings.TrimRight(b.String(), "\n"), footer, true)
 }
 
+// presetShortName returns the leading name of a preset option label — the
+// portion before the " — " descriptor — so the Review row reads, e.g.,
+// "Strategist preset" rather than echoing the full radio sentence.
+func presetShortName(label string) string {
+	if idx := strings.Index(label, " — "); idx >= 0 {
+		return label[:idx]
+	}
+	return label
+}
+
+// modelsReviewValue formats the Models row for the Review screen. The customize
+// choice reports the count of customized steps; every preset reports its short
+// name. Chameleon (and Craftsman) carry no per-step customizations, so they are
+// described by their preset name rather than a count.
+func modelsReviewValue(m Model) string {
+	s := m.catalog.Installer
+	if m.wizard.modelGateChoice == modelGateCustomizeChoice {
+		if n := m.countCustomizedModels(); n > 0 {
+			return fmt.Sprintf(s.ValueModelsCustomized, n)
+		}
+		return fmt.Sprintf(s.ValueModelsCustomized, 0)
+	}
+	label := presetShortName(presetOptionLabels(s)[m.wizard.modelGateChoice])
+	return fmt.Sprintf(s.ValueModelsPreset, label)
+}
+
 func renderReview(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
@@ -461,10 +488,7 @@ func renderReview(m Model) string {
 		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelProvider), installer.Providers[m.wizard.provider].Name)
 	}
 
-	modelsVal := s.ValueModelsRecommended
-	if n := m.countCustomizedModels(); n > 0 {
-		modelsVal = fmt.Sprintf(s.ValueModelsCustomized, n)
-	}
+	modelsVal := modelsReviewValue(m)
 	fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelModels), modelsVal)
 
 	if m.agentConfig.skip {
@@ -503,7 +527,8 @@ func renderReview(m Model) string {
 			if ok {
 				pathStr = adapter.ConfigPath() + "  "
 			}
-			fmt.Fprintf(&b, "    %s  %s%s\n",
+			fmt.Fprintf(
+				&b, "    %s  %s%s\n",
 				styles.Default.Dim.Render(name),
 				styles.Default.Dim.Render(pathStr),
 				styles.Default.Cursor.Render("["+modeLabel(s, mode)+"]"),

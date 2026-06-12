@@ -1,4 +1,5 @@
 schema_version: "1"
 stack:
-  - Go
+  - go
+  - node
 file_structure: "cmd/ for binaries, internal/ for private packages"

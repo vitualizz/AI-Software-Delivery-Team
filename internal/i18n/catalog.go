@@ -106,12 +106,25 @@ type InstallerStrings struct {
 	BodyEmojiPrefSubtitle  string
 	BodyModelSetupSubtitle string // printf format: %s = detected provider names
 
-	// Model gate options (radio rows) and per-step screen extras
-	OptionModelsRecommended    string
-	OptionModelsCustomize      string
+	// Model gate options (radio rows) and per-step screen extras. The six
+	// OptionModelsPreset rows are the gate choices (0 = Chameleon … 4 =
+	// Mastermind, 5 = customize per step); each focused row shows its matching
+	// HintPresetAssignment. All copy is provider-agnostic — no model IDs.
+	OptionModelsPreset0        string
+	OptionModelsPreset1        string
+	OptionModelsPreset2        string
+	OptionModelsPreset3        string
+	OptionModelsPreset4        string
+	OptionModelsPreset5        string
+	HintPresetAssignment0      string
+	HintPresetAssignment1      string
+	HintPresetAssignment2      string
+	HintPresetAssignment3      string
+	HintPresetAssignment4      string
+	HintPresetAssignment5      string
 	HintRunsAs                 string // printf format: %s = Claude Code model enum
 	LabelModels                string
-	ValueModelsRecommended     string
+	ValueModelsPreset          string // printf format: %s = preset short name
 	ValueModelsCustomized      string // printf format: %d = customized step count
 	BodyAgentWriteMode         string
 	BodyInstalling             string

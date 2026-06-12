@@ -1,0 +1,6 @@
+schema_version: "1"
+detected_at: 2026-06-12T09:33:10Z
+is_monorepo: { value: "true", source: "detected", confidence: "medium" }
+test_runner: { value: "make test", source: "detected", confidence: "medium" }
+naming_style: { value: "snake_case filenames, PascalCase exported symbols", source: "detected", confidence: "medium" }
+architectural_style: { value: "hexagonal", source: "detected", confidence: "high" }

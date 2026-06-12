@@ -6,20 +6,48 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/vitualizz/ai-software-delivery-team/internal/i18n"
 	"github.com/vitualizz/ai-software-delivery-team/internal/installer"
 	"github.com/vitualizz/ai-software-delivery-team/internal/setup/styles"
 	"github.com/vitualizz/ai-software-delivery-team/internal/tui/panels"
 )
 
-// renderModelGate renders the recommended-vs-customize gate: two radio rows
-// following the EmojiPref pattern. Recommended is the default, so users who
-// don't care about models pass through with a single Enter.
+// presetOptionLabels returns the six gate radio labels in choice order
+// (0 = Chameleon … 5 = customize per step).
+func presetOptionLabels(s i18n.InstallerStrings) []string {
+	return []string{
+		s.OptionModelsPreset0,
+		s.OptionModelsPreset1,
+		s.OptionModelsPreset2,
+		s.OptionModelsPreset3,
+		s.OptionModelsPreset4,
+		s.OptionModelsPreset5,
+	}
+}
+
+// presetHints returns the six per-row assignment hints in choice order.
+func presetHints(s i18n.InstallerStrings) []string {
+	return []string{
+		s.HintPresetAssignment0,
+		s.HintPresetAssignment1,
+		s.HintPresetAssignment2,
+		s.HintPresetAssignment3,
+		s.HintPresetAssignment4,
+		s.HintPresetAssignment5,
+	}
+}
+
+// renderModelGate renders the preset gate: six radio rows following the
+// EmojiPref pattern, with the focused row's tier-assignment hint shown beneath
+// it. Chameleon is the default, so users who don't care about models pass
+// through with a single Enter.
 func renderModelGate(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
 	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 4, 6))
 
-	options := []string{s.OptionModelsRecommended, s.OptionModelsCustomize}
+	options := presetOptionLabels(s)
+	hints := presetHints(s)
 	for i, opt := range options {
 		focused := i == m.cursor
 		selected := i == m.wizard.modelGateChoice
@@ -44,6 +72,9 @@ func renderModelGate(m Model) string {
 		}
 
 		fmt.Fprintf(&b, "  %s%s %s\n", cursor, radioStr, nameStr)
+		if focused {
+			fmt.Fprintf(&b, "        %s\n", styles.Default.Dim.Render(hints[i]))
+		}
 	}
 
 	names := make([]string, len(m.wizard.detectedAI))

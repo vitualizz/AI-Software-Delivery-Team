@@ -1,7 +1,3 @@
 memory:
   provider: engram
-
-# strict_tdd: When true, enables test-first cycles in Developer specialist workflow.
-# When false (default, opt-in), test steps are excluded from Developer workflow.
-# Tests become QA's responsibility.
 strict_tdd: false

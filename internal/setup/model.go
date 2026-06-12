@@ -54,10 +54,11 @@ const (
 	// Reached only via StateModelGate's customize choice. Appended at the
 	// END of the iota block so existing state values never shift.
 	StateModelSetup
-	// StateModelGate asks whether to keep the recommended per-step models or
-	// customize them. Sits between SelectProvider and AgentSetup; the
-	// recommended choice (default) bypasses StateModelSetup entirely.
-	// Appended at the END of the iota block so existing state values never shift.
+	// StateModelGate offers five model presets plus a "customize per step"
+	// choice. Sits between SelectProvider and AgentSetup; the preset choices
+	// (0-4, default Chameleon) bypass StateModelSetup entirely, while choice 5
+	// opens it. Appended at the END of the iota block so existing state values
+	// never shift.
 	StateModelGate
 )
 
@@ -78,13 +79,17 @@ type wizardState struct {
 	agentDone       bool // true once AgentInstallDoneMsg arrives (or skip)
 
 	// Model selection state. modelGateChoice is the StateModelGate radio
-	// (0 = recommended, 1 = customize). modelSteps lists every subagent step
-	// from the embedded workflows; selectedModels tracks the current choice
-	// per step key ("{specialist}/{step}"), prefilled with the source
-	// defaults; modelOptions is the flattened cycle list from detected
-	// providers; expandedGroups tracks which specialist accordion groups are
-	// open. A selection map identical to the source defaults installs
-	// workflow.yaml files verbatim (skip path) — see countCustomizedModels.
+	// (0 = Chameleon, 1 = Sprinter, 2 = Craftsman, 3 = Strategist,
+	// 4 = Mastermind, 5 = customize per step), defaulting to Chameleon.
+	// modelSteps lists every subagent step from the embedded workflows;
+	// selectedModels tracks the current choice per step key
+	// ("{specialist}/{step}") — prefilled with the source defaults on the
+	// customize path, written from a preset's tier mapping by applyPreset, or
+	// left empty for Chameleon (which strips every model field at install).
+	// modelOptions is the flattened cycle list from detected providers;
+	// expandedGroups tracks which specialist accordion groups are open. A
+	// selection map identical to the source defaults installs workflow.yaml
+	// files verbatim (skip path) — see countCustomizedModels.
 	modelGateChoice int
 	modelSteps      []installer.WorkflowStepModel
 	selectedModels  map[string]string
@@ -524,10 +529,15 @@ func (m Model) enterModelGate() Model {
 	return m
 }
 
-// handleModelGate handles keys for the recommended-vs-customize gate.
-// Two radio rows track the cursor live (EmojiPref pattern). Enter on
-// recommended goes straight to AgentSetup — the customization screen is
-// never rendered; Enter on customize opens StateModelSetup.
+// modelGateCustomizeChoice is the gate index of the "customize per step" row —
+// the only choice that opens StateModelSetup. The lower indices (0-4) are
+// presets applied in place.
+const modelGateCustomizeChoice = 5
+
+// handleModelGate handles keys for the preset gate. Six radio rows track the
+// cursor live (EmojiPref pattern). Enter on a preset (0-4) applies it and goes
+// straight to AgentSetup — the customization screen is never rendered; Enter on
+// "customize per step" (5) opens StateModelSetup.
 func (m Model) handleModelGate(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.Type {
 	case tea.KeyUp:
@@ -536,14 +546,15 @@ func (m Model) handleModelGate(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.wizard.modelGateChoice = m.cursor
 		}
 	case tea.KeyDown:
-		if m.cursor < 1 {
+		if m.cursor < modelGateCustomizeChoice {
 			m.cursor++
 			m.wizard.modelGateChoice = m.cursor
 		}
 	case tea.KeyEnter:
-		if m.wizard.modelGateChoice == 1 {
+		if m.wizard.modelGateChoice == modelGateCustomizeChoice {
 			return m.enterModelSetup(), nil
 		}
+		m = m.applyPreset(m.wizard.modelGateChoice)
 		m.state = StateAgentSetup
 		m.cursor = 0
 		m.agentConfig.conflicts = m.detectAgentConflicts()
@@ -553,6 +564,36 @@ func (m Model) handleModelGate(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cursor = 0
 	}
 	return m, nil
+}
+
+// applyPreset classifies every subagent step by its source-default model and
+// writes selectedModels from the chosen preset's tier mapping. Choice 0
+// (Chameleon) leaves selectedModels empty — install strips every model field so
+// each step inherits the assistant's own default. Steps with no source default
+// are skipped, falling through to the global model. The step list self-loads
+// when the customization accordion was never entered (same err-swallow idiom as
+// enterModelSetup).
+func (m Model) applyPreset(choice int) Model {
+	if m.wizard.modelSteps == nil {
+		if steps, err := installer.WorkflowModelSteps(m.skillsFS); err == nil {
+			m.wizard.modelSteps = steps
+		}
+	}
+	m.wizard.selectedModels = make(map[string]string, len(m.wizard.modelSteps))
+	if choice == installer.PresetChameleon {
+		return m
+	}
+	tiers := installer.PresetModels(choice)
+	if tiers == nil {
+		return m
+	}
+	for _, s := range m.wizard.modelSteps {
+		if s.Model == "" {
+			continue
+		}
+		m.wizard.selectedModels[s.Key()] = tiers[installer.Classify(s.Model)]
+	}
+	return m
 }
 
 // enterModelSetup transitions into StateModelSetup, loading the step list
@@ -911,20 +952,54 @@ func (m Model) handleDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) buildInstallCmd() tea.Cmd {
 	assistants := m.selectedAssistants()
 	provider := installer.Providers[m.wizard.provider]
-	// Selections identical to the shipped defaults pass nil so workflow.yaml
-	// files install verbatim — skipping (or customizing and reverting) never
-	// rewrites what the skill ships.
-	models := m.wizard.selectedModels
-	if m.countCustomizedModels() == 0 {
-		models = nil
+	lang := languageOptions[m.language.selected].Code
+
+	var installCmd tea.Cmd
+	if m.wizard.modelGateChoice == installer.PresetChameleon {
+		// Chameleon must be detected BEFORE the nil-guard below: its
+		// selectedModels map is empty, which would otherwise fall through to a
+		// verbatim install and wrongly keep the source defaults. Instead the
+		// remove-models path strips every model field.
+		installCmd = RemoveModelsInstallCmd(assistants, provider, m.skillsFS, lang)
+	} else {
+		// Selections identical to the shipped defaults pass nil so workflow.yaml
+		// files install verbatim — a preset that reproduces the defaults
+		// (Craftsman), or customizing and reverting, never rewrites what the
+		// skill ships.
+		models := m.wizard.selectedModels
+		if m.countCustomizedModels() == 0 {
+			models = nil
+		}
+		installCmd = InstallCmd(assistants, provider, m.skillsFS, lang, models)
 	}
-	installCmd := InstallCmd(assistants, provider, m.skillsFS, languageOptions[m.language.selected].Code, models)
+
 	if m.agentConfig.skip {
 		return installCmd
 	}
 	preset := installer.PersonaPresets[m.agentConfig.selectedPersona]
 	agentCmd := AgentInstallCmd(assistants, preset, m.agentConfig.useEmojis, m.agentConfig.writeModes, m.skillsFS)
 	return tea.Batch(installCmd, agentCmd)
+}
+
+// RemoveModelsInstallCmd is InstallCmd for the Chameleon preset: each
+// per-assistant install strips the `model:` field from every subagent step as
+// its workflow.yaml is written. It mirrors InstallCmd's per-assistant batching
+// so the TUI still updates row-by-row.
+func RemoveModelsInstallCmd(assistants []installer.AssistantDescriptor, provider installer.ProviderDescriptor, skillsFS fs.FS, lang string) tea.Cmd {
+	cmds := make([]tea.Cmd, len(assistants))
+	for i, a := range assistants {
+		a := a // capture loop variable
+		cmds[i] = func() tea.Msg {
+			results := installer.InstallRemovingModels([]installer.AssistantDescriptor{a}, provider, skillsFS, lang)
+			if len(results) > 0 {
+				return AssistantInstallProgressMsg{Result: results[0]}
+			}
+			return AssistantInstallProgressMsg{
+				Result: installer.InstallResult{AssistantID: a.ID},
+			}
+		}
+	}
+	return tea.Batch(cmds...)
 }
 
 // AgentWriteModes returns the per-assistant write mode map. Exported for tests.

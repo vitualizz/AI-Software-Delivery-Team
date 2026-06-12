@@ -444,10 +444,125 @@ func TestUpdate_ModelGate_CustomizeEnterOpensModelSetup(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
-	m = updateKey(t, m, tea.KeyDown)  // select customize
+	for i := 0; i < 5; i++ {
+		m = updateKey(t, m, tea.KeyDown) // move to "customize per step" (index 5)
+	}
 	m2 := updateKey(t, m, tea.KeyEnter)
 	if m2.State() != setup.StateModelSetup {
 		t.Errorf("Enter at ModelGate (customize): state = %v, want StateModelSetup", m2.State())
+	}
+}
+
+func TestUpdate_ModelGate_DownCapsAtCustomizeChoice(t *testing.T) {
+	// Six rows (0-5); a sixth KeyDown past the last row must stay on
+	// "customize per step" rather than running off the end.
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
+	for i := 0; i < 6; i++ {          // one more than the 5 needed to reach index 5
+		m = updateKey(t, m, tea.KeyDown)
+	}
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateModelSetup {
+		t.Errorf("after capped KeyDowns, Enter: state = %v, want StateModelSetup (customize row)", m2.State())
+	}
+}
+
+// presetWorkflowFS is a two-step workflow whose source defaults span two tiers,
+// so preset classification is observable: feature-intake (haiku → TierLight)
+// and decide (opus → TierDecision).
+var presetWorkflowFS = fstest.MapFS{
+	"asdt-pm/workflow.yaml": {Data: []byte(
+		"specialist: pm\nsteps:\n" +
+			"  - name: feature-intake\n    execution: subagent\n    model: haiku\n" +
+			"  - name: decide\n    execution: subagent\n    model: opus\n",
+	)},
+}
+
+// advanceToGate drives a fresh model to StateModelGate with the given skillsFS.
+func advanceToGate(t *testing.T, skillsFS fstest.MapFS) setup.Model {
+	t.Helper()
+	m := setup.New(skillsFS, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
+	if m.State() != setup.StateModelGate {
+		t.Fatalf("advanceToGate: state = %v, want StateModelGate", m.State())
+	}
+	return m
+}
+
+// TestUpdate_ModelGate_ChameleonDefaultLeavesSelectionEmpty is AC-1/AC-3: the
+// default gate choice is Chameleon (no KeyDown), and applying it leaves
+// selectedModels empty so the install strips every model field.
+func TestUpdate_ModelGate_ChameleonDefaultLeavesSelectionEmpty(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := advanceToGate(t, presetWorkflowFS)
+	m2 := updateKey(t, m, tea.KeyEnter) // Enter on Chameleon (default) → AgentSetup
+	if m2.State() != setup.StateAgentSetup {
+		t.Fatalf("Chameleon Enter: state = %v, want StateAgentSetup", m2.State())
+	}
+	if got := len(m2.SelectedModels()); got != 0 {
+		t.Errorf("Chameleon left %d selections, want 0 (empty → strip at install)", got)
+	}
+}
+
+// TestUpdate_ModelGate_SprinterClassifiesByTier is AC-2: Sprinter routes the
+// decision-tier step to the balanced model and never to the cheapest one.
+func TestUpdate_ModelGate_SprinterClassifiesByTier(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := advanceToGate(t, presetWorkflowFS)
+	m = updateKey(t, m, tea.KeyDown) // Chameleon → Sprinter (index 1)
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateAgentSetup {
+		t.Fatalf("Sprinter Enter: state = %v, want StateAgentSetup", m2.State())
+	}
+	sel := m2.SelectedModels()
+	// feature-intake is TierLight → haiku; decide is TierDecision → sonnet.
+	if sel["pm/feature-intake"] != "haiku" {
+		t.Errorf("Sprinter pm/feature-intake = %q, want haiku", sel["pm/feature-intake"])
+	}
+	if sel["pm/decide"] != "sonnet" {
+		t.Errorf("Sprinter pm/decide = %q, want sonnet (decision tier, never haiku)", sel["pm/decide"])
+	}
+}
+
+// TestUpdate_ModelGate_CraftsmanIsSkipPath proves Craftsman reproduces the
+// source defaults exactly, so countCustomizedModels()==0 and the install passes
+// nil (verbatim) rather than re-encoding.
+func TestUpdate_ModelGate_CraftsmanIsSkipPath(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := advanceToGate(t, presetWorkflowFS)
+	for i := 0; i < 2; i++ {
+		m = updateKey(t, m, tea.KeyDown) // Chameleon → Sprinter → Craftsman (index 2)
+	}
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.ModelsTouched() {
+		t.Error("Craftsman reproduces source defaults — ModelsTouched() must be false (skip path)")
+	}
+}
+
+// TestModel_ApplyPreset_SelfLoadsStepsWhenAccordionNeverEntered proves the
+// guard: applying a preset on a fresh model (StateModelSetup never opened)
+// still classifies steps because applyPreset self-loads the step list.
+func TestModel_ApplyPreset_SelfLoadsStepsWhenAccordionNeverEntered(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	m := advanceToGate(t, presetWorkflowFS)
+	// Strategist (index 3) without ever opening the accordion.
+	for i := 0; i < 3; i++ {
+		m = updateKey(t, m, tea.KeyDown)
+	}
+	m2 := updateKey(t, m, tea.KeyEnter)
+	sel := m2.SelectedModels()
+	if len(sel) == 0 {
+		t.Fatal("applyPreset must self-load steps and populate selections, got empty map")
+	}
+	// Strategist: TierDecision → opus.
+	if sel["pm/decide"] != "opus" {
+		t.Errorf("Strategist pm/decide = %q, want opus", sel["pm/decide"])
 	}
 }
 
@@ -520,12 +635,15 @@ func TestUpdate_ModelSetup_AccordionExpandCycleAndReset(t *testing.T) {
 }
 
 // advanceToModelSetup drives the model to StateModelSetup via the gate's
-// customize choice.
+// "customize per step" choice, which now sits at index 5 (after the five
+// preset rows).
 func advanceToModelSetup(t *testing.T, m setup.Model) setup.Model {
 	t.Helper()
 	m = advanceToSelectProvider(t, m)
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
-	m = updateKey(t, m, tea.KeyDown)  // select customize
+	for i := 0; i < 5; i++ {
+		m = updateKey(t, m, tea.KeyDown) // move to "customize per step" (index 5)
+	}
 	m = updateKey(t, m, tea.KeyEnter) // ModelGate → ModelSetup
 	if m.State() != setup.StateModelSetup {
 		t.Fatalf("advanceToModelSetup: state = %v, want StateModelSetup", m.State())

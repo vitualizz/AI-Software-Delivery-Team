@@ -133,3 +133,44 @@ func TestInjectModelsIgnoresUnknownSteps(t *testing.T) {
 		t.Error("selections matching no step must leave content unchanged")
 	}
 }
+
+func TestRemoveModelsStripsEveryModelField(t *testing.T) {
+	out, err := installer.RemoveModels([]byte(modelWorkflowYAML))
+	if err != nil {
+		t.Fatalf("RemoveModels: %v", err)
+	}
+	got := string(out)
+
+	if strings.Contains(got, "model:") {
+		t.Errorf("RemoveModels left a model field behind:\n%s", got)
+	}
+	// Comments and step order must survive the round-trip.
+	if !strings.Contains(got, "# recall runs inline — context only") {
+		t.Errorf("comment lost in round-trip:\n%s", got)
+	}
+	if strings.Index(got, "feature-intake") >= strings.Index(got, "backlog-entry") {
+		t.Errorf("step order changed:\n%s", got)
+	}
+}
+
+func TestRemoveModelsNoModelFieldIsByteIdenticalNoop(t *testing.T) {
+	// A workflow with no model: field anywhere must be returned byte-identical
+	// — no re-encode, no comment/whitespace drift.
+	const noModelYAML = `specialist: pm
+steps:
+  # only inline + a subagent without a model
+  - name: knowledge-recall
+    execution: inline
+
+  - name: feature-intake
+    execution: subagent
+    agent: analyst
+`
+	out, err := installer.RemoveModels([]byte(noModelYAML))
+	if err != nil {
+		t.Fatalf("RemoveModels: %v", err)
+	}
+	if string(out) != noModelYAML {
+		t.Errorf("RemoveModels on model-free content must be byte-identical, got:\n%s", string(out))
+	}
+}

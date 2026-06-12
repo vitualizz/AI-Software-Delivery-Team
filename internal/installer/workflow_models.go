@@ -146,6 +146,65 @@ func InjectModels(content []byte, models map[string]string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// RemoveModels returns workflow.yaml content with the `model:` field stripped
+// from every subagent step, so each step inherits the model the assistant
+// already has defined (the Chameleon preset). The YAML is round-tripped through
+// yaml.Node so comments and field order survive; when no step carries a model
+// field the content is returned unchanged without re-encoding.
+func RemoveModels(content []byte) ([]byte, error) {
+	var root yaml.Node
+	if err := yaml.Unmarshal(content, &root); err != nil {
+		return nil, fmt.Errorf("parse workflow.yaml: %w", err)
+	}
+	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
+		return content, nil
+	}
+
+	doc := root.Content[0]
+	stepsNode := mappingNode(doc, "steps")
+	if stepsNode == nil || stepsNode.Kind != yaml.SequenceNode {
+		return content, nil
+	}
+
+	changed := false
+	for _, step := range stepsNode.Content {
+		if step.Kind != yaml.MappingNode {
+			continue
+		}
+		if deleteMappingKey(step, "model") {
+			changed = true
+		}
+	}
+
+	if !changed {
+		return content, nil
+	}
+
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(doc); err != nil {
+		return nil, fmt.Errorf("encode workflow.yaml: %w", err)
+	}
+	if err := enc.Close(); err != nil {
+		return nil, fmt.Errorf("close encoder: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// deleteMappingKey removes the key/value pair for key from a mapping node,
+// dropping the two adjacent Content slots that hold them. It reports whether a
+// pair was removed.
+func deleteMappingKey(mapping *yaml.Node, key string) bool {
+	for i := 0; i+1 < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			mapping.Content = append(mapping.Content[:i], mapping.Content[i+2:]...)
+			return true
+		}
+	}
+	return false
+}
+
 // mappingValue returns the value node for key in a mapping node, or nil.
 func mappingValue(mapping *yaml.Node, key string) *yaml.Node {
 	for i := 0; i+1 < len(mapping.Content); i += 2 {

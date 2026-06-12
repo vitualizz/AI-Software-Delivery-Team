@@ -1,7 +1,8 @@
 schema_version: "1"
-scanned_at: 2026-06-07T23:53:35Z
+scanned_at: 2026-06-12T09:33:10Z
 detected_stack:
-  - Go
+  - go
+  - node
 conventions:
   file_structure: "cmd/ for binaries, internal/ for private packages"
 design_fingerprint: {}

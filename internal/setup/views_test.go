@@ -190,12 +190,14 @@ func stateView(t *testing.T, target string) string {
 	}
 
 	if target == "ModelSetup" {
-		m = updateKey(t, m, tea.KeyDown)  // select customize
+		for i := 0; i < 5; i++ {
+			m = updateKey(t, m, tea.KeyDown) // move to "customize per step" (index 5)
+		}
 		m = updateKey(t, m, tea.KeyEnter) // ModelGate → ModelSetup
 		return m.View()
 	}
 
-	m = updateKey(t, m, tea.KeyEnter) // ModelGate (recommended) → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // ModelGate (Chameleon default) → AgentSetup
 	if target == "AgentSetup" {
 		return m.View()
 	}
@@ -470,7 +472,7 @@ func TestView_EmojiPrefSharesStepFive(t *testing.T) {
 	}
 }
 
-func TestView_ModelGateShowsRecommendedDefault(t *testing.T) {
+func TestView_ModelGateShowsPresetRowsWithChameleonDefault(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
 	view := stateView(t, "ModelGate")
@@ -480,8 +482,22 @@ func TestView_ModelGateShowsRecommendedDefault(t *testing.T) {
 	if !strings.Contains(view, "AI Models") {
 		t.Errorf("ModelGate view missing title, got:\n%s", view)
 	}
-	if !strings.Contains(view, "Use recommended models") {
-		t.Errorf("ModelGate view missing recommended option, got:\n%s", view)
+	// All six preset rows must be present.
+	for _, name := range []string{"Chameleon", "Sprinter", "Craftsman", "Strategist", "Mastermind", "Customize per step"} {
+		if !strings.Contains(view, name) {
+			t.Errorf("ModelGate view missing preset row %q, got:\n%s", name, view)
+		}
+	}
+	// Chameleon (the default) must be the selected radio.
+	chameleonLine := ""
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "Chameleon") {
+			chameleonLine = line
+			break
+		}
+	}
+	if !strings.Contains(chameleonLine, "(•)") {
+		t.Errorf("Chameleon should be the preselected radio, got line:\n%s", chameleonLine)
 	}
 }
 
@@ -504,8 +520,12 @@ func TestView_ReviewShowsModelsRow(t *testing.T) {
 	if !strings.Contains(view, "Models:") {
 		t.Errorf("review view missing 'Models:' row, got:\n%s", view)
 	}
-	if !strings.Contains(view, "recommended defaults") {
-		t.Errorf("review view should show 'recommended defaults' on the skip path, got:\n%s", view)
+	// The default gate choice is Chameleon, so Review reports the preset name.
+	if !strings.Contains(view, "Chameleon preset") {
+		t.Errorf("review view should show 'Chameleon preset' on the default path, got:\n%s", view)
+	}
+	if strings.Contains(view, "recommended defaults") {
+		t.Errorf("review view must not show the retired 'recommended defaults' string, got:\n%s", view)
 	}
 }
 

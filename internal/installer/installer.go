@@ -34,7 +34,20 @@ func InstallWithModels(assistants []AssistantDescriptor, provider ProviderDescri
 	results := make([]InstallResult, len(assistants))
 
 	for i, assistant := range assistants {
-		results[i] = installOne(assistant, provider, skillsFS, lang, models)
+		results[i] = installOne(assistant, provider, skillsFS, lang, models, false)
+	}
+
+	return results
+}
+
+// InstallRemovingModels is InstallWithModels for the Chameleon preset: it
+// strips the `model:` field from every subagent step as each workflow.yaml is
+// written, so each step inherits the model the assistant already has defined.
+func InstallRemovingModels(assistants []AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS, lang string) []InstallResult {
+	results := make([]InstallResult, len(assistants))
+
+	for i, assistant := range assistants {
+		results[i] = installOne(assistant, provider, skillsFS, lang, nil, true)
 	}
 
 	return results
@@ -76,7 +89,7 @@ func SiblingDestName(entry string) string {
 //   - loose files directly at the embedded tree root (e.g. "SKILL.md") —
 //     they belong to the consultant and are copied to
 //     {SkillsDir}/asdt/{filename}
-func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS, lang string, models map[string]string) InstallResult {
+func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skillsFS fs.FS, lang string, models map[string]string, removeModels bool) InstallResult {
 	result := InstallResult{AssistantID: assistant.ID}
 
 	if err := os.MkdirAll(assistant.SkillsDir, 0o755); err != nil {
@@ -101,7 +114,7 @@ func installOne(assistant AssistantDescriptor, provider ProviderDescriptor, skil
 			destDir = filepath.Join(assistant.SkillsDir, SiblingDestName("."))
 		}
 
-		written, copyErr := copyEntry(skillsFS, entry, srcRoot, destDir, provider, models)
+		written, copyErr := copyEntry(skillsFS, entry, srcRoot, destDir, provider, models, removeModels)
 		if copyErr != nil {
 			result.Err = copyErr
 			return result
@@ -171,13 +184,13 @@ func commandRootFor(id AssistantID) string {
 // srcRoot is "." for loose root-level files (so the file's own name is used
 // as the relative path) or the directory entry's own name (so its subtree is
 // walked and copied beneath destDir).
-func copyEntry(skillsFS fs.FS, entry fs.DirEntry, srcRoot, destDir string, provider ProviderDescriptor, models map[string]string) ([]string, error) {
+func copyEntry(skillsFS fs.FS, entry fs.DirEntry, srcRoot, destDir string, provider ProviderDescriptor, models map[string]string, removeModels bool) ([]string, error) {
 	var written []string
 
 	if !entry.IsDir() {
 		rel := entry.Name()
 		target := filepath.Join(destDir, filepath.FromSlash(rel))
-		if err := writeSkillFile(skillsFS, entry.Name(), target, provider, models); err != nil {
+		if err := writeSkillFile(skillsFS, entry.Name(), target, provider, models, removeModels); err != nil {
 			return nil, err
 		}
 		return []string{target}, nil
@@ -197,7 +210,7 @@ func copyEntry(skillsFS fs.FS, entry fs.DirEntry, srcRoot, destDir string, provi
 		}
 		target := filepath.Join(destDir, rel)
 
-		if err := writeSkillFile(skillsFS, path, target, provider, models); err != nil {
+		if err := writeSkillFile(skillsFS, path, target, provider, models, removeModels); err != nil {
 			return err
 		}
 		written = append(written, target)
@@ -213,18 +226,26 @@ func copyEntry(skillsFS fs.FS, entry fs.DirEntry, srcRoot, destDir string, provi
 // writeSkillFile reads srcPath from skillsFS, applies the provider's content
 // customization — plus per-step model injection for workflow.yaml files —
 // and writes the result to target, creating any needed parent directories.
-func writeSkillFile(skillsFS fs.FS, srcPath, target string, provider ProviderDescriptor, models map[string]string) error {
+func writeSkillFile(skillsFS fs.FS, srcPath, target string, provider ProviderDescriptor, models map[string]string, removeModels bool) error {
 	data, readErr := fs.ReadFile(skillsFS, srcPath)
 	if readErr != nil {
 		return fmt.Errorf("read %s: %w", srcPath, readErr)
 	}
 
 	if filepath.Base(target) == "workflow.yaml" {
-		injected, injErr := InjectModels(data, models)
-		if injErr != nil {
-			return fmt.Errorf("inject models into %s: %w", srcPath, injErr)
+		if removeModels {
+			stripped, rmErr := RemoveModels(data)
+			if rmErr != nil {
+				return fmt.Errorf("remove models from %s: %w", srcPath, rmErr)
+			}
+			data = stripped
+		} else {
+			injected, injErr := InjectModels(data, models)
+			if injErr != nil {
+				return fmt.Errorf("inject models into %s: %w", srcPath, injErr)
+			}
+			data = injected
 		}
-		data = injected
 	}
 
 	content := provider.CustomizeSkill(string(data))
