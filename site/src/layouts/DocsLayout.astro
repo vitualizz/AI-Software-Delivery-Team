@@ -106,6 +106,15 @@ function docHref(slug: string) {
     </aside>
 
     <article class="article">
+      <div class="mobile-search-bar">
+        <button id="mobile-search-trigger" class="mobile-search-btn" aria-label={t.docs.searchLabel}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <span class="msb-hint">{t.docs.searchPlaceholder}</span>
+          <kbd class="msb-kbd">⌘K</kbd>
+        </button>
+      </div>
       {isFallback && (
         <FallbackNotice
           notice={t.docs.fallbackNotice}
@@ -432,6 +441,46 @@ html[data-theme='light'] .article :global(.copy-btn) { background: oklch(0.93 0.
   color: var(--color-text);
   scroll-margin-top: 80px;
 }
+
+/* mobile search bar */
+.mobile-search-bar { display: none; margin-bottom: 20px; }
+@media (max-width: 899px) {
+  .mobile-search-bar { display: block; }
+}
+.mobile-search-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: oklch(0.175 0.012 285 / 0.5);
+  color: var(--faint);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.mobile-search-btn:hover {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background: oklch(0.20 0.013 285 / 0.7);
+}
+.msb-hint { flex: 1; font-size: 12.5px; }
+.msb-kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border-soft);
+  background: oklch(0.19 0.013 285 / 0.6);
+  color: var(--faint);
+  line-height: 1.4;
+}
+html[data-theme='light'] .mobile-search-btn { background: oklch(0.97 0.003 285 / 0.8); }
+html[data-theme='light'] .mobile-search-btn:hover { background: oklch(0.93 0.006 285 / 0.7); }
+html[data-theme='light'] .msb-kbd { background: oklch(0.93 0.005 285); }
 </style>
 
 <script>
@@ -462,5 +511,9 @@ document.querySelectorAll<HTMLElement>('.article h2, .article h3').forEach((head
   anchor.setAttribute('aria-label', `Link to ${heading.textContent}`)
   anchor.textContent = '#'
   heading.appendChild(anchor)
+})
+
+document.getElementById('mobile-search-trigger')?.addEventListener('click', () => {
+  document.dispatchEvent(new CustomEvent('docs:open-search'))
 })
 </script>

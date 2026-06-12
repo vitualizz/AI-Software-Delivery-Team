@@ -14,7 +14,7 @@ interface Props {
     produces: string
   }
 }
-const { specialist, lang, labels } = Astro.props
+const { specialist, labels } = Astro.props
 const config = specialistSteps[specialist]
 if (!config) return
 
