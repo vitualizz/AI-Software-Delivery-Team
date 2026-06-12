@@ -48,11 +48,11 @@ export const es: UIStrings = {
     },
   },
   terminal: {
-    tabs: ['Nueva feature', 'Developer, paso a paso', 'Auditoría', 'Tu turno_'],
+    tabs: ['Nueva feature', 'PM, paso a paso', 'Seguridad · STRIDE', 'Tu turno_'],
   },
   pipeline: {
     title: 'Cómo funciona',
-    sub: 'Describí lo que necesitás — /asdt te dice qué especialistas usar y en qué orden. Cada uno lee los artefactos del anterior automáticamente via Engram.',
+    sub: 'Describí lo que necesitás — /asdt te dice qué especialistas usar y en qué orden. Cada uno lee los artefactos del anterior desde la base de conocimiento compartida.',
     nodes: [
       { id: 'pm', label: 'PM' },
       { id: 'architect', label: 'Arquitecto' },
@@ -62,7 +62,7 @@ export const es: UIStrings = {
       { id: 'ux-ui', label: 'UX/UI' },
     ],
     a11yTitle: 'Pipeline de especialistas ASDT',
-    a11yDesc: 'Diagrama que muestra seis especialistas en secuencia: PM, Arquitecto, Developer, QA, Seguridad, UX/UI.',
+    a11yDesc: 'Diagrama que muestra seis especialistas en secuencia: PM, Arquitecto, Developer, QA, Seguridad, UX/UI — todos conectados a través de una base de conocimiento compartida.',
   },
   recipes: {
     kicker: '02 · Cómo funciona',
@@ -75,6 +75,7 @@ export const es: UIStrings = {
       '/asdt-security revisa el manejo de sesiones',
       '/asdt rediseña el onboarding para móvil',
     ],
+    kbNote: 'cada paso guarda en la base de conocimiento · el siguiente especialista lee automáticamente',
   },
   vs: {
     kicker: '03 · Por qué ASDT',
@@ -116,5 +117,15 @@ export const es: UIStrings = {
     commands: 'Comandos',
     userFlows: 'Flujos de usuario',
     onThisPage: 'En esta página',
+    stepsTitle: 'Pasos que ejecuta',
+    searchPlaceholder: 'Buscar en docs...',
+    searchNoResults: 'Sin resultados.',
+    searchLabel: 'Buscar documentación',
+    complexity: 'Complejidad',
+    riskSurface: 'Superficie de riesgo',
+    notCalled: 'No se invoca en este nivel — el Developer lo maneja directamente.',
+    notEligible: 'No elegible — vuelve a simple.',
+    notAutoInvoked: 'No se auto-invoca. Sigue siendo invocable bajo demanda.',
+    produces: 'Produce',
   },
 }

@@ -1,0 +1,280 @@
+---
+interface Props {
+  lang: 'en' | 'es'
+  placeholder: string
+  noResults: string
+  label: string
+}
+const { lang, placeholder, noResults, label } = Astro.props
+---
+
+<div id="docs-search" data-lang={lang}>
+  <button id="search-btn" class="search-btn" aria-label={label} title={label}>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+    </svg>
+    <span class="search-hint">{placeholder}</span>
+    <kbd class="search-kbd">⌘K</kbd>
+  </button>
+</div>
+
+<div id="search-modal" class="search-modal" role="dialog" aria-modal="true" aria-label={label} hidden>
+  <div class="search-backdrop"></div>
+  <div class="search-box">
+    <div class="search-input-wrap">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input
+        id="search-input"
+        type="search"
+        placeholder={placeholder}
+        autocomplete="off"
+        spellcheck="false"
+        aria-label={label}
+        aria-autocomplete="list"
+        aria-controls="search-results"
+      />
+      <kbd class="search-esc-hint">esc</kbd>
+    </div>
+    <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+    <p id="search-empty" class="search-empty" hidden>{noResults}</p>
+  </div>
+</div>
+
+<script>
+import Fuse from 'fuse.js'
+
+type DocEntry = { id: string; slug: string; locale: string; title: string; description: string }
+
+const container = document.getElementById('docs-search')!
+const btn = document.getElementById('search-btn')!
+const modal = document.getElementById('search-modal')!
+const input = document.getElementById('search-input') as HTMLInputElement
+const resultsList = document.getElementById('search-results')!
+const empty = document.getElementById('search-empty')!
+const backdrop = modal.querySelector('.search-backdrop')!
+
+const lang = container.dataset.lang ?? 'en'
+const base = import.meta.env.BASE_URL
+
+let fuse: Fuse<DocEntry> | null = null
+
+async function initSearch() {
+  if (fuse) return
+  const res = await fetch(`${base}search-index.json`)
+  const all: DocEntry[] = await res.json()
+  const items = all.filter((d) => d.locale === lang)
+  fuse = new Fuse(items, {
+    keys: [
+      { name: 'title', weight: 2 },
+      { name: 'description', weight: 1 },
+    ],
+    threshold: 0.35,
+    includeScore: true,
+    minMatchCharLength: 2,
+  })
+}
+
+function openModal() {
+  modal.hidden = false
+  input.focus()
+  document.body.style.overflow = 'hidden'
+  initSearch()
+}
+
+function closeModal() {
+  modal.hidden = true
+  input.value = ''
+  resultsList.hidden = true
+  resultsList.innerHTML = ''
+  empty.hidden = true
+  document.body.style.overflow = ''
+}
+
+function doSearch(query: string) {
+  if (!fuse || !query.trim()) {
+    resultsList.hidden = true
+    empty.hidden = true
+    return
+  }
+  const hits = fuse.search(query, { limit: 8 })
+  if (hits.length === 0) {
+    resultsList.hidden = true
+    empty.hidden = false
+    return
+  }
+  empty.hidden = true
+  resultsList.innerHTML = hits
+    .map(({ item }) => {
+      const href =
+        lang === 'es'
+          ? `${base}es/docs/${item.slug}`
+          : `${base}docs/${item.slug}`
+      return `<li role="option"><a href="${href}" class="search-result">
+        <span class="sr-title">${item.title}</span>
+        <span class="sr-desc">${item.description}</span>
+      </a></li>`
+    })
+    .join('')
+  resultsList.hidden = false
+}
+
+btn.addEventListener('click', openModal)
+backdrop.addEventListener('click', closeModal)
+input.addEventListener('input', (e) => doSearch((e.target as HTMLInputElement).value))
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal()
+  if (e.key === 'Enter') {
+    const first = resultsList.querySelector<HTMLAnchorElement>('.search-result')
+    if (first) first.click()
+  }
+})
+
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault()
+    modal.hidden ? openModal() : closeModal()
+  }
+  if (e.key === 'Escape' && !modal.hidden) closeModal()
+})
+</script>
+
+<style>
+/* ── trigger button ── */
+.search-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-soft);
+  background: oklch(0.175 0.012 285 / 0.5);
+  color: var(--faint);
+  cursor: pointer;
+  font-size: 13px;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  margin-bottom: 16px;
+  text-align: left;
+}
+.search-btn:hover {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+  background: oklch(0.20 0.013 285 / 0.7);
+}
+.search-hint { flex: 1; font-size: 12.5px; }
+.search-kbd {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border-soft);
+  background: oklch(0.19 0.013 285 / 0.6);
+  color: var(--faint);
+  line-height: 1.4;
+}
+
+html[data-theme='light'] .search-btn { background: oklch(0.97 0.003 285 / 0.8); }
+html[data-theme='light'] .search-btn:hover { background: oklch(0.93 0.006 285 / 0.7); }
+html[data-theme='light'] .search-kbd { background: oklch(0.93 0.005 285); }
+
+/* ── modal ── */
+.search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 80px;
+}
+.search-modal[hidden] { display: none; }
+
+.search-backdrop {
+  position: absolute;
+  inset: 0;
+  background: oklch(0.10 0.012 285 / 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 16px;
+  border-radius: 14px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 24px 80px oklch(0.08 0.015 285 / 0.8);
+  overflow: hidden;
+}
+
+.search-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.search-icon { color: var(--faint); flex-shrink: 0; }
+
+#search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  color: var(--color-text);
+  font-family: var(--font-body, var(--font-sans));
+}
+#search-input::placeholder { color: var(--faint); }
+#search-input::-webkit-search-cancel-button { display: none; }
+
+.search-esc-hint {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-soft);
+  color: var(--faint);
+  background: oklch(0.19 0.013 285 / 0.5);
+  flex-shrink: 0;
+}
+
+/* ── results ── */
+.search-results {
+  list-style: none;
+  padding: 6px;
+  margin: 0;
+  max-height: 380px;
+  overflow-y: auto;
+}
+.search-results[hidden] { display: none; }
+
+.search-result {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.search-result:hover { background: oklch(0.22 0.013 285 / 0.65); }
+.sr-title { font-size: 14px; font-weight: 500; color: var(--color-text); }
+.sr-desc { font-size: 12.5px; color: var(--faint); line-height: 1.4; }
+
+.search-empty {
+  padding: 20px 16px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--faint);
+}
+.search-empty[hidden] { display: none; }
+
+html[data-theme='light'] .search-box { background: #ffffff; }
+html[data-theme='light'] .search-backdrop { background: oklch(0.60 0.01 285 / 0.5); }
+html[data-theme='light'] .search-result:hover { background: oklch(0.92 0.006 285 / 0.7); }
+html[data-theme='light'] .search-esc-hint { background: oklch(0.93 0.005 285); }
+</style>

@@ -9,6 +9,7 @@ steps:
     skill: steps/load-requirements.md
     description: Load upstream spec artifacts and extract acceptance criteria into the ac-list artifact
     execution: subagent
+    model: haiku
     agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/qa/ac-list"
@@ -19,6 +20,7 @@ steps:
     skill: steps/ac-validation.md
     description: Validate acceptance criteria for completeness and surface any gaps
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/qa/ac-list"
@@ -30,6 +32,7 @@ steps:
     skill: steps/edge-case-analysis.md
     description: Identify edge cases not covered by the acceptance criteria
     execution: subagent
+    model: opus
     agent: analyst
     inputs:
       - "{project}/{change}/qa/ac-list"
@@ -41,6 +44,7 @@ steps:
     skill: steps/test-strategy.md
     description: Define the test strategy (unit / integration / e2e split, coverage targets)
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/qa/edge-cases"
@@ -52,6 +56,7 @@ steps:
     skill: steps/test-case-generation.md
     description: Generate concrete test cases from the strategy and edge case analysis
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/qa/test-strategy"
@@ -63,6 +68,7 @@ steps:
     skill: steps/quality-report.md
     description: Consolidate test cases and AC gaps into the final test-plan artifact
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/qa/test-cases"

@@ -1,6 +1,8 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro'
 import FallbackNotice from '@components/FallbackNotice.astro'
+import DocsSearch from '@components/DocsSearch.astro'
+import StepFlow from '@components/StepFlow.astro'
 import { useTranslations, getBaseHref } from '@i18n/utils'
 import type { Locale } from '@i18n/utils'
 import { getCollection } from 'astro:content'
@@ -22,45 +24,82 @@ interface Props {
 
 const { title, description, lang, isFallback = false, currentSlug, headings = [] } = Astro.props
 const t = useTranslations(lang)
+const isEs = lang === 'es'
 
 const allDocs = await getCollection('docs', (entry) => entry.data.locale === 'en')
 const sorted = allDocs.sort((a, b) => a.data.order - b.data.order)
 
-const slugToNav: Record<string, string> = {
-  'getting-started': t.docs.gettingStarted,
-  specialists: t.docs.specialists,
-  commands: t.docs.commands,
-  'user-flows': t.docs.userFlows,
-}
-
 const slugToLabel: Record<string, string> = {
   'getting-started': t.docs.gettingStarted,
-  specialists: t.docs.specialists,
+  'specialists/pm': 'Product Manager',
+  'specialists/architect': 'Architect',
+  'specialists/developer': 'Developer',
+  'specialists/qa': 'QA Engineer',
+  'specialists/security': 'Security',
+  'specialists/ux-ui': 'UX/UI Designer',
   commands: t.docs.commands,
   'user-flows': t.docs.userFlows,
 }
 
+const navGroups = [
+  { label: isEs ? 'Empezar' : 'Getting Started', slugs: ['getting-started', 'configuration'] },
+  { label: isEs ? 'Conceptos' : 'Concepts', slugs: ['how-it-works', 'specialist-model', 'memory-and-engram'] },
+  { label: isEs ? 'Especialistas' : 'Specialists', slugs: ['specialists/pm', 'specialists/architect', 'specialists/developer', 'specialists/qa', 'specialists/security', 'specialists/ux-ui'] },
+  { label: isEs ? 'Referencia' : 'Reference', slugs: ['commands', 'user-flows'] },
+  { label: isEs ? 'Contribuir' : 'Contributing', slugs: ['contributing', 'development'] },
+]
+
+const sortedBySlug = Object.fromEntries(
+  sorted.map((e) => [e.id.replace(/^en\//, ''), e])
+)
+
 const currentLabel = slugToLabel[currentSlug] ?? title
-const tocHeadings = headings.filter((h) => h.depth === 2)
+const specialistId = currentSlug.startsWith('specialists/')
+  ? currentSlug.replace('specialists/', '')
+  : null
+const tocHeadings = headings.filter((h) => h.depth === 2 || h.depth === 3)
+
+const allSlugs = sorted.map((e) => e.id.replace(/^en\//, ''))
+const currentIndex = allSlugs.indexOf(currentSlug)
+const prevEntry = currentIndex > 0 ? sorted[currentIndex - 1] : null
+const nextEntry = currentIndex < sorted.length - 1 ? sorted[currentIndex + 1] : null
+
+function docHref(slug: string) {
+  return isEs ? getBaseHref(`/es/docs/${slug}`) : getBaseHref(`/docs/${slug}`)
+}
 ---
 <BaseLayout lang={lang} title={title} description={description}>
   <div class="docs-shell">
-    <aside class="docs-side" aria-label={t.docs.onThisPage}>
-      <p class="doc-nav-label">{lang === 'es' ? 'Documentación' : 'Documentation'}</p>
+    <aside class="docs-side" aria-label={isEs ? 'Documentación' : 'Documentation'}>
+      <DocsSearch
+        lang={lang}
+        placeholder={t.docs.searchPlaceholder}
+        noResults={t.docs.searchNoResults}
+        label={t.docs.searchLabel}
+      />
       <nav class="doc-nav">
-        {sorted.map((entry) => {
-          const slug = entry.id.replace(/^en\//, '')
-          const label = slugToNav[slug] ?? entry.data.title
-          const href = lang === 'es' ? getBaseHref(`/es/docs/${slug}`) : getBaseHref(`/docs/${slug}`)
-          const isCurrent = currentSlug === slug
+        {navGroups.map((group) => {
+          const groupEntries = group.slugs.map((s) => sortedBySlug[s]).filter(Boolean)
+          if (groupEntries.length === 0) return null
           return (
-            <a
-              href={href}
-              aria-current={isCurrent ? 'page' : undefined}
-              class:list={['doc-nav-link', { active: isCurrent }]}
-            >
-              {label}
-            </a>
+            <div class="doc-nav-section">
+              <p class="doc-nav-group">{group.label}</p>
+              {groupEntries.map((entry) => {
+                const slug = entry.id.replace(/^en\//, '')
+                const label = slugToLabel[slug] ?? entry.data.title
+                const href = docHref(slug)
+                const isCurrent = currentSlug === slug
+                return (
+                  <a
+                    href={href}
+                    aria-current={isCurrent ? 'page' : undefined}
+                    class:list={['doc-nav-link', { active: isCurrent }]}
+                  >
+                    {label}
+                  </a>
+                )
+              })}
+            </div>
           )
         })}
       </nav>
@@ -74,15 +113,50 @@ const tocHeadings = headings.filter((h) => h.depth === 2)
           enHref={getBaseHref(`/docs/${currentSlug}`)}
         />
       )}
-      <p class="crumb">{lang === 'es' ? 'Docs' : 'Docs'} <span aria-hidden="true">/</span> <b>{currentLabel}</b></p>
+      <p class="crumb">Docs <span aria-hidden="true">/</span> <b>{currentLabel}</b></p>
       <slot />
+
+      {specialistId && (
+        <div class="sf-section">
+          <h2 class="sf-heading">{t.docs.stepsTitle}</h2>
+          <StepFlow
+            specialist={specialistId}
+            lang={lang}
+            labels={{
+              complexity: t.docs.complexity,
+              riskSurface: t.docs.riskSurface,
+              notCalled: t.docs.notCalled,
+              notEligible: t.docs.notEligible,
+              notAutoInvoked: t.docs.notAutoInvoked,
+              produces: t.docs.produces,
+            }}
+          />
+        </div>
+      )}
+
+      {(prevEntry || nextEntry) && (
+        <nav class="doc-pagination" aria-label={isEs ? 'Navegación de páginas' : 'Page navigation'}>
+          {prevEntry ? (
+            <a href={docHref(prevEntry.id.replace(/^en\//, ''))} class="pag-link pag-prev">
+              <span class="pag-dir">← {isEs ? 'Anterior' : 'Previous'}</span>
+              <span class="pag-title">{slugToLabel[prevEntry.id.replace(/^en\//, '')] ?? prevEntry.data.title}</span>
+            </a>
+          ) : <div />}
+          {nextEntry ? (
+            <a href={docHref(nextEntry.id.replace(/^en\//, ''))} class="pag-link pag-next">
+              <span class="pag-dir">{isEs ? 'Siguiente' : 'Next'} →</span>
+              <span class="pag-title">{slugToLabel[nextEntry.id.replace(/^en\//, '')] ?? nextEntry.data.title}</span>
+            </a>
+          ) : <div />}
+        </nav>
+      )}
     </article>
 
     {tocHeadings.length > 0 && (
       <aside class="toc" aria-label={t.docs.onThisPage}>
         <p class="doc-nav-label">{t.docs.onThisPage}</p>
         {tocHeadings.map((h) => (
-          <a href={`#${h.slug}`}>{h.text}</a>
+          <a href={`#${h.slug}`} class:list={['toc-link', { 'toc-h3': h.depth === 3 }]}>{h.text}</a>
         ))}
       </aside>
     )}
@@ -106,10 +180,18 @@ const tocHeadings = headings.filter((h) => h.depth === 2)
   .docs-side { display: none; }
 }
 
-.docs-side {
-  position: sticky;
-  top: 92px;
-  align-self: start;
+/* sidebar */
+.docs-side { position: sticky; top: 92px; align-self: start; }
+.doc-nav { display: flex; flex-direction: column; gap: 0; }
+.doc-nav-section { margin-bottom: 20px; }
+.doc-nav-group {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin: 0 0 4px;
+  padding: 0 12px;
 }
 .doc-nav-label {
   font-family: var(--font-mono);
@@ -117,45 +199,41 @@ const tocHeadings = headings.filter((h) => h.depth === 2)
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--faint);
-  margin-bottom: 12px;
-  padding-left: 12px;
+  margin-bottom: 10px;
+  padding-left: 14px;
 }
-.doc-nav { display: flex; flex-direction: column; gap: 2px; }
 .doc-nav-link {
   display: block;
-  padding: 7px 12px;
-  border-radius: 8px;
-  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 13.5px;
   color: var(--color-text-muted);
   text-decoration: none;
   transition: background 0.15s, color 0.15s;
 }
-.doc-nav-link:hover { color: var(--color-text); background: oklch(0.20 0.012 285 / 0.6); }
+.doc-nav-link:hover { color: var(--color-text); background: oklch(0.22 0.013 285 / 0.65); }
 .doc-nav-link.active {
   color: var(--color-text);
-  background: oklch(from var(--color-accent) l c h / 0.10);
+  background: oklch(from var(--color-accent) l c h / 0.12);
 }
 
-.toc {
-  position: sticky;
-  top: 92px;
-  align-self: start;
-  display: none;
-}
+/* table of contents */
+.toc { position: sticky; top: 92px; align-self: start; display: none; }
 @media (min-width: 1080px) { .toc { display: block; } }
-.toc .doc-nav-label { padding-left: 14px; }
-.toc a {
+.toc-link {
   display: block;
   padding: 5px 0 5px 14px;
   border-left: 1px solid var(--border-soft);
-  font-size: 13px;
+  font-size: 12.5px;
   color: var(--color-text-muted);
   text-decoration: none;
   transition: color 0.15s, border-color 0.15s;
+  line-height: 1.4;
 }
-.toc a:hover { color: var(--color-text); }
+.toc-link:hover { color: var(--color-text); border-left-color: var(--color-accent); }
+.toc-h3 { padding-left: 24px; font-size: 12px; opacity: 0.8; }
 
-/* article prose — scoped via :global() so it applies to <slot /> content */
+/* article prose */
 .article { max-width: 680px; }
 .article .crumb {
   font-family: var(--font-mono);
@@ -187,27 +265,26 @@ const tocHeadings = headings.filter((h) => h.depth === 2)
   margin: 46px 0 14px;
   padding-top: 30px;
   border-top: 1px solid var(--border-soft);
+  scroll-margin-top: 80px;
 }
 .article :global(h3) {
   font-family: var(--font-display);
   font-size: 17px;
   font-weight: 600;
-  margin: 24px 0 8px;
+  margin: 30px 0 8px;
+  scroll-margin-top: 80px;
 }
 .article :global(p) {
   font-size: 15.5px;
-  color: oklch(0.83 0.008 285);
+  color: oklch(0.86 0.008 285);
   line-height: 1.7;
   margin: 12px 0;
 }
-.article :global(a) {
-  color: var(--color-accent);
-  text-decoration: none;
-}
+.article :global(a) { color: var(--color-accent); text-decoration: none; }
 .article :global(a:hover) { text-decoration: underline; }
 .article :global(code) {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 87%;
   background: var(--surface-2);
   border: 1px solid var(--border-soft);
   padding: 2px 7px;
@@ -215,6 +292,7 @@ const tocHeadings = headings.filter((h) => h.depth === 2)
   white-space: nowrap;
 }
 .article :global(pre) {
+  position: relative;
   margin: 18px 0;
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -225,89 +303,164 @@ const tocHeadings = headings.filter((h) => h.depth === 2)
   line-height: 1.85;
   overflow-x: auto;
 }
-.article :global(pre code) {
-  background: none;
-  border: none;
-  padding: 0;
-  white-space: pre;
-}
-.article :global(ul), .article :global(ol) {
-  padding: 0;
-  margin: 14px 0;
+.article :global(pre code) { background: none; border: none; padding: 0; white-space: pre; font-size: inherit; }
+.article :global(.copy-btn) {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   display: flex;
-  flex-direction: column;
-  gap: 9px;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.article :global(pre:hover .copy-btn) { opacity: 1; }
+.article :global(.copy-btn:hover) { color: var(--color-accent); border-color: var(--color-accent); }
+.article :global(.copy-btn.copied) { color: var(--color-accent); opacity: 1; }
+
+.article :global(ul), .article :global(ol) {
+  padding: 0; margin: 14px 0;
+  display: flex; flex-direction: column; gap: 9px;
 }
 .article :global(ul) { list-style: none; }
 .article :global(ul li) {
-  display: flex;
-  gap: 11px;
-  font-size: 15.5px;
-  color: oklch(0.83 0.008 285);
-  line-height: 1.6;
+  display: flex; gap: 11px;
+  font-size: 15.5px; color: oklch(0.86 0.008 285); line-height: 1.6;
 }
 .article :global(ul li::before) {
   content: '';
   flex-shrink: 0;
-  width: 6px;
-  height: 6px;
+  width: 6px; height: 6px;
   border-radius: 50%;
   background: var(--color-accent);
-  margin-top: 9px;
+  margin-top: 10px;
 }
 .article :global(ol) { list-style: decimal; padding-left: 20px; }
-.article :global(ol li) {
-  font-size: 15.5px;
-  color: oklch(0.83 0.008 285);
-  line-height: 1.6;
-}
+.article :global(ol li) { font-size: 15.5px; color: oklch(0.86 0.008 285); line-height: 1.6; }
+
 .article :global(blockquote) {
-  margin: 18px 0;
+  margin: 20px 0;
   padding: 14px 18px;
-  border-left: 3px solid var(--color-accent);
-  background: oklch(from var(--color-accent) l c h / 0.06);
+  border-left: 4px solid var(--color-accent);
+  background: oklch(from var(--color-accent) l c h / 0.09);
   border-radius: 0 8px 8px 0;
   font-size: 15px;
   color: var(--color-text-muted);
 }
-.article :global(table) {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 20px 0;
-  font-size: 14px;
-}
+
+.article :global(table) { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
 .article :global(th) {
   padding: 10px 14px;
   border-bottom: 1px solid var(--color-border);
-  text-align: left;
-  font-weight: 600;
-  color: var(--color-text);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  text-align: left; font-weight: 600; color: var(--color-text);
+  font-family: var(--font-mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em;
 }
 .article :global(td) {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-soft);
-  color: oklch(0.83 0.008 285);
-  vertical-align: top;
+  padding: 10px 14px; border-bottom: 1px solid var(--border-soft);
+  color: oklch(0.86 0.008 285); vertical-align: top;
 }
 .article :global(strong) { color: var(--color-text); font-weight: 600; }
 .article :global(em) { color: var(--color-text-muted); }
-.article :global(hr) {
-  border: none;
-  border-top: 1px solid var(--border-soft);
-  margin: 36px 0;
-}
+.article :global(hr) { border: none; border-top: 1px solid var(--border-soft); margin: 36px 0; }
 
-/* light theme — keep article text readable */
-[data-theme='light'] .article :global(p),
-[data-theme='light'] .article :global(ul li),
-[data-theme='light'] .article :global(ol li),
-[data-theme='light'] .article :global(td) {
-  color: oklch(0.32 0.012 285);
+/* heading anchors */
+.article :global(.heading-anchor) {
+  display: inline-block;
+  margin-left: 8px;
+  opacity: 0;
+  color: var(--faint);
+  text-decoration: none;
+  font-weight: 400;
+  font-size: 0.85em;
+  transition: opacity 0.15s, color 0.15s;
 }
-[data-theme='light'] .doc-nav-link:hover { background: oklch(0.92 0.006 285 / 0.7); }
-[data-theme='light'] .toc a { border-left-color: oklch(0.80 0.01 285); }
+.article :global(h2:hover .heading-anchor),
+.article :global(h3:hover .heading-anchor) { opacity: 1; }
+.article :global(.heading-anchor:hover) { color: var(--color-accent); }
+
+/* prev/next pagination */
+.doc-pagination {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 52px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border-soft);
+}
+.pag-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-soft);
+  background: oklch(0.175 0.012 285 / 0.5);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pag-link:hover { border-color: var(--color-border); background: oklch(0.20 0.013 285 / 0.7); }
+.pag-next { text-align: right; }
+.pag-dir { font-family: var(--font-mono); font-size: 11.5px; color: var(--color-accent); }
+.pag-title { font-size: 14px; font-weight: 500; color: var(--color-text); }
+
+/* light theme overrides — html prefix ensures specificity over scoped Astro selectors */
+html[data-theme='light'] .article :global(p),
+html[data-theme='light'] .article :global(ul li),
+html[data-theme='light'] .article :global(ol li),
+html[data-theme='light'] .article :global(td) { color: oklch(0.28 0.012 285); }
+html[data-theme='light'] .doc-nav-link:hover { background: oklch(0.92 0.006 285 / 0.7); }
+html[data-theme='light'] .toc-link { border-left-color: oklch(0.80 0.01 285); }
+html[data-theme='light'] .pag-link { background: oklch(0.97 0.003 285 / 0.8); }
+html[data-theme='light'] .pag-link:hover { background: oklch(0.93 0.006 285 / 0.7); }
+html[data-theme='light'] .article :global(blockquote) { background: oklch(from var(--color-accent) l c h / 0.06); }
+html[data-theme='light'] .article :global(.copy-btn) { background: oklch(0.93 0.005 285); border-color: oklch(0.80 0.01 285); }
+
+/* step-flow section */
+.sf-section { margin-top: 52px; padding-top: 28px; border-top: 1px solid var(--border-soft); }
+.sf-heading {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--color-text);
+  scroll-margin-top: 80px;
+}
 </style>
+
+<script>
+document.querySelectorAll<HTMLElement>('.article pre').forEach((pre) => {
+  const code = pre.querySelector('code')
+  if (!code) return
+  const btn = document.createElement('button')
+  btn.className = 'copy-btn'
+  btn.setAttribute('aria-label', 'Copy code')
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`
+  btn.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(code.textContent ?? '').catch(() => {})
+    btn.classList.add('copied')
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`
+    setTimeout(() => {
+      btn.classList.remove('copied')
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`
+    }, 2000)
+  })
+  pre.appendChild(btn)
+})
+
+document.querySelectorAll<HTMLElement>('.article h2, .article h3').forEach((heading) => {
+  if (!heading.id) return
+  const anchor = document.createElement('a')
+  anchor.className = 'heading-anchor'
+  anchor.href = `#${heading.id}`
+  anchor.setAttribute('aria-label', `Link to ${heading.textContent}`)
+  anchor.textContent = '#'
+  heading.appendChild(anchor)
+})
+</script>

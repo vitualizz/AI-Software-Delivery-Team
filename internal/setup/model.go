@@ -49,6 +49,16 @@ const (
 	// the environment check. Appended at the END of the iota block so existing
 	// state values never shift.
 	StateLanguageSelect
+	// StateModelSetup lets the user choose which AI model each specialist
+	// subagent step runs on, cycling through models of detected providers.
+	// Reached only via StateModelGate's customize choice. Appended at the
+	// END of the iota block so existing state values never shift.
+	StateModelSetup
+	// StateModelGate asks whether to keep the recommended per-step models or
+	// customize them. Sits between SelectProvider and AgentSetup; the
+	// recommended choice (default) bypasses StateModelSetup entirely.
+	// Appended at the END of the iota block so existing state values never shift.
+	StateModelGate
 )
 
 // preflightState holds state for the StateEnvironmentCheck screen.
@@ -66,6 +76,21 @@ type wizardState struct {
 	agentResults    []installer.AgentConfigResult
 	installExpected int  // number of per-assistant install Cmds fired
 	agentDone       bool // true once AgentInstallDoneMsg arrives (or skip)
+
+	// Model selection state. modelGateChoice is the StateModelGate radio
+	// (0 = recommended, 1 = customize). modelSteps lists every subagent step
+	// from the embedded workflows; selectedModels tracks the current choice
+	// per step key ("{specialist}/{step}"), prefilled with the source
+	// defaults; modelOptions is the flattened cycle list from detected
+	// providers; expandedGroups tracks which specialist accordion groups are
+	// open. A selection map identical to the source defaults installs
+	// workflow.yaml files verbatim (skip path) — see countCustomizedModels.
+	modelGateChoice int
+	modelSteps      []installer.WorkflowStepModel
+	selectedModels  map[string]string
+	detectedAI      []installer.AIProvider
+	modelOptions    []installer.AIModel
+	expandedGroups  map[string]bool
 }
 
 // dashboardState holds metadata loaded when the user enters StateDashboard.
@@ -297,6 +322,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleSelectAssistants(msg)
 	case StateSelectProvider:
 		return m.handleSelectProvider(msg)
+	case StateModelGate:
+		return m.handleModelGate(msg)
+	case StateModelSetup:
+		return m.handleModelSetup(msg)
 	case StateAgentSetup:
 		return m.handleAgentSetup(msg)
 	case StateEmojiPref:
@@ -478,15 +507,217 @@ func (m Model) handleSelectProvider(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case tea.KeyEnter:
 		// m.wizard.provider already reflects the live selection; no cursor assignment needed.
-		m.state = StateAgentSetup
-		m.cursor = 0
-		m.agentConfig.conflicts = m.detectAgentConflicts()
-		return m, nil
+		return m.enterModelGate(), nil
 	case tea.KeyEsc:
 		m.state = StateSelectAssistants
 		m.cursor = 0
 	}
 	return m, nil
+}
+
+// enterModelGate transitions into StateModelGate, detecting available AI
+// providers for the subtitle. The gate choice persists across re-entry.
+func (m Model) enterModelGate() Model {
+	m.wizard.detectedAI = installer.DetectAIProviders()
+	m.state = StateModelGate
+	m.cursor = m.wizard.modelGateChoice
+	return m
+}
+
+// handleModelGate handles keys for the recommended-vs-customize gate.
+// Two radio rows track the cursor live (EmojiPref pattern). Enter on
+// recommended goes straight to AgentSetup — the customization screen is
+// never rendered; Enter on customize opens StateModelSetup.
+func (m Model) handleModelGate(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+			m.wizard.modelGateChoice = m.cursor
+		}
+	case tea.KeyDown:
+		if m.cursor < 1 {
+			m.cursor++
+			m.wizard.modelGateChoice = m.cursor
+		}
+	case tea.KeyEnter:
+		if m.wizard.modelGateChoice == 1 {
+			return m.enterModelSetup(), nil
+		}
+		m.state = StateAgentSetup
+		m.cursor = 0
+		m.agentConfig.conflicts = m.detectAgentConflicts()
+		return m, nil
+	case tea.KeyEsc:
+		m.state = StateSelectProvider
+		m.cursor = 0
+	}
+	return m, nil
+}
+
+// enterModelSetup transitions into StateModelSetup, loading the step list
+// from the embedded skill FS and the model cycle options from detected
+// providers. Selections and expanded groups persist across re-entry within
+// the session; on first entry selections are prefilled with each step's
+// source-default model and all accordion groups start collapsed.
+func (m Model) enterModelSetup() Model {
+	if m.wizard.modelSteps == nil {
+		steps, err := installer.WorkflowModelSteps(m.skillsFS)
+		if err == nil {
+			m.wizard.modelSteps = steps
+		}
+		m.wizard.selectedModels = make(map[string]string, len(m.wizard.modelSteps))
+		for _, s := range m.wizard.modelSteps {
+			if s.Model != "" {
+				m.wizard.selectedModels[s.Key()] = s.Model
+			}
+		}
+		m.wizard.expandedGroups = make(map[string]bool)
+	}
+	m.wizard.modelOptions = installer.FlattenModels(m.wizard.detectedAI)
+	m.state = StateModelSetup
+	m.cursor = 0
+	return m
+}
+
+// modelRow is one visible row of the model accordion: a specialist group
+// header, or a step belonging to an expanded group.
+type modelRow struct {
+	header     bool
+	specialist string
+	stepIdx    int // index into wizard.modelSteps; -1 for headers
+}
+
+// modelRows flattens the accordion into its currently visible rows —
+// one header per specialist plus the steps of expanded groups, in
+// workflow order. The confirm button sits at index len(rows).
+func (m Model) modelRows() []modelRow {
+	var rows []modelRow
+	last := ""
+	for i, s := range m.wizard.modelSteps {
+		if s.Specialist != last {
+			rows = append(rows, modelRow{header: true, specialist: s.Specialist, stepIdx: -1})
+			last = s.Specialist
+		}
+		if m.wizard.expandedGroups[s.Specialist] {
+			rows = append(rows, modelRow{specialist: s.Specialist, stepIdx: i})
+		}
+	}
+	return rows
+}
+
+// handleModelSetup handles keys for the per-step model accordion.
+// Up/Down move through visible rows (confirm button sits past the last row);
+// Space toggles a group open/closed on headers and cycles forward on steps;
+// Left/Right cycle models on steps and collapse/expand on headers; r resets
+// the focused step to its shipped default. Enter advances to AgentSetup from
+// any cursor position — same idiom as the sibling wizard screens; Esc
+// returns to the gate.
+func (m Model) handleModelSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	rows := m.modelRows()
+	switch msg.Type {
+	case tea.KeyUp:
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case tea.KeyDown:
+		if m.cursor < len(rows) { // confirm button sits at index len(rows)
+			m.cursor++
+		}
+	case tea.KeyLeft:
+		if row, ok := focusedRow(rows, m.cursor); ok {
+			if row.header {
+				m.wizard.expandedGroups[row.specialist] = false
+			} else {
+				m = m.cycleModel(row.stepIdx, -1)
+			}
+		}
+	case tea.KeyRight:
+		if row, ok := focusedRow(rows, m.cursor); ok {
+			if row.header {
+				m.wizard.expandedGroups[row.specialist] = true
+			} else {
+				m = m.cycleModel(row.stepIdx, 1)
+			}
+		}
+	case tea.KeySpace:
+		if row, ok := focusedRow(rows, m.cursor); ok {
+			if row.header {
+				m.wizard.expandedGroups[row.specialist] = !m.wizard.expandedGroups[row.specialist]
+			} else {
+				m = m.cycleModel(row.stepIdx, 1)
+			}
+		}
+	case tea.KeyRunes:
+		if string(msg.Runes) == "r" {
+			if row, ok := focusedRow(rows, m.cursor); ok && !row.header {
+				step := m.wizard.modelSteps[row.stepIdx]
+				if step.Model != "" {
+					m.wizard.selectedModels[step.Key()] = step.Model
+				} else {
+					delete(m.wizard.selectedModels, step.Key())
+				}
+			}
+		}
+	case tea.KeyEnter:
+		m.state = StateAgentSetup
+		m.cursor = 0
+		m.agentConfig.conflicts = m.detectAgentConflicts()
+		return m, nil
+	case tea.KeyEsc:
+		m.state = StateModelGate
+		m.cursor = m.wizard.modelGateChoice
+	}
+	return m, nil
+}
+
+// focusedRow returns the visible row under the cursor, or ok=false when the
+// cursor sits on the confirm button (or the list is empty).
+func focusedRow(rows []modelRow, cursor int) (modelRow, bool) {
+	if cursor < 0 || cursor >= len(rows) {
+		return modelRow{}, false
+	}
+	return rows[cursor], true
+}
+
+// cycleModel advances the given step's model selection by dir through
+// modelOptions, wrapping around. A selection not present in the options
+// (e.g. a source default from an undetected provider) restarts at index 0.
+func (m Model) cycleModel(stepIdx, dir int) Model {
+	if stepIdx < 0 || stepIdx >= len(m.wizard.modelSteps) || len(m.wizard.modelOptions) == 0 {
+		return m
+	}
+	key := m.wizard.modelSteps[stepIdx].Key()
+	current := m.wizard.selectedModels[key]
+
+	idx := -1
+	for i, opt := range m.wizard.modelOptions {
+		if opt.ID == current {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		idx = 0
+	} else {
+		n := len(m.wizard.modelOptions)
+		idx = (idx + dir + n) % n
+	}
+	m.wizard.selectedModels[key] = m.wizard.modelOptions[idx].ID
+	return m
+}
+
+// countCustomizedModels returns how many steps currently differ from their
+// shipped source default. Zero means the install is byte-identical to the
+// skill sources (the skip path), regardless of how the user navigated.
+func (m Model) countCustomizedModels() int {
+	n := 0
+	for _, s := range m.wizard.modelSteps {
+		if sel, ok := m.wizard.selectedModels[s.Key()]; ok && sel != s.Model {
+			n++
+		}
+	}
+	return n
 }
 
 // detectAgentConflicts checks which selected assistants already have an AGENTS.md
@@ -550,8 +781,10 @@ func (m Model) handleAgentSetup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cursor = 0
 		return m, nil
 	case tea.KeyEsc:
-		m.state = StateSelectProvider
-		m.cursor = 0
+		// The gate is the stable anchor for backward navigation — never the
+		// customization screen, which may not have been visited at all.
+		m.state = StateModelGate
+		m.cursor = m.wizard.modelGateChoice
 	}
 	return m, nil
 }
@@ -678,7 +911,14 @@ func (m Model) handleDone(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m Model) buildInstallCmd() tea.Cmd {
 	assistants := m.selectedAssistants()
 	provider := installer.Providers[m.wizard.provider]
-	installCmd := InstallCmd(assistants, provider, m.skillsFS, languageOptions[m.language.selected].Code)
+	// Selections identical to the shipped defaults pass nil so workflow.yaml
+	// files install verbatim — skipping (or customizing and reverting) never
+	// rewrites what the skill ships.
+	models := m.wizard.selectedModels
+	if m.countCustomizedModels() == 0 {
+		models = nil
+	}
+	installCmd := InstallCmd(assistants, provider, m.skillsFS, languageOptions[m.language.selected].Code, models)
 	if m.agentConfig.skip {
 		return installCmd
 	}
@@ -690,6 +930,17 @@ func (m Model) buildInstallCmd() tea.Cmd {
 // AgentWriteModes returns the per-assistant write mode map. Exported for tests.
 func (m Model) AgentWriteModes() map[string]installer.AgentWriteMode {
 	return m.agentConfig.writeModes
+}
+
+// SelectedModels returns the per-step model selection map. Exported for tests.
+func (m Model) SelectedModels() map[string]string {
+	return m.wizard.selectedModels
+}
+
+// ModelsTouched reports whether any step currently differs from its shipped
+// default. Exported for tests.
+func (m Model) ModelsTouched() bool {
+	return m.countCustomizedModels() > 0
 }
 
 // UseEmojis returns the chosen emoji preference. Exported for tests.

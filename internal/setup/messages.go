@@ -135,12 +135,14 @@ func LanguagePrefCmd() tea.Cmd {
 // AssistantInstallProgressMsg when that assistant's install completes.
 // Running concurrently lets the TUI update row-by-row as each finishes.
 // lang is the language code chosen in the wizard, recorded in install metadata.
-func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.ProviderDescriptor, skillsFS fs.FS, lang string) tea.Cmd {
+// models carries the per-step model selections from StateModelSetup, injected
+// into each workflow.yaml as it is written; nil installs files unmodified.
+func InstallCmd(assistants []installer.AssistantDescriptor, provider installer.ProviderDescriptor, skillsFS fs.FS, lang string, models map[string]string) tea.Cmd {
 	cmds := make([]tea.Cmd, len(assistants))
 	for i, a := range assistants {
 		a := a // capture loop variable
 		cmds[i] = func() tea.Msg {
-			results := installer.Install([]installer.AssistantDescriptor{a}, provider, skillsFS, lang)
+			results := installer.InstallWithModels([]installer.AssistantDescriptor{a}, provider, skillsFS, lang, models)
 			if len(results) > 0 {
 				return AssistantInstallProgressMsg{Result: results[0]}
 			}

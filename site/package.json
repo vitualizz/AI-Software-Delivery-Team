@@ -20,7 +20,8 @@
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@fontsource-variable/space-grotesk": "^5.2.10",
     "@fontsource/instrument-sans": "^5.2.8",
-    "astro": "^6.4.6"
+    "astro": "^6.4.6",
+    "fuse.js": "^7.4.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "latest",

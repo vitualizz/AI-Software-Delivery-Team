@@ -10,9 +10,12 @@
 | [ADR-006](ADR-006-specialist-model.md) | Specialist Model | Active |
 | ADR-007 | — | Not written |
 | ADR-008 | Context-Isolated Skill Steps | Deleted — superseded by ADR-011 |
-| [ADR-009](ADR-009-deterministic-platform-init.md) | Deterministic Platform Initialization | Active |
+| [ADR-009](ADR-009-deterministic-platform-init.md) | Deterministic Platform Initialization | Partially superseded by ADR-013 (execution model) |
 | [ADR-010](ADR-010-semantic-memory-provider.md) | Semantic Memory Provider over Key-Value Cache | Active |
 | [ADR-011](ADR-011-specialist-pipelines-as-orchestration-plans.md) | Specialist Pipelines as Orchestration Plans | Active |
+| [ADR-012](ADR-012-astro-site-github-pages.md) | In-Repo Astro Site under site/ Deployed via GitHub Pages Actions Mode | Active |
+| [ADR-013](ADR-013-skill-only-context-detection.md) | Skill-Only Context Detection for asdt-init | Active |
+| [ADR-014](ADR-014-skill-md-self-load-inline-gate.md) | SKILL.md Self-Load of specialist-header + Inline Orchestrator Gate | Active |
 
 ## Recommended Reading Order
 
@@ -25,3 +28,5 @@
 **ADR-007**: Never written. The gap in numbering is intentional.
 
 **ADR-008**: Described a Go `SpecialistRunner` removed in commit `1fa209e`. The file was deleted when ADR-011 superseded it. ADR-011 is self-contained and does not require ADR-008 to understand the current design.
+
+**Engram "ADR-011" collision**: An Engram-only memory record also labeled "ADR-011" proposed transcluding `specialist-header.md` via the `shared-skills:` frontmatter key — a loading mechanism that does not exist. It is NOT the on-disk ADR-011 above and was never an accepted ADR. ADR-014 supersedes that record and restores the on-disk ADR-011 position (inline gate in each `SKILL.md`).

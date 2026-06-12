@@ -9,6 +9,7 @@ steps:
     skill: steps/feature-intake.md
     description: Extract and normalize the raw feature request into a structured problem statement
     execution: subagent
+    model: haiku
     agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/pm/feature-intake"
@@ -18,6 +19,7 @@ steps:
     skill: steps/user-stories.md
     description: Define user stories with MoSCoW priority and high-level acceptance criteria from the problem statement
     execution: subagent
+    model: haiku
     agent: analyst
     inputs:
       - "{project}/{change}/pm/feature-intake"
@@ -28,6 +30,7 @@ steps:
     skill: steps/scope-analysis.md
     description: Define explicit in-scope and out-of-scope boundaries, integration points, and risk flags
     execution: subagent
+    model: haiku
     agent: analyst
     inputs:
       - "{project}/{change}/pm/user-stories"
@@ -38,6 +41,7 @@ steps:
     skill: steps/prioritization.md
     description: Order user stories by value, effort, and risk using MoSCoW; produce a delivery sequence
     execution: subagent
+    model: haiku
     agent: analyst
     inputs:
       - "{project}/{change}/pm/user-stories"
@@ -49,6 +53,7 @@ steps:
     skill: steps/backlog-entry.md
     description: Consolidate all PM artifacts into the final structured backlog entry consumed by downstream specialists
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/pm/user-stories"

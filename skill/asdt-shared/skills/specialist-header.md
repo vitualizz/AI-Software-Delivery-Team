@@ -1,5 +1,4 @@
-<!-- specialist-header.md — load-order: MUST be the first shared-skills entry in every specialist SKILL.md -->
-<!-- If this file is not loaded before the specialist SKILL.md body, the gate logic below will not run at the correct context position. -->
+<!-- specialist-header.md — loaded by the explicit FIRST ACTION Read instruction at the top of every specialist SKILL.md body. The shared-skills frontmatter key is metadata only; no loader resolves it. -->
 
 ## Prerequisites
 

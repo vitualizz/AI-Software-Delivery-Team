@@ -12,7 +12,7 @@ locale: en
 Before using ASDT, you need:
 
 - **Claude Code** or **OpenCode** — installed and authenticated
-- **Engram MCP server** — required for cross-session memory persistence ([setup guide](https://github.com/vitualizz/AI-Software-Delivery-Team))
+- **A memory provider** — required for cross-session persistence (default: [Engram](https://github.com/vitualizz/AI-Software-Delivery-Team))
 - A terminal (bash or zsh)
 
 > **Building from source?** Go 1.22+ is required. Running the one-line installer downloads a pre-built binary — no compiler needed.
@@ -41,7 +41,7 @@ Creates `.asdt/config.yaml` with sensible defaults.
 /asdt Add user authentication with email and password
 ```
 
-ASDT analyzes the request and recommends a specialist sequence — for example: `/asdt-pm` → `/asdt-architect` → `/asdt-developer`. Confirm the plan, then run each command. Each specialist saves its output to Engram so the next one picks up where the previous left off.
+ASDT analyzes the request and recommends a specialist sequence — for example: `/asdt-pm` → `/asdt-architect` → `/asdt-developer`. Confirm the plan, then run each command. Each specialist saves its output to the knowledge base so the next one picks up where the previous left off.
 
 ## Running individual specialists
 

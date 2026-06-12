@@ -5,8 +5,8 @@ import { getBaseHref } from '@i18n/utils'
 interface Props { t: UIStrings }
 const { t } = Astro.props
 ---
-<footer class="mt-auto border-t border-(--color-border) bg-(--color-surface)">
-  <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
+<footer class="site-footer mt-auto">
+  <div class="mx-auto flex max-w-[1120px] flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
     <p class="text-sm text-(--color-text-muted)">{t.footer.tagline}</p>
     <nav aria-label="Footer navigation" class="flex items-center gap-6 text-sm">
       <a href={getBaseHref('/docs/getting-started')} class="text-(--color-text-muted) hover:text-(--color-text) transition-colors">{t.footer.docsLabel}</a>
@@ -18,6 +18,14 @@ const { t } = Astro.props
 </footer>
 
 <style>
+.site-footer {
+  border-top: 1px solid var(--border-soft);
+  background: oklch(0.13 0.012 285 / 0.8);
+}
+:global([data-theme='light']) .site-footer {
+  background: oklch(0.94 0.005 285 / 0.85);
+  border-top-color: oklch(0.80 0.01 285);
+}
 .credit {
   font-size: 11px;
   color: var(--color-text-muted);

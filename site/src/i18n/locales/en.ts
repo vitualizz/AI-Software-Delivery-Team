@@ -48,11 +48,11 @@ export const en: UIStrings = {
     },
   },
   terminal: {
-    tabs: ['New feature', 'Developer, step by step', 'Audit', 'Your turn_'],
+    tabs: ['New feature', 'PM, step by step', 'Security · STRIDE', 'Your turn_'],
   },
   pipeline: {
     title: 'How it works',
-    sub: 'Describe what you need — /asdt tells you which specialists to involve and in what order. Each reads the previous one\'s artifacts automatically via Engram.',
+    sub: 'Describe what you need — /asdt tells you which specialists to involve and in what order. Each reads the previous one\'s artifacts from the shared knowledge base.',
     nodes: [
       { id: 'pm', label: 'PM' },
       { id: 'architect', label: 'Architect' },
@@ -62,7 +62,7 @@ export const en: UIStrings = {
       { id: 'ux-ui', label: 'UX/UI' },
     ],
     a11yTitle: 'ASDT specialist pipeline',
-    a11yDesc: 'Diagram showing six specialists in sequence: PM, Architect, Developer, QA, Security, UX/UI.',
+    a11yDesc: 'Diagram showing six specialists in sequence: PM, Architect, Developer, QA, Security, UX/UI — all connected through a shared knowledge base.',
   },
   recipes: {
     kicker: '02 · How it works',
@@ -75,6 +75,7 @@ export const en: UIStrings = {
       '/asdt-security review session handling',
       '/asdt redesign onboarding for mobile',
     ],
+    kbNote: 'each step saves to the knowledge base · next specialist reads automatically',
   },
   vs: {
     kicker: '03 · Why ASDT',
@@ -116,5 +117,15 @@ export const en: UIStrings = {
     commands: 'Commands',
     userFlows: 'User Flows',
     onThisPage: 'On this page',
+    stepsTitle: 'Steps it runs',
+    searchPlaceholder: 'Search docs...',
+    searchNoResults: 'No results found.',
+    searchLabel: 'Search documentation',
+    complexity: 'Complexity',
+    riskSurface: 'Risk surface',
+    notCalled: 'Not called at this level — Developer handles it directly.',
+    notEligible: 'Not eligible — falls back to simple.',
+    notAutoInvoked: 'Not auto-invoked. Still user-invocable on demand.',
+    produces: 'Produces',
   },
 }

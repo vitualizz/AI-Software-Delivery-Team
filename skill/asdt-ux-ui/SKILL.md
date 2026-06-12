@@ -13,7 +13,15 @@ metadata:
   version: "1.0"
 ---
 
-> **Fallback guard**: If `specialist-header` was not loaded before this file, abort immediately and notify the orchestrator: "specialist-header.md failed to load — cannot proceed without Prerequisites and gate logic."
+> **FIRST ACTION — self-load the header**: Read `../asdt-shared/skills/specialist-header.md`
+> and `./workflow.yaml` NOW, before acting on anything below. Re-read them whenever you can
+> no longer recall their content (e.g. after a context compaction).
+
+> **ORCHESTRATOR GATE (inline copy — full version in specialist-header.md)**: You, the
+> calling assistant, are the SOLE orchestrator of this plan. Launch every `subagent` step
+> via your native delegation primitive (Agent/Task) — never run subagent steps inline; run
+> `inline` steps in your own context. Sub-agents are bound by the executor header injected
+> into their prompts, not by this gate.
 
 # UX/UI Specialist
 

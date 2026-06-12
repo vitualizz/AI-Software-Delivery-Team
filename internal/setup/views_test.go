@@ -184,7 +184,18 @@ func stateView(t *testing.T, target string) string {
 		return m.View()
 	}
 
-	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
+	if target == "ModelGate" {
+		return m.View()
+	}
+
+	if target == "ModelSetup" {
+		m = updateKey(t, m, tea.KeyDown)  // select customize
+		m = updateKey(t, m, tea.KeyEnter) // ModelGate → ModelSetup
+		return m.View()
+	}
+
+	m = updateKey(t, m, tea.KeyEnter) // ModelGate (recommended) → AgentSetup
 	if target == "AgentSetup" {
 		return m.View()
 	}
@@ -221,7 +232,8 @@ func stateView(t *testing.T, target string) string {
 		m2 = next2.(setup.Model)
 		m2 = updateKey(t, m2, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
 		m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
-		m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup (conflict detected)
+		m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → ModelGate
+		m2 = updateKey(t, m2, tea.KeyEnter) // ModelGate (recommended) → AgentSetup (conflict detected)
 		m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup preset → EmojiPref
 		m2 = updateKey(t, m2, tea.KeyEnter) // EmojiPref → AgentWriteMode (conflict)
 		return m2.View()
@@ -449,12 +461,51 @@ func TestView_EmojiPrefShowsRadioOptionsAndSubtitle(t *testing.T) {
 	}
 }
 
-func TestView_EmojiPrefSharesStepFour(t *testing.T) {
+func TestView_EmojiPrefSharesStepFive(t *testing.T) {
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("XDG_CONFIG_HOME", "")
 	view := stateView(t, "EmojiPref")
-	if !strings.Contains(view, "step 4 of 5") {
-		t.Errorf("EmojiPref should share step 4 of 5 with AgentSetup, got:\n%s", view)
+	if !strings.Contains(view, "step 5 of 6") {
+		t.Errorf("EmojiPref should share step 5 of 6 with AgentSetup, got:\n%s", view)
+	}
+}
+
+func TestView_ModelGateShowsRecommendedDefault(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "ModelGate")
+	if !strings.Contains(view, "step 4 of 6") {
+		t.Errorf("ModelGate should be step 4 of 6, got:\n%s", view)
+	}
+	if !strings.Contains(view, "AI Models") {
+		t.Errorf("ModelGate view missing title, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Use recommended models") {
+		t.Errorf("ModelGate view missing recommended option, got:\n%s", view)
+	}
+}
+
+func TestView_ModelSetupShowsStepsAndModels(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "ModelSetup")
+	if !strings.Contains(view, "step 4 of 6") {
+		t.Errorf("ModelSetup should be step 4 of 6, got:\n%s", view)
+	}
+	if !strings.Contains(view, "Choose Models per Step") {
+		t.Errorf("ModelSetup view missing title, got:\n%s", view)
+	}
+}
+
+func TestView_ReviewShowsModelsRow(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("XDG_CONFIG_HOME", "")
+	view := stateView(t, "Review")
+	if !strings.Contains(view, "Models:") {
+		t.Errorf("review view missing 'Models:' row, got:\n%s", view)
+	}
+	if !strings.Contains(view, "recommended defaults") {
+		t.Errorf("review view should show 'recommended defaults' on the skip path, got:\n%s", view)
 	}
 }
 
@@ -481,7 +532,8 @@ func TestView_ReviewOmitsEmojiRowWhenSkipped(t *testing.T) {
 	m = next.(setup.Model)
 	m = updateKey(t, m, tea.KeyEnter) // EnvironmentCheck → SelectAssistants
 	m = updateKey(t, m, tea.KeyEnter) // SelectAssistants → SelectProvider
-	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
+	m = updateKey(t, m, tea.KeyEnter) // ModelSetup → AgentSetup
 	for range installer.PersonaPresets {
 		m = updateKey(t, m, tea.KeyDown) // navigate to [ Skip → ]
 	}

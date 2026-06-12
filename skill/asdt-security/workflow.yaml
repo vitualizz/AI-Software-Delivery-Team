@@ -14,6 +14,7 @@ steps:
     skill: steps/threat-modeling.md
     description: Apply STRIDE threat modeling using platform summary and any available upstream artifacts
     execution: subagent
+    model: opus
     agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/security/stride-threats"
@@ -25,6 +26,7 @@ steps:
     skill: steps/attack-surface.md
     description: Map the attack surface from the identified STRIDE threats
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/security/stride-threats"
@@ -35,6 +37,7 @@ steps:
     skill: steps/owasp-analysis.md
     description: Analyze the attack surface against OWASP Top 10 and applicable vulnerability classes
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/security/attack-surface"
@@ -46,6 +49,7 @@ steps:
     skill: steps/hardening-checklist.md
     description: Produce the final security-findings + hardening-checklist artifacts with CVSS-lite severity ratings
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/security/stride-threats"

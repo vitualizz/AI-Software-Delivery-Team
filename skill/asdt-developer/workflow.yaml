@@ -9,6 +9,7 @@ steps:
     skill: steps/explore.md
     description: Explore the request and platform context to produce a development exploration artifact
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/developer/dev-exploration"
@@ -20,6 +21,7 @@ steps:
     skill: steps/spec.md
     description: Transform the exploration into a structured development specification
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/developer/dev-exploration"
@@ -31,6 +33,7 @@ steps:
     skill: steps/design.md
     description: Produce a technical design from the spec (data model, API surface, component boundaries)
     execution: subagent
+    model: opus
     agent: analyst
     inputs:
       - "{project}/{change}/developer/dev-spec"
@@ -41,6 +44,7 @@ steps:
     skill: steps/tasks.md
     description: Break the design into an ordered task list with dependency graph
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/developer/dev-spec"
@@ -52,6 +56,7 @@ steps:
     skill: steps/implement.md
     description: Generate the concrete implementation from the task list and design
     execution: subagent
+    model: opus
     agent: builder
     inputs:
       - "{project}/{change}/developer/dev-tasks"
@@ -65,6 +70,7 @@ steps:
     skill: steps/test.md
     description: Write tests covering the implementation tasks and edge cases
     execution: subagent
+    model: sonnet
     agent: builder
     inputs:
       - "{project}/{change}/developer/dev-tasks"

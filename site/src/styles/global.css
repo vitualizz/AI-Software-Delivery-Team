@@ -5,7 +5,7 @@
 
 @theme {
   /* Dark (default) palette */
-  --color-bg: #0d1117;
+  --color-bg: oklch(0.15 0.012 285);
   --color-surface: #161b22;
   --color-text: #e6edf3;
   --color-text-muted: #8b949e;
@@ -42,7 +42,7 @@
 }
 
 :root {
-  --color-bg: #0d1117;
+  --color-bg: oklch(0.15 0.012 285);
   --color-surface: #161b22;
   --color-text: #e6edf3;
   --color-text-muted: #8b949e;
@@ -65,6 +65,7 @@
   --c-ux:   oklch(0.75 0.145 340);
 
   --tint-h: 285;
+  --tint-c: 0.012;
   --spectrum: linear-gradient(90deg, var(--c-pm), var(--c-arch), var(--c-dev), var(--c-qa), var(--c-sec), var(--c-ux));
 }
 
@@ -73,8 +74,8 @@
   --color-surface: #f6f8fa;
   --color-text: #1f2328;
   --color-text-muted: #636c76;
-  --color-accent: #1a7f37;
-  --color-accent-hover: #218a3d;
+  --color-accent: oklch(0.56 0.14 155);
+  --color-accent-hover: oklch(0.52 0.15 155);
   --color-error: #d1242f;
   --color-border: #d0d7de;
 
@@ -82,14 +83,13 @@
   --surface-2:   oklch(0.99 0.003 285);
   --border-soft: oklch(0.80 0.01 285);
   --faint:       oklch(0.60 0.01 285);
-  --accent-ink:  oklch(0.12 0.005 285);
-  /* specialist colors same in both themes */
-  --c-pm:   oklch(0.76 0.145 75);
-  --c-arch: oklch(0.74 0.145 300);
-  --c-dev:  oklch(0.74 0.145 245);
-  --c-qa:   oklch(0.76 0.145 155);
-  --c-sec:  oklch(0.72 0.145 25);
-  --c-ux:   oklch(0.75 0.145 340);
+  --accent-ink:  oklch(0.985 0.01 155);
+  --c-pm:   oklch(0.58 0.13 75);
+  --c-arch: oklch(0.52 0.13 300);
+  --c-dev:  oklch(0.52 0.13 245);
+  --c-qa:   oklch(0.55 0.13 155);
+  --c-sec:  oklch(0.54 0.13 25);
+  --c-ux:   oklch(0.54 0.13 340);
 }
 
 * {
@@ -217,6 +217,16 @@ body { font-family: var(--font-body); }
   background: color-mix(in oklch, var(--c-pm) 15%, transparent);
 }
 .star-link svg { color: var(--c-pm); }
+
+/* light theme: component surface overrides (html prefix wins specificity over scoped styles) */
+html[data-theme='light'] .hero .eyebrow { background: oklch(0.99 0.002 285 / 0.6); }
+html[data-theme='light'] .btn-ghost { background: oklch(0.99 0.002 285 / 0.7); }
+html[data-theme='light'] .spec-card { background: oklch(0.985 0.002 285 / 0.85); }
+html[data-theme='light'] .recipes-shell { background: oklch(0.985 0.002 285 / 0.85); }
+html[data-theme='light'] .vs-col { background: oklch(0.985 0.002 285 / 0.85); }
+html[data-theme='light'] .advisor-inner { background: oklch(0.975 0.003 285); }
+html[data-theme='light'] .advisor-strip span { background: oklch(0.95 0.004 285 / 0.8); }
+html[data-theme='light'] .vs-asdt .vs-item p { color: oklch(0.30 0.012 285); }
 
 /* light theme: keep terminal and install dark */
 [data-theme='light'] .term,

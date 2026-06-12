@@ -241,6 +241,7 @@ func TestUpdate_AssistantInstallProgress_AllDone_TransitionsToDone(t *testing.T)
 	m := setup.New(fstest.MapFS{}, "dev")
 	// Advance to StateReview with skip=true (sets agentDone=true on Enter).
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup
 	// Navigate to Skip button (5 presets, Skip is at index 5).
 	for range installer.PersonaPresets {
@@ -273,6 +274,7 @@ func TestUpdate_AssistantInstallProgress_WaitsForAgentConfig(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (no conflicts in clean HOME)
 	m = updateKey(t, m, tea.KeyEnter) // preset 0 → EmojiPref
 	m = updateKey(t, m, tea.KeyEnter) // EmojiPref (Yes) → Review
@@ -361,7 +363,8 @@ func toInstalling(t *testing.T, m setup.Model) setup.Model {
 	}
 	m2 = updateKey(t, m2, tea.KeyEnter) // preflightDone → StateSelectAssistants
 	m2 = updateKey(t, m2, tea.KeyEnter) // SelectAssistants → SelectProvider
-	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → AgentSetup
+	m2 = updateKey(t, m2, tea.KeyEnter) // SelectProvider → ModelSetup
+	m2 = updateKey(t, m2, tea.KeyEnter) // ModelSetup → AgentSetup
 	m2 = updateKey(t, m2, tea.KeyEnter) // AgentSetup → EmojiPref
 	m2 = updateKey(t, m2, tea.KeyEnter) // EmojiPref (Yes) → Review (no conflicts)
 	m2 = updateKey(t, m2, tea.KeyEnter) // Review → Installing
@@ -413,16 +416,124 @@ func TestUpdate_SpinnerTickIgnoredOutsideInstalling(t *testing.T) {
 	}
 }
 
-// --- StateAgentSetup transition tests ---
+// --- StateModelGate / StateModelSetup transition tests ---
 
-func TestUpdate_SelectProvider_EnterGoesToAgentSetup(t *testing.T) {
+func TestUpdate_SelectProvider_EnterGoesToModelGate(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
 	m2 := updateKey(t, m, tea.KeyEnter)
-	if m2.State() != setup.StateAgentSetup {
-		t.Errorf("Enter at SelectProvider: state = %v, want StateAgentSetup", m2.State())
+	if m2.State() != setup.StateModelGate {
+		t.Errorf("Enter at SelectProvider: state = %v, want StateModelGate", m2.State())
 	}
 }
+
+func TestUpdate_ModelGate_RecommendedEnterSkipsToAgentSetup(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate (recommended preselected)
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateAgentSetup {
+		t.Errorf("Enter at ModelGate (recommended): state = %v, want StateAgentSetup", m2.State())
+	}
+	if m2.ModelsTouched() {
+		t.Error("ModelsTouched() = true after recommended pass-through, want false")
+	}
+}
+
+func TestUpdate_ModelGate_CustomizeEnterOpensModelSetup(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
+	m = updateKey(t, m, tea.KeyDown)  // select customize
+	m2 := updateKey(t, m, tea.KeyEnter)
+	if m2.State() != setup.StateModelSetup {
+		t.Errorf("Enter at ModelGate (customize): state = %v, want StateModelSetup", m2.State())
+	}
+}
+
+func TestUpdate_ModelGate_EscReturnsToSelectProvider(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
+	m2 := updateKey(t, m, tea.KeyEsc)
+	if m2.State() != setup.StateSelectProvider {
+		t.Errorf("Esc at ModelGate: state = %v, want StateSelectProvider", m2.State())
+	}
+}
+
+func TestUpdate_ModelSetup_EscReturnsToModelGate(t *testing.T) {
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToModelSetup(t, m)
+	m2 := updateKey(t, m, tea.KeyEsc)
+	if m2.State() != setup.StateModelGate {
+		t.Errorf("Esc at ModelSetup: state = %v, want StateModelGate", m2.State())
+	}
+}
+
+func TestUpdate_ModelSetup_UntouchedSkipLeavesModelsUntouched(t *testing.T) {
+	// Walking through the customization screen without cycling anything is
+	// still the skip path: nothing differs from the shipped defaults, so
+	// install passes nil models and workflow.yaml files are written verbatim.
+	m := setup.New(fstest.MapFS{}, "dev")
+	m = advanceToModelSetup(t, m)
+	m = updateKey(t, m, tea.KeyDown)  // navigation alone must not count as touching
+	m = updateKey(t, m, tea.KeyEnter) // ModelSetup → AgentSetup
+	if m.State() != setup.StateAgentSetup {
+		t.Fatalf("expected StateAgentSetup, got %v", m.State())
+	}
+	if m.ModelsTouched() {
+		t.Error("ModelsTouched() = true after skip-through, want false")
+	}
+}
+
+func TestUpdate_ModelSetup_AccordionExpandCycleAndReset(t *testing.T) {
+	skillsFS := fstest.MapFS{
+		"asdt-pm/workflow.yaml": {Data: []byte(
+			"specialist: pm\nsteps:\n  - name: feature-intake\n    execution: subagent\n    model: haiku\n",
+		)},
+	}
+	m := setup.New(skillsFS, "dev")
+	m = advanceToModelSetup(t, m)
+
+	// Cursor 0 is the collapsed pm group header; Right on a step is a no-op
+	// until the group is expanded.
+	m = updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeySpace}) // expand pm
+	m = updateKey(t, m, tea.KeyDown)                       // onto feature-intake
+	m = updateKey(t, m, tea.KeyRight)                      // haiku → next option
+
+	models := m.SelectedModels()
+	if models["pm/feature-intake"] == "haiku" {
+		t.Error("Right on expanded step: selection still haiku, want next option")
+	}
+	if !m.ModelsTouched() {
+		t.Error("ModelsTouched() = false after cycling, want true")
+	}
+
+	// r resets the focused step back to its shipped default.
+	m = updateKeyMsg(t, m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("r")})
+	if got := m.SelectedModels()["pm/feature-intake"]; got != "haiku" {
+		t.Errorf("after reset: selection = %q, want haiku", got)
+	}
+	if m.ModelsTouched() {
+		t.Error("ModelsTouched() = true after reset to defaults, want false")
+	}
+}
+
+// advanceToModelSetup drives the model to StateModelSetup via the gate's
+// customize choice.
+func advanceToModelSetup(t *testing.T, m setup.Model) setup.Model {
+	t.Helper()
+	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
+	m = updateKey(t, m, tea.KeyDown)  // select customize
+	m = updateKey(t, m, tea.KeyEnter) // ModelGate → ModelSetup
+	if m.State() != setup.StateModelSetup {
+		t.Fatalf("advanceToModelSetup: state = %v, want StateModelSetup", m.State())
+	}
+	return m
+}
+
+// --- StateAgentSetup transition tests ---
 
 func TestUpdate_AgentSetup_EnterPreset_GoesToEmojiPrefThenReview(t *testing.T) {
 	// Use a clean HOME so detectAgentConflicts finds no existing config.
@@ -430,6 +541,7 @@ func TestUpdate_AgentSetup_EnterPreset_GoesToEmojiPrefThenReview(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	if m.State() != setup.StateAgentSetup {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
@@ -453,6 +565,7 @@ func TestUpdate_EmojiPref_DefaultsToYes(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	m = updateKey(t, m, tea.KeyEnter) // AgentSetup preset → EmojiPref
 	if m.State() != setup.StateEmojiPref {
@@ -468,6 +581,7 @@ func TestUpdate_EmojiPref_DownTogglesNo_UpTogglesYes(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	m = updateKey(t, m, tea.KeyEnter) // AgentSetup preset → EmojiPref
 
@@ -486,6 +600,7 @@ func TestUpdate_EmojiPref_Esc_ReturnsToAgentSetup(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	m = updateKey(t, m, tea.KeyEnter) // AgentSetup preset → EmojiPref
 	if m.State() != setup.StateEmojiPref {
@@ -502,6 +617,7 @@ func TestUpdate_AgentSetup_Skip_BypassesEmojiPref(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	// Navigate to Skip (cursor=5 = 5 presets).
 	for range installer.PersonaPresets {
@@ -518,6 +634,7 @@ func TestUpdate_Review_EnterGoesToInstalling(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → EmojiPref
 	m = updateKey(t, m, tea.KeyEnter) // EmojiPref → Review
@@ -535,6 +652,7 @@ func TestUpdate_Review_EscGoesToEmojiPref(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	m = updateKey(t, m, tea.KeyEnter) // AgentSetup → EmojiPref
 	m = updateKey(t, m, tea.KeyEnter) // EmojiPref → Review (no conflicts)
@@ -552,6 +670,7 @@ func TestUpdate_Review_Skip_EscGoesToAgentSetup(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 	for range installer.PersonaPresets {
 		m = updateKey(t, m, tea.KeyDown)
@@ -572,6 +691,7 @@ func TestUpdate_AgentSetup_EnterSkip_GoesToReview(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "")
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
 
 	// Navigate to Skip (cursor=5 = 5 presets).
@@ -587,16 +707,17 @@ func TestUpdate_AgentSetup_EnterSkip_GoesToReview(t *testing.T) {
 	}
 }
 
-func TestUpdate_AgentSetup_Esc_ReturnsToSelectProvider(t *testing.T) {
+func TestUpdate_AgentSetup_Esc_ReturnsToModelGate(t *testing.T) {
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
-	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelGate
+	m = updateKey(t, m, tea.KeyEnter) // ModelGate (recommended) → AgentSetup
 	if m.State() != setup.StateAgentSetup {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
 	}
 	m2 := updateKey(t, m, tea.KeyEsc)
-	if m2.State() != setup.StateSelectProvider {
-		t.Errorf("Esc at AgentSetup: state = %v, want StateSelectProvider", m2.State())
+	if m2.State() != setup.StateModelGate {
+		t.Errorf("Esc at AgentSetup: state = %v, want StateModelGate", m2.State())
 	}
 }
 
@@ -622,6 +743,7 @@ func TestUpdate_AgentSetup_WithConflict_EntersAgentWriteMode(t *testing.T) {
 
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → AgentSetup (detects conflicts)
 	if m.State() != setup.StateAgentSetup {
 		t.Fatalf("expected StateAgentSetup, got %v", m.State())
@@ -659,6 +781,7 @@ func advanceToAgentWriteMode(t *testing.T) setup.Model {
 	setupConflict(t)
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict detected)
 	m = updateKey(t, m, tea.KeyEnter) // → EmojiPref (preset 0)
 	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode (conflict)
@@ -733,6 +856,7 @@ func TestUpdate_AgentWriteMode_Esc_ReturnsToEmojiPref(t *testing.T) {
 
 	m := setup.New(fstest.MapFS{}, "dev")
 	m = advanceToSelectProvider(t, m)
+	m = updateKey(t, m, tea.KeyEnter) // SelectProvider → ModelSetup
 	m = updateKey(t, m, tea.KeyEnter) // → AgentSetup (conflict)
 	m = updateKey(t, m, tea.KeyEnter) // → EmojiPref
 	m = updateKey(t, m, tea.KeyEnter) // → AgentWriteMode

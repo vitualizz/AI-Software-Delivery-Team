@@ -14,6 +14,7 @@ steps:
     skill: steps/load-constraints.md
     description: Load architectural constraints from platform context into the constraints artifact
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/architect/constraints-analysis"
@@ -25,6 +26,7 @@ steps:
     skill: steps/evaluate-approaches.md
     description: Evaluate candidate architectural approaches against the loaded constraints
     execution: subagent
+    model: opus
     agent: analyst
     inputs:
       - "{project}/{change}/architect/constraints-analysis"
@@ -35,6 +37,7 @@ steps:
     skill: steps/decision-record.md
     description: Select the winning approach and produce an Architecture Decision Record
     execution: subagent
+    model: opus
     agent: analyst
     inputs:
       - "{project}/{change}/architect/approaches"
@@ -45,6 +48,7 @@ steps:
     skill: steps/system-design.md
     description: Produce the full system design artifact (data model + API surface) from the ADR
     execution: subagent
+    model: opus
     agent: analyst
     inputs:
       - "{project}/{change}/architect/adr"
@@ -59,6 +63,7 @@ steps:
     skill: steps/risk-analysis.md
     description: Identify risks introduced by the system design and rate them by severity
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/architect/system-design"
@@ -69,6 +74,7 @@ steps:
     skill: steps/technical-handoff.md
     description: Consolidate ADR, system-design, and risks into the final architectural-decision + system-design artifacts
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/architect/adr"

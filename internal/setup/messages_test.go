@@ -24,7 +24,7 @@ func TestInstallCmd_ReturnsNonNilCmd(t *testing.T) {
 	assistants := installer.Descriptors
 	provider := installer.Providers[0]
 
-	cmd := setup.InstallCmd(assistants, provider, skillsFS, "en")
+	cmd := setup.InstallCmd(assistants, provider, skillsFS, "en", nil)
 	if cmd == nil {
 		t.Error("InstallCmd returned nil tea.Cmd")
 	}

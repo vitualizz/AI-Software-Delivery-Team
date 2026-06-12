@@ -53,6 +53,8 @@ type InstallerStrings struct {
 	TitlePreflightCheck   string
 	TitleSelectAssistants string
 	TitleSelectProvider   string
+	TitleModelGate        string
+	TitleModelSetup       string
 	TitleAgentSetup       string
 	TitleEmojiPref        string
 	TitleAgentWriteMode   string
@@ -80,6 +82,9 @@ type InstallerStrings struct {
 	HintBack           string
 	HintBackToMenu     string
 	HintCycleMode      string
+	HintCycleModel     string
+	HintExpand         string
+	HintResetDefault   string
 	HintContinue       string
 	HintChecking       string
 	HintEnvironment    string
@@ -97,8 +102,17 @@ type InstallerStrings struct {
 	BtnInstall  string
 
 	// Body / subtitle text
-	BodyAgentSetupSubtitle     string
-	BodyEmojiPrefSubtitle      string
+	BodyAgentSetupSubtitle string
+	BodyEmojiPrefSubtitle  string
+	BodyModelSetupSubtitle string // printf format: %s = detected provider names
+
+	// Model gate options (radio rows) and per-step screen extras
+	OptionModelsRecommended    string
+	OptionModelsCustomize      string
+	HintRunsAs                 string // printf format: %s = Claude Code model enum
+	LabelModels                string
+	ValueModelsRecommended     string
+	ValueModelsCustomized      string // printf format: %d = customized step count
 	BodyAgentWriteMode         string
 	BodyInstalling             string
 	BodyLanguageSelectSubtitle string

@@ -1,0 +1,221 @@
+---
+import { specialistSteps } from '@data/specialist-steps'
+import type { Locale } from '@i18n/utils'
+
+interface Props {
+  specialist: string
+  lang: Locale
+  labels: {
+    complexity: string
+    riskSurface: string
+    notCalled: string
+    notEligible: string
+    notAutoInvoked: string
+    produces: string
+  }
+}
+const { specialist, lang, labels } = Astro.props
+const config = specialistSteps[specialist]
+if (!config) return
+
+const isRisk = config.tierType === 'risk-surface'
+const tiers = isRisk
+  ? (['none', 'moderate', 'high'] as const)
+  : (['trivial', 'simple', 'moderate', 'complex'] as const)
+
+// All steps ordered by max tier (complex/high has the full set)
+const maxKey = isRisk ? 'high' : 'complex'
+const allStepIds: string[] = config.tiers[maxKey as keyof typeof config.tiers] ?? Object.keys(config.steps)
+const defaultTier = isRisk ? 'high' : 'complex'
+---
+
+<div
+  class="sf"
+  data-active={defaultTier}
+  style={`--sc: var(${config.color})`}
+>
+  <div class="sf-header">
+    <span class="sf-dim-label">{isRisk ? labels.riskSurface : labels.complexity}</span>
+    <div class="sf-tiers" role="tablist">
+      {tiers.map((tier) => (
+        <button
+          class="sf-btn"
+          role="tab"
+          data-tier={tier}
+          aria-selected={tier === defaultTier ? 'true' : 'false'}
+        >
+          {tier}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  {tiers.map((tier) => {
+    const special = config.special?.[tier as keyof typeof config.special]
+    const tierSteps = config.tiers[tier as keyof typeof config.tiers] ?? []
+    let specialMsg = ''
+    if (special === 'not-called') specialMsg = labels.notCalled
+    else if (special === 'not-eligible') specialMsg = labels.notEligible
+    else if (special === 'not-auto-invoked') specialMsg = labels.notAutoInvoked
+    return (
+      <div class="sf-panel" data-panel={tier} role="tabpanel" aria-hidden={tier !== defaultTier ? 'true' : 'false'}>
+        {specialMsg ? (
+          <p class="sf-special">{specialMsg}</p>
+        ) : (
+          <div class="sf-table">
+            {allStepIds.map((id) => {
+              const step = config.steps[id]
+              if (!step) return null
+              const active = tierSteps.includes(id)
+              return (
+                <div class="sf-row" data-active={active ? 'true' : 'false'}>
+                  <code class="sf-id">{step.id}</code>
+                  <p class="sf-purpose">{step.purpose}</p>
+                  <span class="sf-produces">→ {step.produces}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  })}
+</div>
+
+<script>
+document.querySelectorAll<HTMLElement>('.sf').forEach((sf) => {
+  const btns = sf.querySelectorAll<HTMLButtonElement>('.sf-btn')
+  const panels = sf.querySelectorAll<HTMLElement>('.sf-panel')
+
+  btns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const tier = btn.dataset.tier!
+      sf.dataset.active = tier
+      btns.forEach((b) => b.setAttribute('aria-selected', b.dataset.tier === tier ? 'true' : 'false'))
+      panels.forEach((p) => p.setAttribute('aria-hidden', p.dataset.panel !== tier ? 'true' : 'false'))
+    })
+  })
+})
+</script>
+
+<style>
+.sf {
+  margin: 32px 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  overflow: hidden;
+  background: oklch(from var(--sc) l c h / 0.04);
+}
+
+.sf-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  background: oklch(from var(--sc) l c h / 0.06);
+}
+
+.sf-dim-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  white-space: nowrap;
+}
+
+.sf-tiers {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.sf-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  border: 1px solid var(--border-soft);
+  background: transparent;
+  color: var(--muted, var(--color-text-muted));
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.sf-btn:hover {
+  color: var(--color-text);
+  border-color: oklch(from var(--sc) l c h / 0.5);
+}
+.sf-btn[aria-selected='true'] {
+  background: oklch(from var(--sc) l c h / 0.18);
+  border-color: oklch(from var(--sc) l c h / 0.6);
+  color: var(--sc);
+}
+
+.sf-panel[aria-hidden='true'] { display: none; }
+
+.sf-special {
+  padding: 20px 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--faint);
+  font-style: italic;
+}
+
+.sf-table {
+  display: flex;
+  flex-direction: column;
+}
+
+.sf-row {
+  display: grid;
+  grid-template-columns: 160px 1fr auto;
+  gap: 10px 16px;
+  align-items: start;
+  padding: 12px 18px;
+  border-bottom: 1px solid oklch(from var(--border-soft) l c h / 0.5);
+  transition: opacity 0.2s, background 0.15s;
+}
+.sf-row:last-child { border-bottom: none; }
+.sf-row[data-active='false'] { opacity: 0.28; }
+.sf-row[data-active='true'] { background: oklch(from var(--sc) l c h / 0.04); }
+
+.sf-id {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--sc);
+  background: oklch(from var(--sc) l c h / 0.12);
+  border: 1px solid oklch(from var(--sc) l c h / 0.25);
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  align-self: start;
+}
+
+.sf-purpose {
+  font-size: 13.5px;
+  color: oklch(0.86 0.008 285);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.sf-produces {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--faint);
+  white-space: nowrap;
+  align-self: start;
+  padding-top: 3px;
+}
+
+@media (max-width: 680px) {
+  .sf-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .sf-produces { white-space: normal; }
+}
+
+html[data-theme='light'] .sf-purpose { color: oklch(0.28 0.012 285); }
+html[data-theme='light'] .sf-row[data-active='true'] { background: oklch(from var(--sc) l c h / 0.07); }
+</style>

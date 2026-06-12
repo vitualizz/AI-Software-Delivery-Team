@@ -66,6 +66,7 @@ export interface UIStrings {
     sub: string
     tabs: [string, string, string, string]
     notes: [string, string, string, string]
+    kbNote: string
   }
   vs: {
     kicker: string
@@ -94,5 +95,15 @@ export interface UIStrings {
     commands: string
     userFlows: string
     onThisPage: string
+    stepsTitle: string
+    searchPlaceholder: string
+    searchNoResults: string
+    searchLabel: string
+    complexity: string
+    riskSurface: string
+    notCalled: string
+    notEligible: string
+    notAutoInvoked: string
+    produces: string
   }
 }

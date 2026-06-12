@@ -46,6 +46,10 @@ func renderState(m Model) string {
 		return renderSelectAssistants(m)
 	case StateSelectProvider:
 		return renderSelectProvider(m)
+	case StateModelGate:
+		return renderModelGate(m)
+	case StateModelSetup:
+		return renderModelSetup(m)
 	case StateAgentSetup:
 		return renderAgentSetup(m)
 	case StateEmojiPref:
@@ -168,7 +172,7 @@ func renderLanguageSelect(m Model) string {
 func renderSelectAssistants(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 2, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 2, 6))
 
 	for i, d := range installer.Descriptors {
 		bp, sp, _ := installer.Detect(d)
@@ -219,7 +223,7 @@ func renderSelectAssistants(m Model) string {
 func renderSelectProvider(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 3, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 3, 6))
 
 	for i, p := range installer.Providers {
 		focused := i == m.cursor
@@ -266,7 +270,7 @@ func renderSelectProvider(m Model) string {
 func renderAgentSetup(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 4, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 5, 6))
 
 	if len(m.agentConfig.conflicts) > 0 {
 		fmt.Fprintf(&b, "  %s\n",
@@ -336,7 +340,7 @@ func renderAgentSetup(m Model) string {
 func renderEmojiPref(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 4, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 5, 6))
 
 	options := []string{s.OptionEmojiYes, s.OptionEmojiNo}
 	for i, opt := range options {
@@ -382,7 +386,7 @@ func renderEmojiPref(m Model) string {
 func renderAgentWriteMode(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 4, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 5, 6))
 	fmt.Fprintf(&b, "  %s\n\n", styles.Default.Dim.Render(s.BodyAgentWriteMode))
 
 	nameFor := make(map[string]string, len(installer.Descriptors))
@@ -438,7 +442,7 @@ func renderAgentWriteMode(m Model) string {
 func renderReview(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 5, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 6, 6))
 
 	names := make([]string, 0)
 	for i, d := range installer.Descriptors {
@@ -456,6 +460,12 @@ func renderReview(m Model) string {
 	if m.wizard.provider < len(installer.Providers) {
 		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelProvider), installer.Providers[m.wizard.provider].Name)
 	}
+
+	modelsVal := s.ValueModelsRecommended
+	if n := m.countCustomizedModels(); n > 0 {
+		modelsVal = fmt.Sprintf(s.ValueModelsCustomized, n)
+	}
+	fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelModels), modelsVal)
 
 	if m.agentConfig.skip {
 		fmt.Fprintf(&b, "  %s  %s\n", styles.Default.Dim.Render(s.LabelPersona), styles.Default.Dim.Render(s.LabelSkipped))
@@ -527,7 +537,7 @@ func renderInstalling(m Model) string {
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 5, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 6, 6))
 
 	spinnerFrame := m.spinner.View()
 	for i, d := range installer.Descriptors {

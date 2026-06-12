@@ -14,6 +14,7 @@ steps:
     skill: steps/feature-brief.md
     description: Transform the user request and platform summary into a structured feature brief
     execution: subagent
+    model: haiku
     agent: analyst
     inputs: []
     output_topic_key: "{project}/{change}/ux-ui/feature-brief"
@@ -23,6 +24,7 @@ steps:
     skill: steps/information-architecture.md
     description: Define the information architecture (navigation, hierarchy, content model) from the feature brief
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/feature-brief"
@@ -34,6 +36,7 @@ steps:
     skill: steps/user-flows.md
     description: Map user flows from the information architecture artifact
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/ia"
@@ -44,6 +47,7 @@ steps:
     skill: steps/component-mapping.md
     description: Map user flows to design system components and identify gaps
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/flows"
@@ -54,6 +58,7 @@ steps:
     skill: steps/responsive-strategy.md
     description: Define the responsive layout strategy for the mapped components
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/components"
@@ -65,6 +70,7 @@ steps:
     skill: steps/ux-handoff.md
     description: Consolidate feature-brief, IA, flows, components, and responsive into the final ux-brief + component-spec artifacts
     execution: subagent
+    model: sonnet
     agent: analyst
     inputs:
       - "{project}/{change}/ux-ui/feature-brief"

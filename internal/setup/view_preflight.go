@@ -41,7 +41,7 @@ func renderPreflightCheck(m Model) string {
 	s := m.catalog.Installer
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 1, 5))
+	fmt.Fprintf(&b, "  %s\n\n", stepLine(s, 1, 6))
 
 	for _, sg := range m.preflight.sections {
 		b.WriteString(sg.Render(m.width))

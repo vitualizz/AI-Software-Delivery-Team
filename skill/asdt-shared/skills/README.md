@@ -1,9 +1,11 @@
 # ASDT Shared Skills
 
-Cross-specialist utility files. They are loaded into specialist steps via two mechanisms:
+Cross-specialist utility files. They reach specialist contexts via two mechanisms:
 
-- `shared-skills:` frontmatter in a specialist's `SKILL.md` — loaded for every step
-- `reference_skills:` in a specific step entry in `workflow.yaml` — loaded only for that step
+- The **FIRST ACTION Read** at the top of every specialist `SKILL.md` body — the specialist explicitly reads `specialist-header.md` (and its `workflow.yaml`) before doing anything else
+- `reference_skills:` in a specific step entry in `workflow.yaml` — injected by the orchestrator into that step's sub-agent prompt only
+
+The `shared-skills:` frontmatter key in each specialist `SKILL.md` is **metadata/documentation only** — it records which shared skills a specialist relates to, but no loader (Claude Code, OpenCode, or the installer) resolves it into context.
 
 These are **reference text injected into the active context**, not independently executable units. They have no `## Inputs` / `## Output` structure of their own.
 
@@ -13,7 +15,7 @@ These are **reference text injected into the active context**, not independently
 
 | File | Purpose |
 |---|---|
-| `specialist-header.md` | Must be the first `shared-skills:` entry in every specialist `SKILL.md`. Contains the ORCHESTRATOR GATE and prerequisite logic. |
+| `specialist-header.md` | Loaded via the FIRST ACTION Read in each specialist `SKILL.md` body. Contains the ORCHESTRATOR GATE and prerequisite logic. |
 | `executor-header.md` | Injected into every `subagent` step prompt. Instructs the executor: do the single assigned step, do NOT orchestrate or delegate. |
 
 ### Artifact contracts
@@ -46,7 +48,7 @@ In `workflow.yaml` (step-specific):
     - ../asdt-shared/skills/scope-definition.md
 ```
 
-In a specialist's `SKILL.md` frontmatter (loaded on every step):
+In a specialist's `SKILL.md` frontmatter (metadata/documentation only — NOT a loading mechanism):
 
 ```yaml
 shared-skills: specialist-header, platform-context, artifact-envelope

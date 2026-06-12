@@ -1,7 +1,7 @@
 ---
 title: User Flows
 description: Common patterns and end-to-end workflows with ASDT.
-order: 4
+order: 10
 locale: en
 ---
 
@@ -42,23 +42,21 @@ When you already know what you need, skip `/asdt` and invoke the specialist dire
 /asdt-security Audit the OAuth integration
 ```
 
-Each specialist runs its full workflow (explore → spec → design → implement, depending on complexity) and saves artifacts to Engram.
+Each specialist runs its full workflow (explore → spec → design → implement, depending on complexity) and saves artifacts to the knowledge base.
 
 ## Picking up mid-pipeline
 
-If you ran some specialists and want to continue later, just invoke the next one. It reads prior artifacts from Engram automatically — even from a previous session:
+If you ran some specialists and want to continue later, just invoke the next one. It reads prior artifacts from the knowledge base automatically — even from a previous session:
 
 ```
 /asdt-developer Implement based on the Architect's ADR
 ```
 
-The Developer reads whatever the Architect produced via Engram. You don't pass context manually.
+The Developer reads the Architect's artifacts from the knowledge base. You don't pass context manually.
 
-## Memory and Engram
+## Memory and continuity
 
-ASDT uses [Engram](https://github.com/vitualizz/AI-Software-Delivery-Team) as its memory layer. Engram is **required** for the pipeline to function — it is how artifacts persist between specialists and across sessions.
-
-More memory providers are planned. Today, Engram is the only supported option.
+ASDT uses a memory provider to persist artifacts between specialists and across sessions. A memory provider is **required** for the pipeline to function. The default implementation is [Engram](https://github.com/vitualizz/AI-Software-Delivery-Team). More providers are planned.
 
 ## Supported AI assistants
 

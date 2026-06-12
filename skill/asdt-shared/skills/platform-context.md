@@ -110,4 +110,4 @@ Treat `manual` fields as user-declared — never override without explicit user 
 
 ## Usage Note
 
-This skill is always loaded by specialists via their `shared-skills` list. The specialist does not need to duplicate this logic — it calls this skill at its Platform Analysis step.
+This skill is referenced by specialists; it is injected per step via `reference_skills` in each specialist's `workflow.yaml`. The specialist does not need to duplicate this logic — it calls this skill at its Platform Analysis step.

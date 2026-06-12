@@ -1,7 +1,7 @@
 ---
 title: Commands
 description: Complete reference for all ASDT CLI commands and slash commands.
-order: 3
+order: 4
 locale: en
 ---
 
