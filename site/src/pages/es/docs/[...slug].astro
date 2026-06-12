@@ -1,0 +1,26 @@
+---
+import DocsLayout from '@layouts/DocsLayout.astro'
+import { getCollection, render } from 'astro:content'
+
+export async function getStaticPaths() {
+  const enDocs = await getCollection('docs', (entry) => entry.data.locale === 'en')
+  return enDocs.map((entry) => ({
+    params: { slug: entry.id.replace(/^en\//, '') },
+    props: { entry },
+  }))
+}
+
+const { entry } = Astro.props
+const { Content, headings } = await render(entry)
+const slug = entry.id.replace(/^en\//, '')
+---
+<DocsLayout
+  title={entry.data.title}
+  description={entry.data.description}
+  lang="es"
+  isFallback={true}
+  currentSlug={slug}
+  headings={headings}
+>
+  <Content />
+</DocsLayout>

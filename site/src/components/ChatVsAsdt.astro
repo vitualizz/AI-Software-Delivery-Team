@@ -1,0 +1,104 @@
+---
+import type { UIStrings } from '@i18n/types'
+
+interface Props { t: UIStrings }
+const { t } = Astro.props
+---
+<section class="vs-section" id="por-que">
+  <div class="deco deco-ring deco-dashed" style="width:230px; height:230px; top:20px; right:-80px; --dc:var(--c-sec);" aria-hidden="true"></div>
+  <div class="v3-wrap">
+    <div class="section-head v3-reveal">
+      <p class="kicker">{t.vs.kicker}</p>
+      <h2>{t.vs.title}</h2>
+      <p class="sub">{t.vs.sub}</p>
+    </div>
+
+    <div class="vs-grid v3-reveal">
+      <div class="vs-col vs-chat">
+        <p class="vs-head">{t.vs.chatHead}</p>
+        {t.vs.items.map((item) => (
+          <div class="vs-item">
+            <span class="vs-mark">✕</span>
+            <p>{item.chat}</p>
+          </div>
+        ))}
+      </div>
+
+      <div class="vs-col vs-asdt">
+        <p class="vs-head"><span class="dot"></span>{t.vs.asdtHead}</p>
+        {t.vs.items.map((item) => (
+          <div class="vs-item">
+            <span class="vs-mark">✓</span>
+            <p>{item.asdt}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+.vs-section { padding: 104px 0 0; position: relative; }
+.section-head { text-align: center; max-width: 640px; margin: 0 auto 52px; }
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 14px;
+}
+.section-head h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 600; letter-spacing: -0.025em; line-height: 1.12; }
+.section-head .sub { margin-top: 16px; color: var(--color-text-muted); font-size: 16.5px; line-height: 1.6; }
+
+.vs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  max-width: 920px;
+  margin: 0 auto;
+  align-items: start;
+}
+.vs-col {
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  padding: 24px 26px 8px;
+  background: oklch(0.165 0.014 285 / 0.75);
+}
+.vs-col.vs-asdt {
+  border-color: oklch(from var(--color-accent) l c h / 0.35);
+  box-shadow: 0 18px 60px -30px oklch(from var(--color-accent) l c h / 0.45);
+}
+.vs-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding-bottom: 14px;
+}
+.vs-asdt .vs-head { color: var(--color-accent); }
+.vs-head .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.vs-item { display: flex; gap: 13px; padding: 16px 0; border-top: 1px solid var(--border-soft); }
+.vs-item p { font-size: 14.5px; line-height: 1.6; color: var(--color-text-muted); }
+.vs-asdt .vs-item p { color: var(--color-text); }
+.vs-mark {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11.5px;
+  margin-top: 1px;
+  font-family: var(--font-mono);
+}
+.vs-chat .vs-mark { color: oklch(0.65 0.12 25); background: oklch(0.65 0.14 25 / 0.10); }
+.vs-asdt .vs-mark { color: var(--color-accent); background: oklch(from var(--color-accent) l c h / 0.12); }
+
+@media (max-width: 760px) { .vs-grid { grid-template-columns: 1fr; } }
+</style>

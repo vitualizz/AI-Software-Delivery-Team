@@ -1,0 +1,128 @@
+---
+import TerminalDemo from '@components/TerminalDemo.astro'
+import { getBaseHref } from '@i18n/utils'
+import type { UIStrings } from '@i18n/types'
+import type { Locale } from '@i18n/utils'
+
+interface Props { t: UIStrings; lang: Locale }
+const { t, lang } = Astro.props
+const isEs = lang === 'es'
+---
+<section class="hero">
+  <div class="deco deco-ring" style="width:440px; height:440px; top:-140px; right:-160px; --dc:var(--color-accent);" aria-hidden="true"></div>
+  <div class="deco deco-sq" style="width:130px; height:130px; top:340px; left:-48px; --rot:14deg; --dc:var(--c-arch);" aria-hidden="true"></div>
+  <div class="deco deco-plus" style="top:170px; left:7%; --dc:var(--c-pm);" aria-hidden="true">+</div>
+
+  <div class="v3-wrap">
+    <p class="eyebrow"><span class="dot"></span>{t.hero.eyebrow}</p>
+    <h1>{t.hero.headline} <span class="grad">{t.hero.headlineGrad}</span>{isEs ? ', en tu terminal' : ', in your terminal'}</h1>
+    <p class="sub">{t.hero.sub}</p>
+
+    <div class="hero-ctas">
+      <a class="btn btn-primary" href={getBaseHref('/docs/getting-started')}>
+        {t.hero.cta}
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/vitualizz/AI-Software-Delivery-Team" target="_blank" rel="noopener noreferrer">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" style="color:var(--c-pm);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        {t.hero.secondaryCta}
+      </a>
+    </div>
+
+    <div class="install">
+      <p class="install-label">{t.hero.installLabel}</p>
+      <div class="install-row">
+        <span class="prompt">$</span>
+        <code id="install-cmd">{t.hero.installCmd}</code>
+        <button class="copy-btn" id="copy-install" aria-label={t.hero.copyLabel} data-copy-label={t.hero.copyLabel} data-copied-label={t.hero.copiedLabel}>
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <TerminalDemo t={t} lang={lang} />
+  </div>
+</section>
+
+<style>
+.hero {
+  position: relative;
+  padding: 88px 0 40px;
+  text-align: center;
+}
+.hero .eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-family: var(--font-mono); font-size: 12.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--color-text-muted); border: 1px solid var(--border-soft); border-radius: 999px; padding: 7px 16px;
+  background: oklch(0.20 0.012 285 / 0.5);
+}
+.eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); box-shadow: 0 0 10px var(--color-accent); }
+.hero h1 {
+  margin: 26px auto 0; max-width: 840px;
+  font-size: clamp(40px, 6.4vw, 68px); font-weight: 600; line-height: 1.04; letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.hero h1 .grad {
+  background: linear-gradient(90deg, var(--c-pm), var(--c-arch), var(--c-dev), var(--c-qa), var(--c-sec), var(--c-ux), var(--c-pm));
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero h1 .grad { animation: grad-flow 9s linear infinite; }
+}
+.hero .sub {
+  margin: 22px auto 0; max-width: 620px;
+  font-size: 18.5px; color: var(--color-text-muted); line-height: 1.6; text-wrap: pretty;
+}
+.hero-ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; margin-top: 34px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 9px;
+  border-radius: 10px; padding: 12px 22px;
+  font-family: var(--font-display); font-size: 15px; font-weight: 600;
+  text-decoration: none; transition: transform 0.15s, box-shadow 0.2s, background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--color-accent); color: var(--accent-ink);
+  box-shadow: 0 0 0 1px oklch(1 0 0 / 0.08) inset, 0 8px 28px -10px oklch(from var(--color-accent) l c h / 0.8);
+}
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 0 1px oklch(1 0 0 / 0.1) inset, 0 12px 34px -10px oklch(from var(--color-accent) l c h / 0.8); }
+.btn-ghost { border: 1px solid var(--color-border); color: var(--color-text); background: oklch(0.20 0.012 285 / 0.4); }
+.btn-ghost:hover { border-color: oklch(0.42 0.02 285); background: var(--surface-2); }
+.install { margin: 40px auto 0; max-width: 640px; text-align: left; }
+.install-label { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); margin-bottom: 9px; }
+.install-row {
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid var(--color-border); border-radius: 12px;
+  background: var(--bg-deep); padding: 14px 16px;
+  font-family: var(--font-mono); font-size: 13px;
+}
+.install-row .prompt { color: var(--color-accent); user-select: none; }
+.install-row code { flex: 1; overflow-x: auto; white-space: nowrap; color: var(--color-text); scrollbar-width: none; }
+.copy-btn {
+  flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted);
+  transition: color 0.15s, border-color 0.15s;
+}
+.copy-btn:hover { color: var(--color-accent); border-color: var(--color-accent); }
+@media (max-width: 640px) { .hero { padding-top: 64px; } }
+</style>
+
+<script>
+const btn = document.getElementById('copy-install') as HTMLButtonElement | null
+const code = document.getElementById('install-cmd')
+if (btn && code) {
+  btn.addEventListener('click', async () => {
+    const copyLabel = btn.dataset.copyLabel ?? 'Copy'
+    const copiedLabel = btn.dataset.copiedLabel ?? 'Copied!'
+    const svgCopy = `<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`
+    try {
+      await navigator.clipboard.writeText(code.textContent ?? '')
+      btn.setAttribute('aria-label', copiedLabel)
+      btn.innerHTML = `<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`
+      setTimeout(() => { btn.setAttribute('aria-label', copyLabel); btn.innerHTML = svgCopy }, 2000)
+    } catch { }
+  })
+}
+</script>

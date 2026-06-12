@@ -1,0 +1,33 @@
+---
+import { getLocalePath } from '@i18n/utils'
+import type { Locale } from '@i18n/utils'
+
+interface Props { lang: Locale; currentPath: string; label: string }
+const { lang, currentPath, label } = Astro.props
+
+const enPath = getLocalePath(currentPath.replace(/^\/es\//, '/'), 'en')
+const esPath = getLocalePath(currentPath.replace(/^\/en\//, '/'), 'es')
+---
+<nav aria-label={label} class="flex items-center gap-1 text-xs font-mono">
+  <a
+    href={enPath}
+    aria-current={lang === 'en' ? 'true' : undefined}
+    class:list={[
+      'px-2 py-1 rounded transition-colors',
+      lang === 'en'
+        ? 'text-(--color-accent) bg-(--color-surface)'
+        : 'text-(--color-text-muted) hover:text-(--color-text)',
+    ]}
+  >EN</a>
+  <span class="text-(--color-border)">|</span>
+  <a
+    href={esPath}
+    aria-current={lang === 'es' ? 'true' : undefined}
+    class:list={[
+      'px-2 py-1 rounded transition-colors',
+      lang === 'es'
+        ? 'text-(--color-accent) bg-(--color-surface)'
+        : 'text-(--color-text-muted) hover:text-(--color-text)',
+    ]}
+  >ES</a>
+</nav>

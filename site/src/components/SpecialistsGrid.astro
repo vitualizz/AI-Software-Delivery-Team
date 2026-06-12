@@ -1,0 +1,46 @@
+---
+import SpecialistCard from '@components/SpecialistCard.astro'
+import SpecialistAdvisor from '@components/SpecialistAdvisor.astro'
+import type { UIStrings } from '@i18n/types'
+
+interface Props { t: UIStrings }
+const { t } = Astro.props
+---
+<section class="section" id="equipo">
+  <div class="deco deco-sq" style="width:190px; height:190px; top:30px; right:-70px; --rot:-9deg; --dc:var(--c-pm);" aria-hidden="true"></div>
+  <div class="deco deco-plus" style="top:540px; left:4%; --dc:var(--c-ux);" aria-hidden="true">+</div>
+  <div class="v3-wrap">
+    <div class="section-head v3-reveal">
+      <p class="kicker">{t.specialists.kicker}</p>
+      <h2>{t.specialists.title}</h2>
+      <p class="sub">{t.specialists.sub}</p>
+    </div>
+
+    <SpecialistAdvisor t={t} />
+
+    <div class="team-grid v3-reveal">
+      {t.specialists.items.map((s) => <SpecialistCard specialist={s} />)}
+    </div>
+  </div>
+</section>
+
+<style>
+.section { padding: 104px 0 0; }
+.section-head { text-align: center; max-width: 640px; margin: 0 auto 52px; }
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 14px;
+}
+.section-head h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 600; letter-spacing: -0.025em; line-height: 1.12; text-wrap: balance; }
+.section-head .sub { margin-top: 16px; color: var(--color-text-muted); font-size: 16.5px; line-height: 1.6; }
+.team-grid {
+  display: grid;
+  gap: 16px;
+  margin-top: 30px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+</style>

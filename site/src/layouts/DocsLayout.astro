@@ -1,0 +1,313 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro'
+import FallbackNotice from '@components/FallbackNotice.astro'
+import { useTranslations, getBaseHref } from '@i18n/utils'
+import type { Locale } from '@i18n/utils'
+import { getCollection } from 'astro:content'
+
+interface Heading {
+  depth: number
+  slug: string
+  text: string
+}
+
+interface Props {
+  title: string
+  description: string
+  lang: Locale
+  isFallback?: boolean
+  currentSlug: string
+  headings?: Heading[]
+}
+
+const { title, description, lang, isFallback = false, currentSlug, headings = [] } = Astro.props
+const t = useTranslations(lang)
+
+const allDocs = await getCollection('docs', (entry) => entry.data.locale === 'en')
+const sorted = allDocs.sort((a, b) => a.data.order - b.data.order)
+
+const slugToNav: Record<string, string> = {
+  'getting-started': t.docs.gettingStarted,
+  specialists: t.docs.specialists,
+  commands: t.docs.commands,
+  'user-flows': t.docs.userFlows,
+}
+
+const slugToLabel: Record<string, string> = {
+  'getting-started': t.docs.gettingStarted,
+  specialists: t.docs.specialists,
+  commands: t.docs.commands,
+  'user-flows': t.docs.userFlows,
+}
+
+const currentLabel = slugToLabel[currentSlug] ?? title
+const tocHeadings = headings.filter((h) => h.depth === 2)
+---
+<BaseLayout lang={lang} title={title} description={description}>
+  <div class="docs-shell">
+    <aside class="docs-side" aria-label={t.docs.onThisPage}>
+      <p class="doc-nav-label">{lang === 'es' ? 'Documentación' : 'Documentation'}</p>
+      <nav class="doc-nav">
+        {sorted.map((entry) => {
+          const slug = entry.id.replace(/^en\//, '')
+          const label = slugToNav[slug] ?? entry.data.title
+          const href = lang === 'es' ? getBaseHref(`/es/docs/${slug}`) : getBaseHref(`/docs/${slug}`)
+          const isCurrent = currentSlug === slug
+          return (
+            <a
+              href={href}
+              aria-current={isCurrent ? 'page' : undefined}
+              class:list={['doc-nav-link', { active: isCurrent }]}
+            >
+              {label}
+            </a>
+          )
+        })}
+      </nav>
+    </aside>
+
+    <article class="article">
+      {isFallback && (
+        <FallbackNotice
+          notice={t.docs.fallbackNotice}
+          linkLabel={t.docs.fallbackNoticeLink}
+          enHref={getBaseHref(`/docs/${currentSlug}`)}
+        />
+      )}
+      <p class="crumb">{lang === 'es' ? 'Docs' : 'Docs'} <span aria-hidden="true">/</span> <b>{currentLabel}</b></p>
+      <slot />
+    </article>
+
+    {tocHeadings.length > 0 && (
+      <aside class="toc" aria-label={t.docs.onThisPage}>
+        <p class="doc-nav-label">{t.docs.onThisPage}</p>
+        {tocHeadings.map((h) => (
+          <a href={`#${h.slug}`}>{h.text}</a>
+        ))}
+      </aside>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+.docs-shell {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 56px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 48px 24px 90px;
+}
+@media (min-width: 1080px) {
+  .docs-shell { grid-template-columns: 210px minmax(0, 1fr) 190px; }
+}
+@media (max-width: 900px) {
+  .docs-shell { grid-template-columns: 1fr; gap: 32px; }
+  .docs-side { display: none; }
+}
+
+.docs-side {
+  position: sticky;
+  top: 92px;
+  align-self: start;
+}
+.doc-nav-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 12px;
+  padding-left: 12px;
+}
+.doc-nav { display: flex; flex-direction: column; gap: 2px; }
+.doc-nav-link {
+  display: block;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.doc-nav-link:hover { color: var(--color-text); background: oklch(0.20 0.012 285 / 0.6); }
+.doc-nav-link.active {
+  color: var(--color-text);
+  background: oklch(from var(--color-accent) l c h / 0.10);
+}
+
+.toc {
+  position: sticky;
+  top: 92px;
+  align-self: start;
+  display: none;
+}
+@media (min-width: 1080px) { .toc { display: block; } }
+.toc .doc-nav-label { padding-left: 14px; }
+.toc a {
+  display: block;
+  padding: 5px 0 5px 14px;
+  border-left: 1px solid var(--border-soft);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+.toc a:hover { color: var(--color-text); }
+
+/* article prose — scoped via :global() so it applies to <slot /> content */
+.article { max-width: 680px; }
+.article .crumb {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--faint);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.article .crumb :global(b) { color: var(--color-accent); font-weight: 500; }
+
+.article :global(h1) {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 4vw, 42px);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-bottom: 14px;
+}
+.article :global(.lead),
+.article :global(> p:first-of-type) {
+  font-size: 17.5px;
+  color: var(--color-text-muted);
+  line-height: 1.65;
+}
+.article :global(h2) {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  margin: 46px 0 14px;
+  padding-top: 30px;
+  border-top: 1px solid var(--border-soft);
+}
+.article :global(h3) {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 24px 0 8px;
+}
+.article :global(p) {
+  font-size: 15.5px;
+  color: oklch(0.83 0.008 285);
+  line-height: 1.7;
+  margin: 12px 0;
+}
+.article :global(a) {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+.article :global(a:hover) { text-decoration: underline; }
+.article :global(code) {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  padding: 2px 7px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.article :global(pre) {
+  margin: 18px 0;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--bg-deep);
+  padding: 16px 18px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.85;
+  overflow-x: auto;
+}
+.article :global(pre code) {
+  background: none;
+  border: none;
+  padding: 0;
+  white-space: pre;
+}
+.article :global(ul), .article :global(ol) {
+  padding: 0;
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.article :global(ul) { list-style: none; }
+.article :global(ul li) {
+  display: flex;
+  gap: 11px;
+  font-size: 15.5px;
+  color: oklch(0.83 0.008 285);
+  line-height: 1.6;
+}
+.article :global(ul li::before) {
+  content: '';
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  margin-top: 9px;
+}
+.article :global(ol) { list-style: decimal; padding-left: 20px; }
+.article :global(ol li) {
+  font-size: 15.5px;
+  color: oklch(0.83 0.008 285);
+  line-height: 1.6;
+}
+.article :global(blockquote) {
+  margin: 18px 0;
+  padding: 14px 18px;
+  border-left: 3px solid var(--color-accent);
+  background: oklch(from var(--color-accent) l c h / 0.06);
+  border-radius: 0 8px 8px 0;
+  font-size: 15px;
+  color: var(--color-text-muted);
+}
+.article :global(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 14px;
+}
+.article :global(th) {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.article :global(td) {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  color: oklch(0.83 0.008 285);
+  vertical-align: top;
+}
+.article :global(strong) { color: var(--color-text); font-weight: 600; }
+.article :global(em) { color: var(--color-text-muted); }
+.article :global(hr) {
+  border: none;
+  border-top: 1px solid var(--border-soft);
+  margin: 36px 0;
+}
+
+/* light theme — keep article text readable */
+[data-theme='light'] .article :global(p),
+[data-theme='light'] .article :global(ul li),
+[data-theme='light'] .article :global(ol li),
+[data-theme='light'] .article :global(td) {
+  color: oklch(0.32 0.012 285);
+}
+[data-theme='light'] .doc-nav-link:hover { background: oklch(0.92 0.006 285 / 0.7); }
+[data-theme='light'] .toc a { border-left-color: oklch(0.80 0.01 285); }
+</style>

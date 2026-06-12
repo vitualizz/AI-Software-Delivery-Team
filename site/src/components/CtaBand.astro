@@ -1,0 +1,57 @@
+---
+import type { UIStrings } from '@i18n/types'
+import { getBaseHref } from '@i18n/utils'
+
+interface Props { t: UIStrings }
+const { t } = Astro.props
+---
+<section class="cta-band">
+  <div class="deco deco-sq" style="width:140px; height:140px; top:70px; left:9%; --rot:18deg; --dc:var(--c-qa);" aria-hidden="true"></div>
+  <div class="deco deco-plus" style="bottom:130px; right:11%; --dc:var(--c-arch);" aria-hidden="true">+</div>
+  <div class="v3-wrap v3-reveal">
+    <h2>{t.ctaBand.title}</h2>
+    <p class="sub">{t.ctaBand.sub}</p>
+    <div class="ctas">
+      <a class="btn btn-primary" href={getBaseHref('/docs/getting-started')}>
+        {t.hero.cta}
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+      </a>
+      <a class="btn btn-ghost" href="https://github.com/vitualizz/AI-Software-Delivery-Team" target="_blank" rel="noopener noreferrer">
+        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" style="color:var(--c-pm);"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        {t.hero.secondaryCta}
+      </a>
+    </div>
+  </div>
+</section>
+
+<style>
+.cta-band { padding: 110px 0 120px; text-align: center; }
+.cta-band h2 { font-size: clamp(26px, 3.6vw, 38px); font-weight: 600; letter-spacing: -0.025em; }
+.cta-band .sub { margin: 14px auto 30px; color: var(--color-text-muted); max-width: 480px; }
+.ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  border-radius: 10px;
+  padding: 12px 22px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.2s, background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--color-accent);
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 1px oklch(1 0 0 / 0.08) inset, 0 8px 28px -10px oklch(from var(--color-accent) l c h / 0.8);
+}
+.btn-primary:hover { transform: translateY(-1px); }
+.btn-ghost {
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  background: oklch(0.20 0.012 285 / 0.4);
+}
+.btn-ghost:hover { border-color: var(--color-border); background: oklch(0.225 0.019 285); }
+</style>

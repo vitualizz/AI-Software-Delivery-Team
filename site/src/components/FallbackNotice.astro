@@ -1,0 +1,19 @@
+---
+interface Props {
+  notice: string
+  linkLabel: string
+  enHref?: string
+}
+const { notice, linkLabel, enHref } = Astro.props
+---
+<div role="note" class="mb-6 flex items-start gap-3 rounded-md border border-(--color-border) bg-(--color-surface) px-4 py-3 text-sm text-(--color-text-muted)">
+  <svg class="mt-0.5 size-4 shrink-0 text-(--color-accent)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span>
+    {notice}
+    {enHref && (
+      <a href={enHref} class="ml-1 text-(--color-accent) underline underline-offset-2 hover:text-(--color-accent-hover)">
+        {linkLabel}
+      </a>
+    )}
+  </span>
+</div>

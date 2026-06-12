@@ -1,0 +1,16 @@
+---
+interface Props { label: string; href: string; isCurrent: boolean }
+const { label, href, isCurrent } = Astro.props
+---
+<a
+  href={href}
+  aria-current={isCurrent ? 'page' : undefined}
+  class:list={[
+    'block rounded-md px-3 py-2 text-sm transition-colors',
+    isCurrent
+      ? 'bg-(--color-surface) text-(--color-accent) font-medium'
+      : 'text-(--color-text-muted) hover:text-(--color-text) hover:bg-(--color-surface)',
+  ]}
+>
+  {label}
+</a>

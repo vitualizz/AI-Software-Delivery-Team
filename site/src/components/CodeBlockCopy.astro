@@ -1,0 +1,50 @@
+---
+interface Props { code: string; lang?: string; copyLabel: string; copiedLabel: string; errorLabel: string }
+const { code, lang = 'bash', copyLabel, copiedLabel, errorLabel } = Astro.props
+const id = `cbc-${Math.random().toString(36).slice(2, 9)}`
+---
+<div class="relative group">
+  <pre
+    class="overflow-x-auto rounded-lg border border-(--color-border) bg-(--color-surface) p-4 pr-14 text-sm font-mono text-(--color-text)"
+    aria-label={`${lang} code block`}
+  ><code id={id} class="select-all whitespace-pre">{code}</code></pre>
+  <button
+    data-copy-target={id}
+    data-copy-label={copyLabel}
+    data-copied-label={copiedLabel}
+    data-error-label={errorLabel}
+    aria-label={copyLabel}
+    class="absolute right-3 top-3 flex size-8 items-center justify-center rounded border border-(--color-border) bg-(--color-bg) text-(--color-text-muted) opacity-0 transition-all hover:border-(--color-accent) hover:text-(--color-accent) group-hover:opacity-100 focus-visible:opacity-100"
+  >
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+document.querySelectorAll<HTMLButtonElement>('[data-copy-target]').forEach((btn) => {
+  btn.addEventListener('click', async () => {
+    const targetId = btn.dataset.copyTarget!
+    const code = document.getElementById(targetId)?.textContent ?? ''
+    const copyLabel = btn.dataset.copyLabel!
+    const copiedLabel = btn.dataset.copiedLabel!
+    const errorLabel = btn.dataset.errorLabel!
+
+    try {
+      await navigator.clipboard.writeText(code)
+      btn.setAttribute('aria-label', copiedLabel)
+      btn.innerHTML = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>`
+      btn.classList.add('border-(--color-accent)', 'text-(--color-accent)')
+      setTimeout(() => {
+        btn.setAttribute('aria-label', copyLabel)
+        btn.innerHTML = `<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`
+        btn.classList.remove('border-(--color-accent)', 'text-(--color-accent)')
+      }, 2000)
+    } catch {
+      btn.setAttribute('aria-label', errorLabel)
+      setTimeout(() => btn.setAttribute('aria-label', copyLabel), 3000)
+    }
+  })
+})
+</script>

@@ -1,0 +1,181 @@
+---
+import type { UIStrings } from '@i18n/types'
+
+interface Props { t: UIStrings }
+const { t } = Astro.props
+---
+<section class="section" id="como-funciona">
+  <div class="deco deco-ring" style="width:320px; height:320px; bottom:-110px; left:-130px; --dc:var(--c-dev);" aria-hidden="true"></div>
+  <div class="deco deco-plus" style="top:70px; right:8%; --dc:var(--c-qa);" aria-hidden="true">+</div>
+  <div class="v3-wrap">
+    <div class="section-head v3-reveal">
+      <p class="kicker">{t.recipes.kicker}</p>
+      <h2>{t.recipes.title}</h2>
+      <p class="sub">{t.recipes.sub}</p>
+    </div>
+
+    <div class="recipes recipes-shell v3-reveal">
+      <input type="radio" name="recipe" id="r-feature" checked />
+      <input type="radio" name="recipe" id="r-hotfix" />
+      <input type="radio" name="recipe" id="r-audit" />
+      <input type="radio" name="recipe" id="r-design" />
+
+      <div class="recipe-tabs" role="tablist">
+        <label for="r-feature">{t.recipes.tabs[0]}</label>
+        <label for="r-hotfix">{t.recipes.tabs[1]}</label>
+        <label for="r-audit">{t.recipes.tabs[2]}</label>
+        <label for="r-design">{t.recipes.tabs[3]}</label>
+      </div>
+
+      <div class="recipe-panel panel-feature">
+        <div class="chip-row">
+          <span class="chip" style="--c:var(--c-pm); --d:0.05s;"><span class="dot"></span>pm</span>
+          <span class="chip-arrow" style="--d:0.12s;">→</span>
+          <span class="chip" style="--c:var(--c-arch); --d:0.18s;"><span class="dot"></span>architect</span>
+          <span class="chip-arrow" style="--d:0.25s;">→</span>
+          <span class="chip" style="--c:var(--c-ux); --d:0.31s;"><span class="dot"></span>ux-ui</span>
+          <span class="chip-arrow" style="--d:0.38s;">→</span>
+          <span class="chip" style="--c:var(--c-dev); --d:0.44s;"><span class="dot"></span>developer</span>
+          <span class="chip-arrow" style="--d:0.51s;">→</span>
+          <span class="chip" style="--c:var(--c-sec); --d:0.57s;"><span class="dot"></span>security</span>
+          <span class="chip-arrow" style="--d:0.64s;">→</span>
+          <span class="chip" style="--c:var(--c-qa); --d:0.70s;"><span class="dot"></span>qa</span>
+        </div>
+        <p class="recipe-note"><span class="t-acc">&gt;</span> {t.recipes.notes[0]}</p>
+      </div>
+
+      <div class="recipe-panel panel-hotfix">
+        <div class="chip-row">
+          <span class="chip" style="--c:var(--c-dev); --d:0.05s;"><span class="dot"></span>developer</span>
+          <span class="chip-arrow" style="--d:0.12s;">→</span>
+          <span class="chip" style="--c:var(--c-qa); --d:0.18s;"><span class="dot"></span>qa</span>
+        </div>
+        <p class="recipe-note"><span class="t-acc">&gt;</span> {t.recipes.notes[1]}</p>
+      </div>
+
+      <div class="recipe-panel panel-audit">
+        <div class="chip-row">
+          <span class="chip" style="--c:var(--c-sec); --d:0.05s;"><span class="dot"></span>security</span>
+        </div>
+        <p class="recipe-note"><span class="t-acc">&gt;</span> {t.recipes.notes[2]}</p>
+      </div>
+
+      <div class="recipe-panel panel-design">
+        <div class="chip-row">
+          <span class="chip" style="--c:var(--c-ux); --d:0.05s;"><span class="dot"></span>ux-ui</span>
+          <span class="chip-arrow" style="--d:0.12s;">→</span>
+          <span class="chip" style="--c:var(--c-dev); --d:0.18s;"><span class="dot"></span>developer</span>
+        </div>
+        <p class="recipe-note"><span class="t-acc">&gt;</span> {t.recipes.notes[3]}</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+.section { padding: 104px 0 0; }
+.section-head { text-align: center; max-width: 640px; margin: 0 auto 52px; }
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  margin-bottom: 14px;
+}
+.section-head h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 600; letter-spacing: -0.025em; line-height: 1.12; }
+.section-head .sub { margin-top: 16px; color: var(--color-text-muted); font-size: 16.5px; line-height: 1.6; }
+
+.recipes { position: relative; }
+.recipes input[type='radio'] { position: absolute; opacity: 0; pointer-events: none; }
+.recipes-shell {
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: oklch(0.165 0.014 285 / 0.75);
+  padding: 28px;
+  max-width: 880px;
+  margin: 0 auto;
+}
+.recipe-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.recipe-tabs label {
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--color-text-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 8px 18px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.recipe-tabs label:hover { color: var(--color-text); border-color: var(--color-border); }
+
+.recipes:has(#r-feature:checked) label[for='r-feature'],
+.recipes:has(#r-hotfix:checked) label[for='r-hotfix'],
+.recipes:has(#r-audit:checked) label[for='r-audit'],
+.recipes:has(#r-design:checked) label[for='r-design'] {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+  background: oklch(from var(--color-accent) l c h / 0.1);
+}
+
+.recipe-panel { display: none; margin-top: 34px; }
+.recipes:has(#r-feature:checked) .panel-feature,
+.recipes:has(#r-hotfix:checked) .panel-hotfix,
+.recipes:has(#r-audit:checked) .panel-audit,
+.recipes:has(#r-design:checked) .panel-design { display: block; }
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+}
+.chip {
+  --c: var(--color-accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text);
+  border: 1px solid oklch(from var(--c) l c h / 0.38);
+  background: oklch(from var(--c) l c h / 0.10);
+  border-radius: 999px;
+  padding: 9px 17px;
+  box-shadow: 0 6px 22px -12px oklch(from var(--c) l c h / 0.60);
+}
+.chip .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: 0 0 9px oklch(from var(--c) l c h / 0.80);
+}
+.chip-arrow { color: var(--faint); font-family: var(--font-mono); font-size: 14px; }
+.recipe-note {
+  margin-top: 26px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--faint);
+  font-family: var(--font-mono);
+}
+.t-acc { color: var(--color-accent); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .recipe-panel .chip,
+  .recipe-panel .chip-arrow {
+    opacity: 0;
+    animation: chip-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+    animation-delay: var(--d, 0s);
+  }
+}
+</style>

@@ -1,0 +1,120 @@
+import type { UIStrings } from '@i18n/types'
+
+export const es: UIStrings = {
+  nav: {
+    home: 'ASDT',
+    docs: 'Docs',
+    github: 'GitHub',
+    langPickerLabel: 'Idioma',
+    specialists: 'Especialistas',
+    howItWorks: 'Cómo funciona',
+  },
+  a11y: {
+    skipToContent: 'Ir al contenido',
+    themeToggleLabel: 'Cambiar tema',
+    langPickerLabel: 'Seleccionar idioma',
+  },
+  hero: {
+    eyebrow: 'Para Claude Code y OpenCode',
+    headline: 'Todo un',
+    headlineGrad: 'equipo de software',
+    sub: 'Especialistas de IA que se pasan el trabajo entre sí sobre una base de conocimientos compartida. Tú diriges la ruta; el equipo no olvida nada.',
+    cta: 'Empezar',
+    secondaryCta: 'Dale una estrella',
+    installLabel: 'Instalación — un solo comando',
+    installCmd: 'curl -fsSL https://raw.githubusercontent.com/vitualizz/AI-Software-Delivery-Team/main/install.sh | bash',
+    copyLabel: 'Copiar',
+    copiedLabel: '¡Copiado!',
+    copyErrorLabel: 'Error al copiar — seleccioná manualmente',
+  },
+  specialists: {
+    kicker: '01 · El equipo',
+    title: 'Conoce a los especialistas',
+    sub: 'Roles enfocados, cada uno con su oficio. Invocá a cualquiera directamente, o pedile a /asdt que te sugiera la ruta.',
+    advisorStrip: 'El punto de partida',
+    items: [
+      { id: 'pm', name: 'Product Manager', desc: 'Convierte ideas sueltas en historias de usuario con alcance claro y criterios definidos.', command: '/asdt-pm' },
+      { id: 'architect', name: 'Arquitecto', desc: 'Toma las decisiones técnicas: diseño del sistema, contratos de API y registros de decisión.', command: '/asdt-architect' },
+      { id: 'developer', name: 'Developer', desc: 'Convierte especificaciones y diseños en código de producción, con plan de implementación.', command: '/asdt-developer' },
+      { id: 'qa', name: 'QA Engineer', desc: 'Construye la red de seguridad: planes de prueba, criterios de aceptación y reportes de calidad.', command: '/asdt-qa' },
+      { id: 'security', name: 'Seguridad', desc: 'Encuentra los huecos que un atacante vería primero: modelos de amenaza y endurecimiento.', command: '/asdt-security' },
+      { id: 'ux-ui', name: 'Diseño UX/UI', desc: 'Da forma a la experiencia: flujos, componentes y accesibilidad.', command: '/asdt-ux-ui' },
+    ],
+    orchestrator: {
+      id: 'orchestrator',
+      name: 'Asesor de ruta',
+      desc: 'Analiza lo que pedís y recomienda qué especialistas involucrar y en qué orden. Vos confirmás el plan y ejecutás cada comando.',
+      command: '/asdt',
+    },
+  },
+  terminal: {
+    tabs: ['Nueva feature', 'Developer, paso a paso', 'Auditoría', 'Tu turno_'],
+  },
+  pipeline: {
+    title: 'Cómo funciona',
+    sub: 'Describí lo que necesitás — /asdt te dice qué especialistas usar y en qué orden. Cada uno lee los artefactos del anterior automáticamente via Engram.',
+    nodes: [
+      { id: 'pm', label: 'PM' },
+      { id: 'architect', label: 'Arquitecto' },
+      { id: 'developer', label: 'Developer' },
+      { id: 'qa', label: 'QA' },
+      { id: 'security', label: 'Seguridad' },
+      { id: 'ux-ui', label: 'UX/UI' },
+    ],
+    a11yTitle: 'Pipeline de especialistas ASDT',
+    a11yDesc: 'Diagrama que muestra seis especialistas en secuencia: PM, Arquitecto, Developer, QA, Seguridad, UX/UI.',
+  },
+  recipes: {
+    kicker: '02 · Cómo funciona',
+    title: 'No es un pipeline. Es un equipo que vos componés.',
+    sub: '/asdt sugiere una ruta según la tarea — vos la confirmás, la reordenás o vas directo a un especialista.',
+    tabs: ['Nueva feature', 'Hotfix', 'Auditoría de seguridad', 'Pase de diseño'],
+    notes: [
+      '/asdt añade espacios de trabajo con permisos por rol',
+      '/asdt corrige el crash al paginar resultados vacíos',
+      '/asdt-security revisa el manejo de sesiones',
+      '/asdt rediseña el onboarding para móvil',
+    ],
+  },
+  vs: {
+    kicker: '03 · Por qué ASDT',
+    title: 'Un chat improvisa. Un equipo entrega.',
+    sub: 'Los asistentes de código son buenísimos. Con método y memoria, se convierten en un equipo.',
+    chatHead: 'Todo en un chat',
+    asdtHead: 'Con ASDT',
+    items: [
+      {
+        chat: 'El contexto se diluye a medida que la conversación crece — lo que decidiste ayer ya no existe.',
+        asdt: 'Cada decisión queda en una base de conocimientos que todo el equipo consulta. ASDT recuerda.',
+      },
+      {
+        chat: 'Cada prompt improvisa el proceso desde cero: a veces brillante, a veces a lo loco.',
+        asdt: 'Cada especialista trabaja con pasos definidos — explorar, especificar, ejecutar. Siempre.',
+      },
+      {
+        chat: 'Llegás rápido a un demo, pero sin historias, decisiones ni pruebas que lo respalden.',
+        asdt: 'Quedan artefactos reales — historias, decisiones, pruebas — listos para retomar mañana.',
+      },
+    ],
+  },
+  ctaBand: {
+    title: 'Contratá al equipo con un comando',
+    sub: 'Funciona con Claude Code y OpenCode. Open source, licencia MIT.',
+  },
+  footer: {
+    tagline: 'Impulsado por IA. Dirigido por ti.',
+    githubLabel: 'GitHub',
+    docsLabel: 'Docs',
+    licenseLabel: 'Licencia MIT',
+    credit: 'Hecho en abierto por Lee Palacios — vitualizz · © 2026 ASDT',
+  },
+  docs: {
+    fallbackNotice: 'Esta página solo está disponible en inglés.',
+    fallbackNoticeLink: 'Ver en inglés',
+    gettingStarted: 'Comenzando',
+    specialists: 'Especialistas',
+    commands: 'Comandos',
+    userFlows: 'Flujos de usuario',
+    onThisPage: 'En esta página',
+  },
+}

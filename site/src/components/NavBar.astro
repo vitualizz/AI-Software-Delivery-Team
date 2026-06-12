@@ -1,0 +1,70 @@
+---
+import LanguagePicker from '@components/LanguagePicker.astro'
+import ThemeToggle from '@components/ThemeToggle.astro'
+import LogoDots from '@components/LogoDots.astro'
+import { getBaseHref } from '@i18n/utils'
+import type { Locale } from '@i18n/utils'
+import type { UIStrings } from '@i18n/types'
+
+interface Props { lang: Locale; t: UIStrings; currentPath: string }
+const { lang, t, currentPath } = Astro.props
+const isEs = lang === 'es'
+---
+<header class="nav">
+  <div class="nav-inner">
+    <a href={getBaseHref('/')} class="logo">
+      <LogoDots />
+      {t.nav.home}
+    </a>
+    <nav class="nav-links" aria-label={t.a11y.skipToContent}>
+      <a href="#equipo" class="hidden md:block">{t.nav.specialists}</a>
+      <a href="#como-funciona" class="hidden md:block">{t.nav.howItWorks}</a>
+      <a href={getBaseHref('/docs/getting-started')}>{t.nav.docs}</a>
+      <a class="star-link" href="https://github.com/vitualizz/AI-Software-Delivery-Team" target="_blank" rel="noopener noreferrer">
+        <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        {isEs ? 'Star en GitHub' : 'Star on GitHub'}
+      </a>
+      <span class="nav-pill"><span class="dot"></span>v0.4.2</span>
+      <LanguagePicker lang={lang} currentPath={currentPath} label={t.nav.langPickerLabel} />
+      <ThemeToggle label={t.a11y.themeToggleLabel} />
+    </nav>
+  </div>
+</header>
+
+<style>
+.nav {
+  position: sticky; top: 0; z-index: 40;
+  border-bottom: 1px solid oklch(0.30 0.012 285 / 0.55);
+  background: oklch(0.15 0.012 285 / 0.78);
+  backdrop-filter: blur(14px);
+}
+:global([data-theme='light']) .nav {
+  background: oklch(0.965 0.004 285 / 0.8);
+  border-bottom-color: oklch(0.86 0.01 285 / 0.7);
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px; max-width: 1120px; margin: 0 auto;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px; text-decoration: none;
+  font-family: var(--font-mono); font-weight: 600; font-size: 17px; letter-spacing: 0.02em;
+  color: var(--color-text); transition: color 0.15s;
+}
+.logo:hover { color: var(--color-accent); }
+.nav-links {
+  display: flex; align-items: center; gap: 26px;
+}
+.nav-links a {
+  font-size: 14px; color: var(--color-text-muted); text-decoration: none;
+  transition: color 0.15s; white-space: nowrap;
+}
+.nav-links a:hover { color: var(--color-text); }
+.nav-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--color-border); border-radius: 999px;
+  padding: 5px 12px; font-family: var(--font-mono); font-size: 12px;
+  color: var(--color-text-muted);
+}
+.nav-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--color-accent); }
+</style>

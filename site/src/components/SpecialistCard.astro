@@ -1,0 +1,104 @@
+---
+import type { SpecialistItem } from '@i18n/types'
+
+interface Props { specialist: SpecialistItem }
+const { specialist } = Astro.props
+
+const colorMap: Record<string, string> = {
+  pm: 'var(--c-pm)',
+  architect: 'var(--c-arch)',
+  developer: 'var(--c-dev)',
+  qa: 'var(--c-qa)',
+  security: 'var(--c-sec)',
+  'ux-ui': 'var(--c-ux)',
+  orchestrator: 'var(--color-accent)',
+}
+
+const iconPaths: Record<string, string> = {
+  pm: 'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+  architect: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  developer: 'M16 18 22 12 16 6M8 6 2 12 8 18',
+  qa: 'M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
+  security: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z',
+  'ux-ui': 'M2 13.5V19a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5.5M22 10.5 12 5 2 10.5M12 5v14',
+  orchestrator: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
+}
+
+const color = colorMap[specialist.id] ?? 'var(--color-accent)'
+const iconPath = iconPaths[specialist.id] ?? iconPaths.orchestrator
+---
+<article class="spec-card" style={`--c: ${color};`}>
+  <div class="spec-top">
+    <div class="card-icon">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d={iconPath} />
+      </svg>
+    </div>
+    <code class="card-cmd">{specialist.command}</code>
+  </div>
+  <div class="card-body">
+    <h3>{specialist.name}</h3>
+    <p>{specialist.desc}</p>
+  </div>
+</article>
+
+<style>
+.spec-card {
+  --c: var(--color-accent);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: oklch(0.175 0.012 285 / 0.7);
+  padding: 24px;
+  transition: border-color 0.2s, box-shadow 0.25s, transform 0.2s;
+}
+.spec-card:hover {
+  transform: translateY(-2px);
+  border-color: oklch(from var(--c) l c h / 0.45);
+  box-shadow: 0 14px 44px -18px oklch(from var(--c) l c h / 0.55);
+}
+.spec-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(140px 90px at 24px 24px, oklch(from var(--c) l c h / 0.09), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.spec-card:hover::before { opacity: 1; }
+.spec-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.card-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  color: var(--c);
+  background: oklch(from var(--c) l c h / 0.12);
+  border: 1px solid oklch(from var(--c) l c h / 0.30);
+}
+.card-cmd {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--c);
+  border: 1px solid oklch(from var(--c) l c h / 0.35);
+  background: oklch(from var(--c) l c h / 0.08);
+  border-radius: 999px;
+  padding: 3px 11px;
+  white-space: nowrap;
+}
+.card-body h3 { font-size: 17.5px; font-weight: 600; margin-bottom: 5px; }
+.card-body p { font-size: 14.5px; color: var(--color-text-muted); line-height: 1.6; }
+</style>

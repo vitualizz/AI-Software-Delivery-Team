@@ -1,0 +1,538 @@
+---
+import type { UIStrings } from '@i18n/types'
+import type { Locale } from '@i18n/utils'
+
+interface Props {
+  t: UIStrings
+  lang: Locale
+}
+const { t, lang } = Astro.props
+const isEs = lang === 'es'
+---
+<div class="term-stage">
+  <div class="term" data-lang={lang}>
+    <input type="radio" name="tsession" id="ts-1" checked />
+    <input type="radio" name="tsession" id="ts-2" />
+    <input type="radio" name="tsession" id="ts-3" />
+    <input type="radio" name="tsession" id="ts-4" />
+
+    <div class="term-bar">
+      <span class="tl"></span><span class="tl"></span><span class="tl"></span>
+      <span class="title">~/app — claude</span>
+    </div>
+    <div class="term-tabs">
+      <span class="hint">{isEs ? 'Pruébalo' : 'Try it'}</span>
+      <label for="ts-1">{t.terminal.tabs[0]}</label>
+      <label for="ts-2">{t.terminal.tabs[1]}</label>
+      <label for="ts-3">{t.terminal.tabs[2]}</label>
+      <label for="ts-4" class="tab-play">{t.terminal.tabs[3]}</label>
+    </div>
+    <div class="term-body">
+      {isEs ? (
+        <>
+          <div class="term-session session-1">
+            <div class="t-line" style="--d:0.2s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line" style="--d:0.55s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:28ch; --tf:steps(28); --tt:1.0s; --d:0.7s;">/asdt añade login con Google</span></div>
+            <div class="t-line" style="--d:1.9s;">&nbsp;</div>
+            <div class="t-line t-eph" style="--d:2.0s; --d2:2.55s;">{'  '}<span class="t-spin"></span> <span class="t-shim">Analizando tu pedido…</span></div>
+            <div class="t-line" style="--d:2.7s;">{'  '}<span class="t-cmd">Ruta recomendada</span></div>
+            <div class="t-line" style="--d:2.7s;">&nbsp;</div>
+            <div class="t-line" style="--d:3.0s;">{'  '}<span class="t-dot" style="background:var(--c-pm);"></span><span style="color:var(--c-pm);">pm        </span> <span class="t-mut">alcance + historias     </span> <span class="t-dim">/asdt-pm</span></div>
+            <div class="t-line" style="--d:3.2s;">{'  '}<span class="t-dot" style="background:var(--c-arch);"></span><span style="color:var(--c-arch);">architect </span> <span class="t-mut">decisión del flujo      </span> <span class="t-dim">/asdt-architect</span></div>
+            <div class="t-line" style="--d:3.4s;">{'  '}<span class="t-dot" style="background:var(--c-dev);"></span><span style="color:var(--c-dev);">developer </span> <span class="t-mut">implementación          </span> <span class="t-dim">/asdt-developer</span></div>
+            <div class="t-line" style="--d:3.6s;">{'  '}<span class="t-dot" style="background:var(--c-sec);"></span><span style="color:var(--c-sec);">security  </span> <span class="t-mut">revisión de tokens      </span> <span class="t-dim">/asdt-security</span></div>
+            <div class="t-line" style="--d:3.8s;">{'  '}<span class="t-dot" style="background:var(--c-qa);"></span><span style="color:var(--c-qa);">qa        </span> <span class="t-mut">plan de pruebas         </span> <span class="t-dim">/asdt-qa</span></div>
+            <div class="t-line" style="--d:4.2s;">&nbsp;</div>
+            <div class="t-line t-dim" style="--d:4.4s;">{'  '}Cada paso retoma lo que dejó el anterior.</div>
+            <div class="t-line t-dim" style="--d:4.9s;">{'  '}Ejecútalos en orden — o salta directo a uno.</div>
+            <div class="t-line" style="--d:5.4s;">&nbsp;</div>
+            <div class="t-line" style="--d:6.0s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:8ch; --tf:steps(8); --tt:0.5s; --d:6.2s;">/asdt-pm</span></div>
+            <div class="t-line t-eph" style="--d:7.0s; --d2:8.0s;">{'  '}<span class="t-spin"></span> <span style="color:var(--c-pm);">pm</span> <span class="t-shim">está explorando el código…</span></div>
+            <div class="t-line" style="--d:8.1s;">{'  '}<span class="t-acc">✓</span> <span style="color:var(--c-pm);">pm</span> <span class="t-mut">— historias de usuario guardadas</span> <span class="t-dim">· base de conocimientos</span></div>
+            <div class="t-line" style="--d:8.7s;">{'  '}<span class="t-dim">→ siguiente:</span> <span style="color:var(--c-arch);">/asdt-architect</span> <span class="caret"></span></div>
+          </div>
+
+          <div class="term-session session-2">
+            <div class="t-line" style="--d:0.2s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line" style="--d:0.55s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:32ch; --tf:steps(32); --tt:1.05s; --d:0.7s;">/asdt-developer arregla el crash</span></div>
+            <div class="t-line" style="--d:1.95s;">&nbsp;</div>
+            <div class="t-line t-eph" style="--d:2.05s; --d2:2.65s;">{'  '}<span class="t-spin"></span> <span class="t-shim">Leyendo el conocimiento del proyecto…</span></div>
+            <div class="t-line" style="--d:2.75s;">{'  '}<span style="color:var(--c-dev);">◆ developer</span> <span class="t-mut">— especialista con flujo propio · 8 pasos</span></div>
+            <div class="t-line" style="--d:2.75s;">&nbsp;</div>
+            <div class="t-line" style="--d:3.0s;">{'  '}<span class="t-step"></span> <span class="t-cmd">knowledge-recall      </span><span class="t-mut">memoria del equipo    </span><span class="t-dim">2 decisiones previas</span></div>
+            <div class="t-line" style="--d:3.6s;">{'  '}<span class="t-step"></span> <span class="t-cmd">explore               </span><span class="t-mut">exploración           </span><span class="t-dim">dev-exploration</span></div>
+            <div class="t-line" style="--d:4.2s;">{'  '}<span class="t-step"></span> <span class="t-cmd">spec                  </span><span class="t-mut">especificación        </span><span class="t-dim">dev-spec</span></div>
+            <div class="t-line" style="--d:4.8s;">{'  '}<span class="t-step"></span> <span class="t-cmd">design                </span><span class="t-mut">diseño técnico        </span><span class="t-dim">dev-design</span></div>
+            <div class="t-line" style="--d:5.4s;">{'  '}<span class="t-step"></span> <span class="t-cmd">tasks                 </span><span class="t-mut">plan de tareas        </span><span class="t-dim">dev-tasks · 5 tareas</span></div>
+            <div class="t-line" style="--d:6.0s;">{'  '}<span class="t-step"></span> <span class="t-cmd">implement             </span><span class="t-mut">implementación        </span><span class="t-dim">+84 −12 · 3 archivos</span></div>
+            <div class="t-line" style="--d:6.6s;">{'  '}<span class="t-step"></span> <span class="t-cmd">test                  </span><span class="t-mut">pruebas               </span><span class="t-dim">6 passing</span></div>
+            <div class="t-line" style="--d:7.2s;">{'  '}<span class="t-step"></span> <span class="t-cmd">decision-preservation </span><span class="t-mut">registro de decisiones</span><span class="t-dim">guardado</span></div>
+            <div class="t-line" style="--d:7.9s;">&nbsp;</div>
+            <div class="t-line t-dim" style="--d:8.1s;">{'  '}Cada paso deja un artefacto en la base de conocimientos.</div>
+            <div class="t-line" style="--d:8.7s;">{'  '}<span class="t-dim">→ siguiente:</span> <span style="color:var(--c-qa);">/asdt-qa</span> <span class="caret"></span></div>
+          </div>
+
+          <div class="term-session session-3">
+            <div class="t-line" style="--d:0.2s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line" style="--d:0.55s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:34ch; --tf:steps(34); --tt:1.1s; --d:0.7s;">/asdt-security revisa las sesiones</span></div>
+            <div class="t-line" style="--d:2.0s;">&nbsp;</div>
+            <div class="t-line t-eph" style="--d:2.2s; --d2:3.4s;">{'  '}<span class="t-spin"></span> <span style="color:var(--c-sec);">security</span> <span class="t-shim">está modelando amenazas…</span></div>
+            <div class="t-line" style="--d:3.5s;">{'  '}<span class="t-acc">✓</span> <span style="color:var(--c-sec);">security</span> <span class="t-mut">— modelo de amenazas guardado</span> <span class="t-dim">· sesiones</span></div>
+            <div class="t-line" style="--d:4.1s;">{'  '}<span class="t-acc">✓</span> <span class="t-mut">checklist de endurecimiento guardado</span></div>
+            <div class="t-line" style="--d:4.6s;">&nbsp;</div>
+            <div class="t-line" style="--d:4.9s;">{'  '}<span class="t-cmd">3 hallazgos</span> <span class="t-dim">·</span> <span style="color:var(--c-sec);">1 crítico</span></div>
+            <div class="t-line" style="--d:5.5s;">{'  '}<span class="t-dim">→ recomendado:</span> <span style="color:var(--c-dev);">/asdt-developer</span> <span class="t-mut">para aplicar los fixes</span> <span class="caret"></span></div>
+          </div>
+
+          <div class="term-session session-4">
+            <div class="t-line" style="--d:0.1s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line t-dim" style="--d:0.3s;">{'  '}Esta es de verdad: escribí un pedido y mirá qué ruta arma el equipo.</div>
+            <div class="t-line t-dim" style="--d:0.5s;">{'  '}Probá <span class="t-cmd">/asdt añade modo offline</span> · <span class="t-cmd">/asdt-developer</span> · <span class="t-cmd">/help</span></div>
+            <div id="play-out"></div>
+            <div class="t-line play-prompt" style="--d:0.7s;"><span class="t-acc">&gt;</span><input id="play-input" type="text" autocomplete="off" spellcheck="false" placeholder="escribí aquí…" aria-label="Comando de prueba" /></div>
+          </div>
+        </>
+      ) : (
+        <>
+          <div class="term-session session-1">
+            <div class="t-line" style="--d:0.2s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line" style="--d:0.55s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:26ch; --tf:steps(26); --tt:1.0s; --d:0.7s;">/asdt add Google login</span></div>
+            <div class="t-line" style="--d:1.9s;">&nbsp;</div>
+            <div class="t-line t-eph" style="--d:2.0s; --d2:2.55s;">{'  '}<span class="t-spin"></span> <span class="t-shim">Analyzing your request…</span></div>
+            <div class="t-line" style="--d:2.7s;">{'  '}<span class="t-cmd">Recommended route</span></div>
+            <div class="t-line" style="--d:2.7s;">&nbsp;</div>
+            <div class="t-line" style="--d:3.0s;">{'  '}<span class="t-dot" style="background:var(--c-pm);"></span><span style="color:var(--c-pm);">pm        </span> <span class="t-mut">scope + user stories   </span> <span class="t-dim">/asdt-pm</span></div>
+            <div class="t-line" style="--d:3.2s;">{'  '}<span class="t-dot" style="background:var(--c-arch);"></span><span style="color:var(--c-arch);">architect </span> <span class="t-mut">OAuth flow decision    </span> <span class="t-dim">/asdt-architect</span></div>
+            <div class="t-line" style="--d:3.4s;">{'  '}<span class="t-dot" style="background:var(--c-dev);"></span><span style="color:var(--c-dev);">developer </span> <span class="t-mut">implementation         </span> <span class="t-dim">/asdt-developer</span></div>
+            <div class="t-line" style="--d:3.6s;">{'  '}<span class="t-dot" style="background:var(--c-sec);"></span><span style="color:var(--c-sec);">security  </span> <span class="t-mut">token review           </span> <span class="t-dim">/asdt-security</span></div>
+            <div class="t-line" style="--d:3.8s;">{'  '}<span class="t-dot" style="background:var(--c-qa);"></span><span style="color:var(--c-qa);">qa        </span> <span class="t-mut">test plan              </span> <span class="t-dim">/asdt-qa</span></div>
+            <div class="t-line" style="--d:4.2s;">&nbsp;</div>
+            <div class="t-line t-dim" style="--d:4.4s;">{'  '}Each step picks up where the previous left off.</div>
+            <div class="t-line t-dim" style="--d:4.9s;">{'  '}Run them in order — or jump straight to one.</div>
+            <div class="t-line" style="--d:5.4s;">&nbsp;</div>
+            <div class="t-line" style="--d:6.0s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:8ch; --tf:steps(8); --tt:0.5s; --d:6.2s;">/asdt-pm</span></div>
+            <div class="t-line t-eph" style="--d:7.0s; --d2:8.0s;">{'  '}<span class="t-spin"></span> <span style="color:var(--c-pm);">pm</span> <span class="t-shim">exploring the codebase…</span></div>
+            <div class="t-line" style="--d:8.1s;">{'  '}<span class="t-acc">✓</span> <span style="color:var(--c-pm);">pm</span> <span class="t-mut">— user stories saved</span> <span class="t-dim">· knowledge base</span></div>
+            <div class="t-line" style="--d:8.7s;">{'  '}<span class="t-dim">→ next:</span> <span style="color:var(--c-arch);">/asdt-architect</span> <span class="caret"></span></div>
+          </div>
+
+          <div class="term-session session-2">
+            <div class="t-line" style="--d:0.2s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line" style="--d:0.55s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:30ch; --tf:steps(30); --tt:1.0s; --d:0.7s;">/asdt-developer fix the crash</span></div>
+            <div class="t-line" style="--d:1.95s;">&nbsp;</div>
+            <div class="t-line t-eph" style="--d:2.05s; --d2:2.65s;">{'  '}<span class="t-spin"></span> <span class="t-shim">Reading project knowledge…</span></div>
+            <div class="t-line" style="--d:2.75s;">{'  '}<span style="color:var(--c-dev);">◆ developer</span> <span class="t-mut">— specialist with own flow · 8 steps</span></div>
+            <div class="t-line" style="--d:2.75s;">&nbsp;</div>
+            <div class="t-line" style="--d:3.0s;">{'  '}<span class="t-step"></span> <span class="t-cmd">knowledge-recall      </span><span class="t-mut">team memory           </span><span class="t-dim">2 prior decisions</span></div>
+            <div class="t-line" style="--d:3.6s;">{'  '}<span class="t-step"></span> <span class="t-cmd">explore               </span><span class="t-mut">exploration           </span><span class="t-dim">dev-exploration</span></div>
+            <div class="t-line" style="--d:4.2s;">{'  '}<span class="t-step"></span> <span class="t-cmd">spec                  </span><span class="t-mut">specification         </span><span class="t-dim">dev-spec</span></div>
+            <div class="t-line" style="--d:4.8s;">{'  '}<span class="t-step"></span> <span class="t-cmd">design                </span><span class="t-mut">technical design      </span><span class="t-dim">dev-design</span></div>
+            <div class="t-line" style="--d:5.4s;">{'  '}<span class="t-step"></span> <span class="t-cmd">tasks                 </span><span class="t-mut">task plan             </span><span class="t-dim">dev-tasks · 5 items</span></div>
+            <div class="t-line" style="--d:6.0s;">{'  '}<span class="t-step"></span> <span class="t-cmd">implement             </span><span class="t-mut">implementation        </span><span class="t-dim">+84 −12 · 3 files</span></div>
+            <div class="t-line" style="--d:6.6s;">{'  '}<span class="t-step"></span> <span class="t-cmd">test                  </span><span class="t-mut">tests                 </span><span class="t-dim">6 passing</span></div>
+            <div class="t-line" style="--d:7.2s;">{'  '}<span class="t-step"></span> <span class="t-cmd">decision-preservation </span><span class="t-mut">decision record       </span><span class="t-dim">saved</span></div>
+            <div class="t-line" style="--d:7.9s;">&nbsp;</div>
+            <div class="t-line t-dim" style="--d:8.1s;">{'  '}Each step leaves an artifact in the knowledge base.</div>
+            <div class="t-line" style="--d:8.7s;">{'  '}<span class="t-dim">→ next:</span> <span style="color:var(--c-qa);">/asdt-qa</span> <span class="caret"></span></div>
+          </div>
+
+          <div class="term-session session-3">
+            <div class="t-line" style="--d:0.2s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line" style="--d:0.55s;"><span class="t-acc">&gt;</span> <span class="t-type t-cmd" style="--w:32ch; --tf:steps(32); --tt:1.1s; --d:0.7s;">/asdt-security review sessions</span></div>
+            <div class="t-line" style="--d:2.0s;">&nbsp;</div>
+            <div class="t-line t-eph" style="--d:2.2s; --d2:3.4s;">{'  '}<span class="t-spin"></span> <span style="color:var(--c-sec);">security</span> <span class="t-shim">modeling threats…</span></div>
+            <div class="t-line" style="--d:3.5s;">{'  '}<span class="t-acc">✓</span> <span style="color:var(--c-sec);">security</span> <span class="t-mut">— threat model saved</span> <span class="t-dim">· sessions</span></div>
+            <div class="t-line" style="--d:4.1s;">{'  '}<span class="t-acc">✓</span> <span class="t-mut">hardening checklist saved</span></div>
+            <div class="t-line" style="--d:4.6s;">&nbsp;</div>
+            <div class="t-line" style="--d:4.9s;">{'  '}<span class="t-cmd">3 findings</span> <span class="t-dim">·</span> <span style="color:var(--c-sec);">1 critical</span></div>
+            <div class="t-line" style="--d:5.5s;">{'  '}<span class="t-dim">→ recommended:</span> <span style="color:var(--c-dev);">/asdt-developer</span> <span class="t-mut">to apply the fixes</span> <span class="caret"></span></div>
+          </div>
+
+          <div class="term-session session-4">
+            <div class="t-line" style="--d:0.1s;"><span class="t-dim">~/app</span> <span class="t-acc">$</span> <span class="t-cmd">claude</span></div>
+            <div class="t-line t-dim" style="--d:0.3s;">{'  '}The real deal: type a request and see what route the team builds.</div>
+            <div class="t-line t-dim" style="--d:0.5s;">{'  '}Try <span class="t-cmd">/asdt add offline mode</span> · <span class="t-cmd">/asdt-developer</span> · <span class="t-cmd">/help</span></div>
+            <div id="play-out"></div>
+            <div class="t-line play-prompt" style="--d:0.7s;"><span class="t-acc">&gt;</span><input id="play-input" type="text" autocomplete="off" spellcheck="false" placeholder="type here…" aria-label="Test command" /></div>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+</div>
+
+<style>
+.term-stage {
+  position: relative;
+  margin: 64px auto 0;
+  max-width: 760px;
+}
+.term-stage::before {
+  content: '';
+  position: absolute;
+  inset: -8% -14%;
+  z-index: -1;
+  background: radial-gradient(60% 70% at 50% 45%, oklch(0.45 0.09 280 / 0.16), transparent 70%);
+}
+.term {
+  text-align: left;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  background: oklch(0.135 0.012 285 / 0.92);
+  box-shadow: 0 30px 80px -30px oklch(0 0 0 / 0.7), 0 0 0 1px oklch(1 0 0 / 0.03) inset;
+  overflow: hidden;
+}
+.term input[type='radio'] { position: absolute; opacity: 0; pointer-events: none; }
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  background: oklch(0.175 0.012 285 / 0.8);
+}
+.term-bar .tl { width: 11px; height: 11px; border-radius: 50%; background: oklch(0.35 0.01 285); }
+.term-bar .title { margin-left: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--faint); }
+.term-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border-soft);
+  background: oklch(0.155 0.012 285 / 0.7);
+}
+.term-tabs .hint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-right: 4px;
+}
+.term-tabs label {
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  padding: 5px 13px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.term-tabs label:hover { color: var(--color-text); border-color: var(--color-border); }
+.term-tabs .tab-play { color: var(--color-accent); border-color: oklch(from var(--color-accent) l c h / 0.35); }
+.term:has(#ts-1:checked) label[for='ts-1'],
+.term:has(#ts-2:checked) label[for='ts-2'],
+.term:has(#ts-3:checked) label[for='ts-3'],
+.term:has(#ts-4:checked) label[for='ts-4'] {
+  color: var(--color-text);
+  border-color: var(--color-accent);
+  background: oklch(from var(--color-accent) l c h / 0.1);
+}
+.term-body {
+  padding: 22px 24px 26px;
+  font-family: var(--font-mono);
+  font-size: 13.5px;
+  line-height: 1.85;
+  overflow-x: auto;
+  min-height: 320px;
+}
+.term:has(#ts-4:checked) .term-body {
+  max-height: 380px;
+  overflow-y: auto;
+}
+.term-session { display: none; }
+.term:has(#ts-1:checked) .session-1,
+.term:has(#ts-2:checked) .session-2,
+.term:has(#ts-3:checked) .session-3,
+.term:has(#ts-4:checked) .session-4 { display: block; }
+
+.t-line { white-space: pre; }
+.t-dim { color: var(--faint); }
+.t-mut { color: var(--color-text-muted); }
+.t-acc { color: var(--color-accent); }
+.t-cmd { color: var(--color-text); font-weight: 500; }
+.t-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; transform: translateY(-1px); }
+.caret { display: inline-block; width: 8px; height: 16px; transform: translateY(3px); background: var(--color-accent); }
+
+/* v5 — spinner, step, shimmer, ephemeral */
+.t-spin { display: inline-block; width: 1ch; color: var(--color-accent); }
+.t-spin::before { content: '✻'; }
+.t-step { display: inline-block; width: 1ch; }
+.t-step::before { content: '✓'; color: var(--color-accent); }
+.t-eph { height: 1.85em; }
+.t-shim { color: var(--color-text-muted); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .t-line { opacity: 0; animation: t-in 0.35s ease-out forwards; animation-delay: var(--d, 0s); }
+  .t-type {
+    display: inline-block;
+    overflow: hidden;
+    white-space: pre;
+    vertical-align: bottom;
+    width: 0;
+    animation: t-type var(--tt, 1.1s) forwards;
+    animation-timing-function: var(--tf, steps(33));
+    animation-delay: var(--d, 0.6s);
+  }
+  .caret { animation: t-blink 1s steps(1) infinite; }
+  .t-spin::before { content: '⠋'; animation: spin-ch 0.8s steps(1) infinite; }
+  .t-step::before {
+    content: '⠋';
+    animation: step-work 0.55s steps(1) forwards;
+    animation-delay: var(--d, 0s);
+  }
+  .t-shim {
+    background: linear-gradient(90deg, var(--color-text-muted) 25%, var(--color-text) 50%, var(--color-text-muted) 75%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: shim-slide 1.8s linear infinite;
+  }
+  .t-eph {
+    opacity: 0;
+    overflow: hidden;
+    animation: t-in 0.3s ease-out forwards, t-collapse 0.25s ease-in forwards;
+    animation-delay: var(--d, 0s), var(--d2, 3s);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-type { width: auto; }
+  .t-eph { display: none; }
+}
+
+@keyframes spin-ch {
+  0%  { content: '⠋'; } 10% { content: '⠙'; } 20% { content: '⠹'; } 30% { content: '⠸'; }
+  40% { content: '⠼'; } 50% { content: '⠴'; } 60% { content: '⠦'; } 70% { content: '⠧'; }
+  80% { content: '⠇'; } 90% { content: '⠏'; }
+}
+@keyframes step-work {
+  0%   { content: '⠋'; color: var(--faint); } 15%  { content: '⠙'; color: var(--faint); }
+  30%  { content: '⠹'; color: var(--faint); } 45%  { content: '⠼'; color: var(--faint); }
+  60%  { content: '⠴'; color: var(--faint); } 75%  { content: '⠦'; color: var(--faint); }
+  90%  { content: '⠇'; color: var(--faint); } 100% { content: '✓'; color: var(--color-accent); }
+}
+@keyframes shim-slide { from { background-position: 180% 0; } to { background-position: -80% 0; } }
+@keyframes t-collapse { from { opacity: 1; height: 1.85em; } to { opacity: 0; height: 0; } }
+
+@media (max-width: 640px) {
+  .term-body { font-size: 12px; }
+}
+.play-prompt { display: flex; align-items: center; gap: 9px; }
+#play-input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  color: var(--color-text); font: inherit; padding: 0; caret-color: var(--color-accent);
+}
+#play-input::placeholder { color: var(--faint); }
+</style>
+
+<script>
+(function () {
+  const term = document.querySelector('.term[data-lang]') as HTMLElement | null
+  const out = document.getElementById('play-out')
+  const input = document.getElementById('play-input') as HTMLInputElement | null
+  if (!out || !input || !term) return
+
+  const lang = term.dataset.lang === 'es' ? 'es' : 'en'
+  const tbody = input.closest('.term-body') as HTMLElement | null
+  let busy = false
+
+  const C = {
+    pm: 'var(--c-pm)', architect: 'var(--c-arch)', 'ux-ui': 'var(--c-ux)',
+    developer: 'var(--c-dev)', security: 'var(--c-sec)', qa: 'var(--c-qa)',
+  } as Record<string, string>
+
+  const STR = {
+    es: {
+      verbs: ['Pensando…', 'Leyendo el contexto…', 'Trazando la ruta…', 'Consultando la base de conocimientos…'],
+      sp: {
+        pm:        { busy: 'está explorando el código…',       done: 'historias de usuario guardadas', next: 'architect' },
+        architect: { busy: 'está evaluando alternativas…',     done: 'registro de decisión guardado',  next: 'developer' },
+        'ux-ui':   { busy: 'está mapeando los flujos…',        done: 'flujos y componentes guardados', next: 'developer' },
+        developer: { busy: '', done: '', next: 'qa' },
+        security:  { busy: 'está modelando amenazas…',         done: 'modelo de amenazas guardado',    next: 'developer' },
+        qa:        { busy: 'está derivando casos de prueba…',  done: 'plan de pruebas guardado',       next: null },
+      },
+      devInfo: {
+        'knowledge-recall':      ['memoria del equipo',    '2 decisiones previas'],
+        explore:                 ['exploración',           'dev-exploration'],
+        spec:                    ['especificación',        'dev-spec'],
+        design:                  ['diseño técnico',        'dev-design'],
+        tasks:                   ['plan de tareas',        'dev-tasks · 5 tareas'],
+        implement:               ['implementación',        '+84 −12 · 3 archivos'],
+        test:                    ['pruebas',               '6 passing'],
+        'decision-preservation': ['registro de decisiones','guardado'],
+      },
+      devFlow: '— flujo de 8 pasos',
+      devDone: '→ artefactos guardados · siguiente:',
+      routeLabel: 'Ruta recomendada',
+      routeStart: (r: string) => `Ejecutá <span class="t-cmd">/asdt-${r}</span> para empezar — aquí mismo, si querés.`,
+      nextLabel: '→ siguiente:',
+      cycleEnd: '→ ciclo completo. El equipo no olvidó nada.',
+      helpTitle: 'Comandos disponibles',
+      helpLines: [
+        '/asdt &lt;pedido&gt;  <span class="t-dim">el asesor sugiere una ruta</span>',
+        '/asdt-pm · /asdt-architect · /asdt-ux-ui',
+        '/asdt-developer · /asdt-security · /asdt-qa',
+      ],
+    },
+    en: {
+      verbs: ['Thinking…', 'Reading context…', 'Mapping the route…', 'Consulting the knowledge base…'],
+      sp: {
+        pm:        { busy: 'exploring the codebase…',      done: 'user stories saved',        next: 'architect' },
+        architect: { busy: 'evaluating approaches…',       done: 'decision record saved',      next: 'developer' },
+        'ux-ui':   { busy: 'mapping flows…',               done: 'flows and components saved', next: 'developer' },
+        developer: { busy: '', done: '', next: 'qa' },
+        security:  { busy: 'modeling threats…',            done: 'threat model saved',         next: 'developer' },
+        qa:        { busy: 'deriving test cases…',         done: 'test plan saved',            next: null },
+      },
+      devInfo: {
+        'knowledge-recall':      ['team memory',       '2 prior decisions'],
+        explore:                 ['exploration',       'dev-exploration'],
+        spec:                    ['specification',     'dev-spec'],
+        design:                  ['technical design',  'dev-design'],
+        tasks:                   ['task plan',         'dev-tasks · 5 items'],
+        implement:               ['implementation',    '+84 −12 · 3 files'],
+        test:                    ['tests',             '6 passing'],
+        'decision-preservation': ['decision record',   'saved'],
+      },
+      devFlow: '— 8-step flow',
+      devDone: '→ artifacts saved · next:',
+      routeLabel: 'Recommended route',
+      routeStart: (r: string) => `Run <span class="t-cmd">/asdt-${r}</span> to start — right here if you want.`,
+      nextLabel: '→ next:',
+      cycleEnd: '→ full cycle complete. The team forgot nothing.',
+      helpTitle: 'Available commands',
+      helpLines: [
+        '/asdt &lt;request&gt;  <span class="t-dim">advisor suggests a route</span>',
+        '/asdt-pm · /asdt-architect · /asdt-ux-ui',
+        '/asdt-developer · /asdt-security · /asdt-qa',
+      ],
+    },
+  }
+
+  const s = lang === 'es' ? STR.es : STR.en
+  const DEV_STEPS = ['knowledge-recall','explore','spec','design','tasks','implement','test','decision-preservation']
+
+  function esc(str: string) {
+    return str.replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c] ?? c))
+  }
+  function pad(str: string, n: number) { let r = str; while (r.length < n) r += ' '; return r }
+  function scroll() { if (tbody) tbody.scrollTop = tbody.scrollHeight }
+
+  function addLine(html: string) {
+    const d = document.createElement('div')
+    d.className = 't-line'
+    d.style.setProperty('--d', '0s')
+    d.innerHTML = html
+    out.appendChild(d)
+    while (out.children.length > 60) out.removeChild(out.firstChild!)
+    scroll()
+    return d
+  }
+  function addLines(arr: string[], cb?: () => void) {
+    arr.forEach((h, i) => setTimeout(() => { addLine(h); if (cb && i === arr.length - 1) cb() }, 120 + i * 220))
+  }
+  function think(innerHtml: string, ms: number, cb: () => void) {
+    const d = addLine(`  <span class="t-spin"></span> ${innerHtml} <span class="t-dim t-sec"></span>`)
+    const t0 = Date.now()
+    const sec = d.querySelector('.t-sec') as HTMLElement
+    const iv = setInterval(() => { sec.textContent = '· ' + Math.round((Date.now() - t0) / 1000) + 's' }, 1000)
+    setTimeout(() => { clearInterval(iv); d.remove(); cb(); scroll() }, ms)
+  }
+  function thinkMs() { return 1100 + Math.random() * 900 }
+  function verb() { return s.verbs[Math.floor(Math.random() * s.verbs.length)] }
+  function finish() { busy = false }
+
+  function chipRow(names: string[]) {
+    return '  ' + names.map(n => `<span style="color:${C[n]}">${n}</span>`).join(' <span class="t-dim">→</span> ')
+  }
+  function routeFor(t: string) {
+    if (/(bug|crash|error|arregla|fix|falla|rompe|corrige)/.test(t)) return ['developer','qa']
+    if (/(segur|vulnerab|amenaza|token|sesi|permis|auditor|security|threat|session|vuln)/.test(t)) return ['security','developer','qa']
+    if (/(dise[ñn]|ux|ui|pantalla|onboarding|m[óo]vil|estilo|tema|design|screen|mobile|style)/.test(t)) return ['ux-ui','developer','qa']
+    return ['pm','architect','ux-ui','developer','security','qa']
+  }
+
+  function showHelp() {
+    addLines([
+      `  <span class="t-cmd">${s.helpTitle}</span>`,
+      ...s.helpLines.map(l => `  <span class="t-mut">${l}</span>`),
+    ], finish)
+  }
+
+  function runDeveloper() {
+    addLine(`  <span style="color:${C.developer}">◆ developer</span> <span class="t-mut">${s.devFlow}</span>`)
+    let i = 0;
+    (function step() {
+      if (i >= DEV_STEPS.length) {
+        const sp = s.sp.developer
+        addLine(`  <span class="t-dim">${s.devDone}</span> <span style="color:${C.qa}">/asdt-qa</span>`)
+        finish()
+        return
+      }
+      const name = DEV_STEPS[i++]
+      const info = (s.devInfo as Record<string, string[]>)[name]
+      const d = addLine(`  <span class="t-spin"></span> <span class="t-cmd">${pad(name,22)}</span><span class="t-shim">${info[0]}</span>`)
+      setTimeout(() => {
+        d.innerHTML = `  <span class="t-acc">✓</span> <span class="t-cmd">${pad(name,22)}</span><span class="t-mut">${pad(info[0],23)}</span><span class="t-dim">${info[1]}</span>`
+        scroll()
+        setTimeout(step, 140)
+      }, 380 + Math.random() * 450)
+    })()
+  }
+
+  function runSpecialist(name: string) {
+    const sp = (s.sp as Record<string, {busy:string; done:string; next:string|null}>)[name]
+    if (!sp) { showHelp(); return }
+    if (name === 'developer') { runDeveloper(); return }
+    think(`<span style="color:${C[name]}">${name}</span> <span class="t-shim">${sp.busy}</span>`, thinkMs(), () => {
+      const arr = [`  <span class="t-acc">✓</span> <span style="color:${C[name]}">${name}</span> <span class="t-mut">— ${sp.done}</span>`]
+      if (sp.next) {
+        arr.push(`  <span class="t-dim">${s.nextLabel}</span> <span style="color:${C[sp.next]}">/asdt-${sp.next}</span>`)
+      } else {
+        arr.push(`  <span class="t-dim">${s.cycleEnd}</span>`)
+      }
+      addLines(arr, finish)
+    })
+  }
+
+  function runAdvisor(text: string) {
+    const route = routeFor(text)
+    think(`<span class="t-shim">${verb()}</span>`, thinkMs(), () => {
+      addLines([
+        `  <span class="t-cmd">${s.routeLabel}</span>`,
+        chipRow(route),
+        `  <span class="t-dim">${s.routeStart(route[0])}</span>`,
+      ], finish)
+    })
+  }
+
+  function run(cmd: string) {
+    const t = cmd.toLowerCase().trim()
+    if (t === '/help' || t === 'help' || t === '/asdt' || t === '?') { showHelp(); return }
+    if (t.startsWith('/asdt-')) { runSpecialist(t.slice(6).split(/\s/)[0]); return }
+    if (t.startsWith('/asdt ')) { runAdvisor(t.slice(6)); return }
+    if (t.startsWith('/')) { showHelp(); return }
+    runAdvisor(t)
+  }
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || busy) return
+    const v = input.value.trim()
+    if (!v) return
+    input.value = ''
+    busy = true
+    addLine(`<span class="t-acc">&gt;</span> <span class="t-cmd">${esc(v)}</span>`)
+    run(v)
+  })
+
+  const r4 = document.getElementById('ts-4') as HTMLInputElement | null
+  if (r4) {
+    r4.addEventListener('change', () => { if (r4.checked) setTimeout(() => input.focus(), 80) })
+  }
+})()
+</script>

@@ -1,0 +1,13 @@
+---
+const tag = import.meta.env.PUBLIC_RELEASE_TAG
+if (!tag) return
+---
+<a
+  href="https://github.com/vitualizz/AI-Software-Delivery-Team/releases"
+  target="_blank"
+  rel="noopener noreferrer"
+  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono border border-(--color-border) text-(--color-text-muted) hover:border-(--color-accent) hover:text-(--color-accent) transition-colors"
+>
+  <span class="size-1.5 rounded-full bg-(--color-accent)"></span>
+  {tag}
+</a>
