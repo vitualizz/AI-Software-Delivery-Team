@@ -134,7 +134,7 @@ input.addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
     e.preventDefault()
-    modal.hidden ? openModal() : closeModal()
+    if (modal.hidden) { openModal() } else { closeModal() }
   }
   if (e.key === 'Escape' && !modal.hidden) closeModal()
 })

@@ -30,7 +30,7 @@ export function FlowWalker({ flow, lang, labelNext, labelPrev, labelStep, labelO
   function handlePrev() { if (step > 0) setStep(step - 1) }
 
   return (
-    <div class="fw" style={{ '--sc': colorVar } as any}>
+    <div class="fw" style={{ '--sc': colorVar } as Record<string, string>}>
       <div class="fw-header">
         <span class="fw-counter">{labelStep} {step + 1} {labelOf} {total}</span>
         <div class="fw-nav">
