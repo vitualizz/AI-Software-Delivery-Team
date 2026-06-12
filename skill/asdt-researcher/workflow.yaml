@@ -1,0 +1,45 @@
+specialist: researcher
+steps:
+  - name: context-recall
+    skill: ../asdt-shared/skills/knowledge-recall.md
+    description: Query organizational memory for prior discovery, similar problem framings, and decisions relevant to this exploration
+    execution: inline
+
+  - name: divergent-ideation
+    skill: steps/divergent-ideation.md
+    description: Frame the problem and generate divergent candidate directions without converging or ranking
+    execution: subagent
+    model: sonnet
+    agent: analyst
+    inputs: []
+    output_topic_key: "{project}/{change}/researcher/ideation"
+    reference_skills: []
+
+  - name: feasibility-scan
+    skill: steps/feasibility-scan.md
+    description: Assess each idea for feasibility with a green/yellow/red verdict, supporting evidence, and an effort estimate
+    execution: subagent
+    model: sonnet
+    agent: analyst
+    inputs:
+      - "{project}/{change}/researcher/ideation"
+    output_topic_key: "{project}/{change}/researcher/feasibility"
+    reference_skills: []
+
+  - name: discovery-brief
+    skill: steps/discovery-brief.md
+    description: Converge to one recommended direction for PM handoff, with feasibility-grounded rationale and won't-do candidates
+    execution: subagent
+    model: sonnet
+    agent: analyst
+    inputs:
+      - "{project}/{change}/researcher/ideation"
+      - "{project}/{change}/researcher/feasibility"
+    output_topic_key: "{project}/{change}/researcher/discovery-brief"
+    reference_skills:
+      - ../asdt-shared/skills/report.md
+
+  - name: decision-preservation
+    skill: ../asdt-shared/skills/decision-preservation.md
+    description: Save a permanent organizational knowledge record of the discovery decision made during this run
+    execution: inline

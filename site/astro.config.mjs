@@ -1,11 +1,14 @@
 import { defineConfig } from 'astro/config'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
+import mdx from '@astrojs/mdx'
+import preact from '@astrojs/preact'
 
 export default defineConfig({
   site: 'https://vitualizz.github.io',
   base: '/asdt',
   output: 'static',
+  integrations: [mdx(), preact()],
   vite: {
     plugins: [tailwindcss()],
     resolve: {

@@ -74,6 +74,7 @@ When you receive a feature request:
 | **Developer** | `/asdt-developer` | Implementation planning, code generation, test generation | When the request involves writing or changing code |
 | **QA Engineer** | `/asdt-qa` | Test plans, acceptance criteria validation, edge case analysis, quality reports | When the request needs formal test coverage, acceptance criteria, or quality sign-off |
 | **Security Engineer** | `/asdt-security` | Threat modeling, OWASP review, hardening, vulnerability analysis | When the request touches authentication, authorization, data handling, or external integrations — can run independently at any time |
+| **Researcher** | `/asdt-researcher` | Problem discovery, divergent ideation, feasibility scanning, discovery briefs | When a problem or opportunity is fuzzy and needs structured exploration BEFORE requirements — runs immediately before /asdt-pm, or standalone |
 
 ---
 
@@ -276,6 +277,7 @@ Once complexity is determined, generate a `## Tailored Workflow` block for each 
 - Security: `knowledge-recall`, `platform-analysis`, `decision-preservation`
 - UX/UI: `knowledge-recall`, `platform-analysis`, `decision-preservation`
 - Developer: `knowledge-recall`, `decision-preservation`
+- Researcher: `context-recall`, `decision-preservation`
 
 **Trivial eligibility**: The `trivial` tier applies ONLY when the orchestrator independently classifies complexity as `trivial` (§9.1). It is not user-selectable. A `trivial` list is exactly the specialist's single `inputs: []` subagent step — by construction it always passes Pass 2 (no declared inputs to satisfy). If a specialist has no useful single-step output (QA), `trivial` is not eligible for that specialist — fall back to `simple` and label the block `complexity: simple`.
 
@@ -306,9 +308,12 @@ Each specialist declares its own tier→step lists inside the `## Orchestration 
 | **Architect** | `skill/asdt-architect/SKILL.md` | `load-constraints` | Yes — but at `simple`, Architect is not invoked at all |
 | **QA** | `skill/asdt-qa/SKILL.md` | — | No — falls back to `simple` |
 | **UX/UI** | `skill/asdt-ux-ui/SKILL.md` | `feature-brief` | Yes |
+| **Researcher** | `skill/asdt-researcher/SKILL.md` | `divergent-ideation` | Yes |
 | **Security** | `skill/asdt-security/SKILL.md` | — | N/A — risk-surface gated, not complexity gated |
 
 > **Adding a new specialist**: declare its tier→step mapping inside the `## Orchestration Plan` of its own `SKILL.md`, then add one row to this table. No other changes to this file are required for the tier mapping.
+
+> **Parity check**: specialist registration is manually mirrored in exactly 3 places — the §5 Specialist Registry, this §9.2 per-specialist table (plus its inline-steps list), and `skill/asdt-init/agents-template.md`'s ASDT Specialists table. Keep all 3 in sync when adding or renaming a specialist. The `name:` fields in each specialist's `workflow.yaml` are authoritative per the two-pass Step List Validation above.
 
 **Tailored Workflow block format:**
 

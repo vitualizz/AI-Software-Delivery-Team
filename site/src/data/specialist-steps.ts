@@ -17,6 +17,44 @@ export interface SpecialistConfig {
 
 // Source of truth: skill/asdt-{id}/SKILL.md and steps/*.md files
 export const specialistSteps: Record<string, SpecialistConfig> = {
+  researcher: {
+    color: '--c-res',
+    tierType: 'complexity',
+    tiers: {
+      trivial:  ['context-recall', 'divergent-ideation', 'decision-preservation'],
+      simple:   ['context-recall', 'divergent-ideation', 'feasibility-scan', 'discovery-brief', 'decision-preservation'],
+      moderate: ['context-recall', 'divergent-ideation', 'feasibility-scan', 'discovery-brief', 'decision-preservation'],
+      complex:  ['context-recall', 'divergent-ideation', 'feasibility-scan', 'discovery-brief', 'decision-preservation'],
+    },
+    steps: {
+      'context-recall': {
+        id: 'context-recall',
+        purpose: 'Search organizational memory for prior discovery, related decisions, and known constraints before ideating',
+        produces: 'context (inline)',
+      },
+      'divergent-ideation': {
+        id: 'divergent-ideation',
+        purpose: 'Frame the problem and generate divergent candidate directions — deliberately generative, never selective',
+        produces: 'researcher/ideation',
+      },
+      'feasibility-scan': {
+        id: 'feasibility-scan',
+        purpose: 'Assess each idea with a green/yellow/red feasibility verdict, supporting evidence, and effort estimate',
+        produces: 'researcher/feasibility',
+      },
+      'discovery-brief': {
+        id: 'discovery-brief',
+        purpose: "Converge to ONE recommended direction with rationale; won't-do candidates seed PM's out-of-scope list",
+        produces: 'researcher/discovery-brief',
+      },
+      'decision-preservation': {
+        id: 'decision-preservation',
+        purpose: "Preserve the chosen direction as permanent organizational knowledge via the brief's summary field",
+        produces: 'summary (inline)',
+      },
+    },
+  },
+
   pm: {
     color: '--c-pm',
     tierType: 'complexity',

@@ -1,6 +1,7 @@
 ---
 import type { UIStrings } from '@i18n/types'
 import { getBaseHref } from '@i18n/utils'
+import { ASDT_REPO, ASDT_LICENSE } from '@data/urls'
 
 interface Props { t: UIStrings }
 const { t } = Astro.props
@@ -10,8 +11,8 @@ const { t } = Astro.props
     <p class="text-sm text-(--color-text-muted)">{t.footer.tagline}</p>
     <nav aria-label="Footer navigation" class="flex items-center gap-6 text-sm">
       <a href={getBaseHref('/docs/getting-started')} class="text-(--color-text-muted) hover:text-(--color-text) transition-colors">{t.footer.docsLabel}</a>
-      <a href="https://github.com/vitualizz/AI-Software-Delivery-Team" target="_blank" rel="noopener noreferrer" class="text-(--color-text-muted) hover:text-(--color-text) transition-colors">{t.footer.githubLabel}</a>
-      <a href="https://github.com/vitualizz/AI-Software-Delivery-Team/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" class="text-(--color-text-muted) hover:text-(--color-text) transition-colors">{t.footer.licenseLabel}</a>
+      <a href={ASDT_REPO} target="_blank" rel="noopener noreferrer" class="text-(--color-text-muted) hover:text-(--color-text) transition-colors">{t.footer.githubLabel}</a>
+      <a href={ASDT_LICENSE} target="_blank" rel="noopener noreferrer" class="text-(--color-text-muted) hover:text-(--color-text) transition-colors">{t.footer.licenseLabel}</a>
     </nav>
     <p class="credit">{t.footer.credit}</p>
   </div>

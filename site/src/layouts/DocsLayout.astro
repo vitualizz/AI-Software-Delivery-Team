@@ -3,8 +3,11 @@ import BaseLayout from '@layouts/BaseLayout.astro'
 import FallbackNotice from '@components/FallbackNotice.astro'
 import DocsSearch from '@components/DocsSearch.astro'
 import StepFlow from '@components/StepFlow.astro'
+import PipelinePositionBadge from '@components/PipelinePositionBadge.astro'
+import ArtifactFlowTrace from '@components/ArtifactFlowTrace.astro'
 import { useTranslations, getBaseHref } from '@i18n/utils'
 import type { Locale } from '@i18n/utils'
+import type { SpecialistId } from '@data/artifact-graph'
 import { getCollection } from 'astro:content'
 
 interface Heading {
@@ -37,6 +40,8 @@ const slugToLabel: Record<string, string> = {
   'specialists/qa': 'QA Engineer',
   'specialists/security': 'Security',
   'specialists/ux-ui': 'UX/UI Designer',
+  'specialists/researcher': 'Researcher',
+  skills: t.docs.skillsIndex,
   commands: t.docs.commands,
   'user-flows': t.docs.userFlows,
 }
@@ -44,7 +49,7 @@ const slugToLabel: Record<string, string> = {
 const navGroups = [
   { label: isEs ? 'Empezar' : 'Getting Started', slugs: ['getting-started', 'configuration'] },
   { label: isEs ? 'Conceptos' : 'Concepts', slugs: ['how-it-works', 'specialist-model', 'memory-and-engram'] },
-  { label: isEs ? 'Especialistas' : 'Specialists', slugs: ['specialists/pm', 'specialists/architect', 'specialists/developer', 'specialists/qa', 'specialists/security', 'specialists/ux-ui'] },
+  { label: isEs ? 'Especialistas' : 'Specialists', slugs: ['skills', 'specialists/pm', 'specialists/architect', 'specialists/developer', 'specialists/qa', 'specialists/security', 'specialists/ux-ui', 'specialists/researcher'] },
   { label: isEs ? 'Referencia' : 'Reference', slugs: ['commands', 'user-flows'] },
   { label: isEs ? 'Contribuir' : 'Contributing', slugs: ['contributing', 'development'] },
 ]
@@ -123,6 +128,21 @@ function docHref(slug: string) {
         />
       )}
       <p class="crumb">Docs <span aria-hidden="true">/</span> <b>{currentLabel}</b></p>
+      {specialistId && (
+        <PipelinePositionBadge
+          specialistId={specialistId as SpecialistId}
+          lang={lang}
+          label={t.docs.pipelinePosition}
+        />
+      )}
+      {specialistId && (
+        <ArtifactFlowTrace
+          specialistId={specialistId as SpecialistId}
+          lang={lang}
+          labelReads={t.docs.artifactReads}
+          labelWrites={t.docs.artifactWrites}
+        />
+      )}
       <slot />
 
       {specialistId && (

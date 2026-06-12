@@ -56,7 +56,7 @@ El Developer lee los artefactos del Arquitecto desde la base de conocimiento. No
 
 ## Memoria y continuidad
 
-ASDT usa un memory provider para persistir artefactos entre especialistas y a través de sesiones. Un memory provider es **requerido** para que el pipeline funcione. La implementación por defecto es [Engram](https://github.com/vitualizz/AI-Software-Delivery-Team). Más providers están planificados.
+ASDT usa un memory provider para persistir artefactos entre especialistas y a través de sesiones. Un memory provider es **requerido** para que el pipeline funcione. La implementación por defecto es [Engram](https://github.com/Gentleman-Programming/engram). Más providers están planificados.
 
 ## Asistentes de IA compatibles
 

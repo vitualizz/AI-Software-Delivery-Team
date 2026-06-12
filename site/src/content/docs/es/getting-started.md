@@ -12,7 +12,7 @@ locale: es
 Antes de usar ASDT necesitás:
 
 - **Claude Code** u **OpenCode** — instalado y autenticado
-- **Un memory provider** — requerido para persistencia entre sesiones (por defecto: [Engram](https://github.com/vitualizz/AI-Software-Delivery-Team))
+- **Un memory provider** — requerido para persistencia entre sesiones (por defecto: [Engram](https://github.com/Gentleman-Programming/engram))
 - Una terminal (bash o zsh)
 
 > **¿Compilando desde el código fuente?** Se requiere Go 1.22+. El instalador de una línea descarga un binario precompilado — no necesitás compilador.
@@ -20,7 +20,7 @@ Antes de usar ASDT necesitás:
 ## Instalación
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/vitualizz/AI-Software-Delivery-Team/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vitualizz/asdt/main/install.sh | bash
 ```
 
 Descarga el último binario precompilado para tu plataforma e instala en `~/.local/bin/`.

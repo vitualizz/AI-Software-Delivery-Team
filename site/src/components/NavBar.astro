@@ -5,6 +5,7 @@ import LogoDots from '@components/LogoDots.astro'
 import { getBaseHref } from '@i18n/utils'
 import type { Locale } from '@i18n/utils'
 import type { UIStrings } from '@i18n/types'
+import { ASDT_REPO } from '@data/urls'
 
 interface Props { lang: Locale; t: UIStrings; currentPath: string }
 const { lang, t, currentPath } = Astro.props
@@ -17,10 +18,10 @@ const isEs = lang === 'es'
       {t.nav.home}
     </a>
     <nav class="nav-links" aria-label={t.a11y.skipToContent}>
-      <a href="#equipo" class="hidden md:block">{t.nav.specialists}</a>
-      <a href="#como-funciona" class="hidden md:block">{t.nav.howItWorks}</a>
+      <a href={getBaseHref('/#equipo')} class="hidden md:block">{t.nav.specialists}</a>
+      <a href={getBaseHref('/#como-funciona')} class="hidden md:block">{t.nav.howItWorks}</a>
       <a href={getBaseHref('/docs/getting-started')}>{t.nav.docs}</a>
-      <a class="star-link" href="https://github.com/vitualizz/AI-Software-Delivery-Team" target="_blank" rel="noopener noreferrer">
+      <a class="star-link" href={ASDT_REPO} target="_blank" rel="noopener noreferrer">
         <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
         {isEs ? 'Star en GitHub' : 'Star on GitHub'}
       </a>

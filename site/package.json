@@ -17,11 +17,14 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@astrojs/mdx": "^6.0.3",
+    "@astrojs/preact": "^5.1.5",
     "@fontsource-variable/jetbrains-mono": "^5.2.8",
     "@fontsource-variable/space-grotesk": "^5.2.10",
     "@fontsource/instrument-sans": "^5.2.8",
     "astro": "^6.4.6",
-    "fuse.js": "^7.4.2"
+    "fuse.js": "^7.4.2",
+    "preact": "^10.29.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "latest",

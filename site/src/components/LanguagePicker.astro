@@ -14,6 +14,7 @@ const esPath = getLocalePath(canonical, 'es')
 <nav aria-label={label} class="flex items-center gap-1 text-xs font-mono">
   <a
     href={enPath}
+    onclick="localStorage.setItem('asdt-lang', 'en')"
     aria-current={lang === 'en' ? 'true' : undefined}
     class:list={[
       'px-2 py-1 rounded transition-colors',
@@ -25,6 +26,7 @@ const esPath = getLocalePath(canonical, 'es')
   <span class="text-(--color-border)">|</span>
   <a
     href={esPath}
+    onclick="localStorage.setItem('asdt-lang', 'es')"
     aria-current={lang === 'es' ? 'true' : undefined}
     class:list={[
       'px-2 py-1 rounded transition-colors',

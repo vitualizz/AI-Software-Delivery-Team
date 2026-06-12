@@ -27,6 +27,11 @@ Any step that makes an architectural, UX, security, or quality **decision**:
    - Do not blindly repeat prior decisions — evaluate whether they still apply.
 4. **If absent**, proceed normally — memory recall is best-effort and non-blocking.
 
+**Soft recall hint**: a prior `researcher/discovery-brief` (topic_key
+`{project}/{change}/researcher/discovery-brief`) MAY be recalled when a Researcher
+handoff preceded this run — it gives richer context, but it is NOT a required
+input.
+
 ## Context Budget
 
 Organizational Context block: **max 300 tokens** (top 3 records only).

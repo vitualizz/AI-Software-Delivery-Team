@@ -16,6 +16,8 @@
 | [ADR-012](ADR-012-astro-site-github-pages.md) | In-Repo Astro Site under site/ Deployed via GitHub Pages Actions Mode | Active |
 | [ADR-013](ADR-013-skill-only-context-detection.md) | Skill-Only Context Detection for asdt-init | Active |
 | [ADR-014](ADR-014-skill-md-self-load-inline-gate.md) | SKILL.md Self-Load of specialist-header + Inline Orchestrator Gate | Active |
+| [ADR-015](ADR-015-init-delegation-conformance.md) | Make asdt-init Delegation Conformant via a Net-New workflow.yaml and an Explicit analyst Default | Accepted — amended by ADR-016 |
+| [ADR-016](ADR-016-init-empowerment-researcher-specialist.md) | Init Empowerment: Three-Step Init Flow and the Researcher Specialist | Active |
 
 ## Recommended Reading Order
 

@@ -39,6 +39,7 @@
   --c-qa:   oklch(0.76 0.145 155);
   --c-sec:  oklch(0.72 0.145 25);
   --c-ux:   oklch(0.75 0.145 340);
+  --c-res:  oklch(0.75 0.145 195);
 }
 
 :root {
@@ -63,6 +64,7 @@
   --c-qa:   oklch(0.76 0.145 155);
   --c-sec:  oklch(0.72 0.145 25);
   --c-ux:   oklch(0.75 0.145 340);
+  --c-res:  oklch(0.75 0.145 195);
 
   --tint-h: 285;
   --tint-c: 0.012;
@@ -90,6 +92,7 @@
   --c-qa:   oklch(0.55 0.13 155);
   --c-sec:  oklch(0.54 0.13 25);
   --c-ux:   oklch(0.54 0.13 340);
+  --c-res:  oklch(0.54 0.13 195);
 }
 
 * {
@@ -245,4 +248,5 @@ html[data-theme='light'] .vs-asdt .vs-item p { color: oklch(0.30 0.012 285); }
   --c-qa:   oklch(0.76 0.145 155);
   --c-sec:  oklch(0.72 0.145 25);
   --c-ux:   oklch(0.75 0.145 340);
+  --c-res:  oklch(0.75 0.145 195);
 }

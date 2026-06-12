@@ -16,61 +16,54 @@ Initialize ASDT for the current project. Detect the project stack, collect confi
 ## Prerequisites
 None — this is the setup step. Run this before any other ASDT specialist.
 
+## Orchestration Plan
+
+**asdt-init is STANDALONE.** It is a user-invocable setup command, deliberately
+NOT registered in `skill/SKILL.md` §9.2 routing — no feature request ever routes
+to setup, so the meta-orchestrator has nothing to route here (per ADR-016). Do
+not "fix" this omission. init has NO complexity tiers and a fixed 3-step flow;
+there is no tier→step table.
+
+| Step | File | Execution | Reads | Writes |
+|------|------|-----------|-------|--------|
+| knowledge-gate | *(inline — no step file)* | inline | *(orchestrator's own tool list)* | *(no artifact — Engram presence gate)* |
+| explore | steps/explore.md | subagent | *(raw project tree — `inputs: []`)* | `init/stack-detection` |
+| clarify | *(inline — no step file)* | inline | `init/stack-detection.ambiguities[]` | *(no artifact — injects `answers{}` into write's prompt)* |
+| write | steps/write.md | subagent | `init/stack-detection` + `### CLARIFY ANSWERS` | `init/write-summary` |
+
+Step names byte-match `workflow.yaml`; when they differ, `workflow.yaml` is
+authoritative.
+
 ## Orchestration
 
-This is a light, mostly-mechanical flow — but it has one gate only the orchestrator can pass correctly, and everything downstream depends on it.
+This is a light flow — but it has one gate only the orchestrator can pass correctly, and everything downstream depends on it.
 
-**Resolve Engram presence yourself, first, before delegating anything** (Step 2's detection). "Does THIS session have Engram's memory tools" is a question about the orchestrator's own tool list — the one the user is actually relying on for every other specialist. A sub-agent has its own tool list (narrower for specialized agent types, full for `general-purpose`); asking it risks a false "absent" when Engram is actually present in the session that matters. It costs nothing to check yourself — you're inspecting your own tools, not running commands or reading files.
+**Resolve Engram presence yourself, first, before delegating anything** (the `knowledge-gate` step / Step 2's detection). "Does THIS session have Engram's memory tools" is a question about the orchestrator's own tool list — the one the user is actually relying on for every other specialist. A sub-agent has its own tool list (narrower for specialized agent types, full for `general-purpose`); asking it risks a false "absent" when Engram is actually present in the session that matters. It costs nothing to check yourself — you're inspecting your own tools, not running commands or reading files. This gate is undelegatable; it stays inline with you.
 
 - **Absent** → stop right here and tell the user, exactly as Step 2 describes. Nothing downstream can run without it — don't launch a sub-agent only to have it discover the same dead end.
-- **Present** → delegate the rest to ONE sub-agent, passing "Engram confirmed present" into its prompt as an established fact:
-  - Stack detection (Step 1)
-  - The idempotency check and file writes (Step 3)
-  - Project context detection (Step 4)
-  - The confirmation message (Step 6)
+- **Present** → run the 3-step flow:
+  - **explore** (subagent, `agent: analyst`) — launch `steps/explore.md` via your native delegation primitive, passing "Engram confirmed present" into its prompt as an established fact. It detects the stack and context, flags `ambiguities[]`, and returns `init/stack-detection`. It writes NO files.
+  - **clarify** (inline — your own context) — resolve `stack-detection.ambiguities[]` with the human, ONE question at a time, then compose the `### CLARIFY ANSWERS` block (see the clarify contract in the Workflow below).
+  - **write** (subagent, `agent: builder`) — launch `steps/write.md`, injecting both `init/stack-detection` and the `### CLARIFY ANSWERS` block. It writes the four `.asdt` files and returns `init/write-summary`.
 
-It returns a short summary of what it found and wrote — keeping the bash output, file reads, and intermediate reasoning out of your main context, which is the whole point of routing work through ASDT specialists in the first place.
+**PRE-EXPLORE recalibration gate.** Before launching explore, check for an
+existing `.asdt/config.yaml`. If it exists, this project was already
+initialized — resolve recalibrate-vs-leave WITH THE USER first. Fail fast: never
+run detection only to discard it. If the user chooses "leave as-is", stop without
+launching explore. Only proceed to explore once the user has chosen to
+recalibrate (a fresh setup with no existing config proceeds directly).
+
+Routing work through sub-agents keeps the bash output, file reads, and intermediate reasoning out of your main context — which is the whole point of the specialist model.
 
 ## Workflow
 
-### Step 1 — Detect project stack
-Run ONE bounded command scanning for stack marker files down to depth 3 — do not eyeball a directory listing or infer from visible files. The result must be identical no matter which model or session runs it. The exclusion list and the result cap are part of the contract: they keep the output size independent of repo size.
+### Step 1 — Detect project stack *(in `explore`)*
 
-```
-fd -d 3 -t f -H '^(go\.mod|package\.json|Cargo\.toml|pyproject\.toml|requirements\.txt|Gemfile)$' . \
-  -E node_modules -E .git -E vendor -E dist -E build -E .venv -E target \
-  | awk -F/ '{printf "%d %s\n", NF, $0}' | LC_ALL=C sort -k1,1n -k2 | cut -d' ' -f2- | head -20
-```
-
-If `fd` is not available, run the equivalent `find` fallback — same exclusions, same ordering pipeline:
-
-```
-find . -maxdepth 3 \( -name node_modules -o -name .git -o -name vendor -o -name dist -o -name build -o -name .venv -o -name target \) -prune \
-  -o -type f \( -name go.mod -o -name package.json -o -name Cargo.toml -o -name pyproject.toml -o -name requirements.txt -o -name Gemfile \) -print \
-  | awk -F/ '{printf "%d %s\n", NF, $0}' | LC_ALL=C sort -k1,1n -k2 | cut -d' ' -f2- | head -20
-```
-
-The `awk | sort | cut` pipeline orders results deterministically: shallowest path first, then lexicographic (`LC_ALL=C`). The cap is the first 20 marker paths.
-
-Map each marker to a canonical language id — no judgment calls:
-
-| Marker file | Language id |
-|---|---|
-| `go.mod` | `go` |
-| `package.json` | `node` |
-| `Cargo.toml` | `rust` |
-| `pyproject.toml` or `requirements.txt` | `python` |
-| `Gemfile` | `ruby` |
-
-From the ordered marker list, derive — mechanically, first occurrence wins:
-
-- **`detected_stack`** — the language ids in scan order, deduplicated. A project can match more than one stack (e.g. a Python `backend/` with a Node `frontend/`).
-- **Primary language** — the first entry of `detected_stack`.
-- **Language root `{lang_root}`** — for each language, the directory containing its first marker. Step 4's probes run against these roots, not blindly against the repo root — a marker in `backend/` means that language's evidence lives in `backend/`.
-
-If nothing matches, record an empty stack — do not guess a stack from other files.
-
-List the detected languages and their roots to the user.
+The marker-scan mechanics — the bounded `fd`/`find` pipeline, its exclusions and
+deterministic ordering, the result cap, the marker→language mapping table, and
+the `detected_stack` / primary-language / `{lang_root}` derivation — live in
+**`steps/explore.md`**. The explore sub-agent runs them and returns
+`init/stack-detection`. Do not duplicate the pipeline here.
 
 ### Step 2 — Detect the memory provider
 
@@ -79,50 +72,48 @@ List the detected languages and their roots to the user.
 - If they're present → Engram is installed and reachable. Tell the user so and continue.
 - If they're absent → tell the user Engram is required for ASDT's cross-session memory and is not reachable in this session, explain how to install/connect it, and STOP. Do not write `.asdt/config.yaml` with `provider: engram` when the provider isn't actually present — that would silently point every future specialist at a memory backend that doesn't exist.
 
-### Step 3 — Write configuration files
+### Step 2.5 — Clarify *(inline — your own context, between explore and write)*
 
-`.asdt/` holds static reference data — bootstrapped once and refreshed only on a deliberate recalibration, never per-change. It is not where in-progress work state lives.
+explore returns `init/stack-detection` carrying `ambiguities[]` — one entry per
+low/medium-confidence or genuinely ambiguous field. clarify is where you, the
+orchestrator, resolve them WITH the human. This step runs inline because only an
+inline step can pause for a question; the `write` sub-agent cannot.
 
-**Check for an existing setup first — never overwrite silently.** Look for `.asdt/config.yaml`:
-- Absent → this is a first-time setup. Proceed to create the files below.
-- Present → this project was already initialized. List what already exists under `.asdt/` (`config.yaml`, and any of `platform.yaml` / `platform-summary.yaml` found under `.asdt/knowledge/`) and ask whether the user wants to recalibrate — re-scan and overwrite — or leave it as-is. Re-running init is for refreshing stale base info, not for silently discarding a working setup.
+The inline contract:
 
-Create `.asdt/config.yaml`:
-```yaml
-memory:
-  provider: engram
-```
+1. For each `Ambiguity` in `stack-detection.ambiguities[]`, ask the user ONE
+   question at a time — the same one-question-per-field discipline §4.3 uses for
+   recalibration. Offer `options` when present; otherwise take a free-form value.
+2. Collect the answers into `answers{}` (field → value).
+3. Compose the `### CLARIFY ANSWERS` block and inject it into write's prompt —
+   it is REQUIRED even when there was nothing to ask:
 
-Create `.asdt/knowledge/platform.yaml`. Populate only what a single bounded command can determine deterministically — deeper analysis (naming conventions, architectural patterns) needs to sample file contents and is a different cost profile; it belongs to a dedicated future step, not to init:
+   ```
+   ### CLARIFY ANSWERS
+   answers: { field: value, ... }     # {} when nothing was asked
+   skipped: true|false
+   blocking_open_items: []
+   ```
 
-```yaml
-schema_version: "1"
-scanned_at: {current UTC timestamp, ISO 8601}
-detected_stack: {list from Step 1}
-conventions:
-  file_structure: {one-line description, derived below}
-design_fingerprint: {}
-```
+4. **Non-interactive harness** (no way to ask the human): SKIP the questions. For
+   each ambiguity, if `skippable: true` apply its `default` (recorded later as
+   `origin: default`); if `skippable: false` add it to `blocking_open_items[]`.
+   Set `skipped: true`.
+5. **User abort**: if the user cancels, do NOT launch write — no files are
+   written.
 
-To derive `conventions.file_structure`, run ONE bounded command checking for well-known top-level directories — never walk the full tree, that breaks the "same output size regardless of repo size" guarantee:
+The `### CLARIFY ANSWERS` block is the only thing the inline clarify step
+produces; it carries no artifact of its own.
 
-```
-fd -d 1 -t d -H '^(cmd|internal|pkg|src|app|lib|components|pages|tests|spec|crates|scripts)$' .
-```
+### Step 3 — Write configuration files *(in `write`)*
 
-Compose one short, factual sentence from the matches (e.g. `"cmd/ for binaries, internal/ for private packages"`). No matches → leave it `""` — don't invent a convention.
-
-Leave `design_fingerprint: {}`. Identifying architectural patterns means sampling file contents, not checking presence — out of scope for init.
-
-Create `.asdt/knowledge/platform-summary.yaml` — derived FROM the data above, never re-analyzed from scratch:
-
-```yaml
-schema_version: "1"
-stack: {detected_stack}
-file_structure: {conventions.file_structure}
-```
-
-Both files stay small and bounded: their size grows with the number of detected stacks, never with repo size.
+The file-writing mechanics — the `.asdt/config.yaml` (`memory.provider: engram`)
+write, the `platform.yaml` scan and `conventions.file_structure` derivation, the
+`platform-summary.yaml` derived FROM `platform.yaml`, and the
+`project-context.yaml` build from `stack-detection.fields` + applied answers —
+live in **`steps/write.md`**, along with the idempotency check, the
+`source: manual` preservation rule, and the halt contract. The write sub-agent
+owns all four file writes. Do not duplicate the write mechanics here.
 
 ### Step 4 — Detect project context
 
@@ -135,88 +126,17 @@ Look for `{root}/knowledge/project-context.yaml`:
 - **Absent** → fresh detection path (§4.2).
 - **Present** → recalibration path (§4.3).
 
-#### 4.2 Fresh detection
+#### 4.2 Fresh detection *(in `explore`)*
 
-The sub-agent runs the probes below as bounded shell commands and writes the result to `{root}/knowledge/project-context.yaml` itself — plain file I/O, no library, no binary (per ADR-013: skills must run on any machine where they are installed, with no dependency on this repo's Go code).
-
-Every probe has the same shape: **one bounded command, one exact mapping table, first matching row wins, no model judgment**. The tables are uniform across languages — supporting a new language means adding rows, never adding logic. If no row matches, the field is `value="unknown"`, `source=inferred`, `confidence=low`. A probe error is non-fatal — record the fallback for that field and continue.
-
-Inputs from Step 1: `detected_stack`, the primary language, and each language's `{lang_root}`. Probes that inspect language evidence run against the primary language's `{lang_root}` — not blindly against the repo root.
-
-**Probe: `is_monorepo`**
-
-Check workspace markers at the repo root with one compound command:
-
-```
-ls go.work pnpm-workspace.yaml 2>/dev/null; grep -l '^\[workspace\]' Cargo.toml 2>/dev/null
-```
-
-| Evidence (first match wins) | Value | Source | Confidence |
-|---|---|---|---|
-| Any workspace marker found (`go.work`, `pnpm-workspace.yaml`, `[workspace]` in root `Cargo.toml`) | `true` | detected | high |
-| Step 1 found markers for ≥ 2 distinct languages in ≥ 2 distinct directories at depth ≤ 2 (reuse Step 1's output — never rescan) | `true` | detected | medium |
-| Neither | `false` | detected | medium *(negative evidence — see §4.4)* |
-
-**Probe: `test_runner`** — each check is one `test -f` or one `grep -q` against the primary language's `{lang_root}`; for `scripts.test`, read `{lang_root}/package.json` and take the value of `.scripts.test`:
-
-| Lang | Check (in table order) | Value | Confidence |
-|---|---|---|---|
-| go | `{lang_root}/Makefile` contains `go test` | `make test` | medium |
-| go | `{lang_root}/go.mod` exists | `go test ./...` | high |
-| node | `package.json` `.scripts.test` is non-empty | that script string | high |
-| node | `{lang_root}/jest.config.js` exists | `jest` | medium |
-| node | `{lang_root}/vitest.config.ts` exists | `vitest` | medium |
-| python | `{lang_root}/pytest.ini` exists OR `pyproject.toml` contains `[tool.pytest` | `pytest` | high |
-| python | `pytest` appears in `pyproject.toml` or `requirements.txt` | `pytest` | medium |
-| ruby | `{lang_root}/Gemfile` contains `rspec` | `bundle exec rspec` | high |
-| ruby | `{lang_root}/.rspec` exists | `bundle exec rspec` | medium |
-| rust | `{lang_root}/Cargo.toml` exists | `cargo test` | high |
-
-All table matches are `source=detected`.
-
-**Probe: `naming_style`** — sample up to 8 source files (≤ 64 KB each) under the primary language's `{lang_root}`, depth ≤ 3, deterministic order:
-
-```
-fd -d 3 -t f -S -64k {extension flags from table} . {lang_root} | LC_ALL=C sort | head -8
-```
-
-(`find` fallback: `-maxdepth 3 -type f -size -65536c` with the same `-name` patterns, then the same `sort | head` pipeline.)
-
-A file **conforms** when it matches the positive regex (`grep -qE`) and does not match the violation regex. Conforming ratio maps to confidence: ≥ 75% high, 50–74% medium, < 50% → `unknown`/inferred/low. At ≥ 50% the table value is emitted with `source=detected`.
-
-| Lang | Extensions | Positive regex | Violation regex | Value when dominant |
-|---|---|---|---|---|
-| go | `.go` | `^(func\|type\|var\|const) [A-Z]` | `^(func\|type\|var\|const) [a-z]` | `snake_case filenames, PascalCase exported symbols` |
-| node | `.ts` `.tsx` | `^export (function\|class\|const\|interface) [A-Z]` | `^export (function\|const) [a-z]` | `PascalCase exported symbols` |
-| python | `.py` | `^(def [a-z_]\|class [A-Z])` | `^def [A-Z]` | `snake_case functions, PascalCase classes` |
-| ruby | `.rb` | `^( *def [a-z_]\|class [A-Z]\|module [A-Z])` | `^ *def [A-Z]` | `snake_case methods, PascalCase classes` |
-| rust | `.rs` | `^(pub )?(fn [a-z_]\|struct [A-Z]\|enum [A-Z])` | `^(pub )?fn [A-Z]` | `snake_case functions, PascalCase types` |
-
-No source files sampled → `unknown`/inferred/low.
-
-**Probe: `architectural_style`** — list top-level directories with one command (`fd -d 1 -t d . {dir}` or `find {dir} -maxdepth 1 -type d`), first at the repo root; if no row matches there and the primary `{lang_root}` differs from the root, evaluate the same table once more at `{lang_root}`:
-
-| Layout evidence (first match wins) | Value | Source | Confidence |
-|---|---|---|---|
-| `cmd/` AND `internal/` present | `hexagonal` | detected | high |
-| `src/` containing `controllers/`, `models/`, `views/` | `mvc` | detected | high |
-| `src/` containing `features/` or `modules/` | `modular` | detected | medium |
-| `src/` (no sub-pattern matched) | `layered` | detected | medium |
-| `lib/` present (no `src/`) | `layered` | detected | medium |
-| No match at root nor at `{lang_root}` | `unknown` | inferred | low |
-
-**Output** — the sub-agent writes `{root}/knowledge/project-context.yaml` directly:
-
-```yaml
-schema_version: "1"
-detected_at: {current UTC timestamp, ISO 8601}
-is_monorepo: { value: "…", source: "…", confidence: "…" }
-test_runner: { value: "…", source: "…", confidence: "…" }
-naming_style: { value: "…", source: "…", confidence: "…" }
-architectural_style: { value: "…", source: "…", confidence: "…" }
-```
-
-The sub-agent returns a `DetectionSummary` alongside the Step 3 output, listing each detected field, its value, source, and confidence.
+The four probes — `is_monorepo`, `test_runner`, `naming_style`,
+`architectural_style` — each with its bounded command and exact mapping table,
+plus the "one bounded command, first matching row wins, no model judgment" rule
+and the per-field `FieldValue` shape, live in **`steps/explore.md`** (§4 probes).
+explore detects every field, attaches `source`/`confidence`, and emits an
+`Ambiguity` for any low/medium-confidence field. The `write` sub-agent applies
+the clarify answers on top and writes `project-context.yaml`; explore itself
+writes nothing. Per ADR-013, all probes run as bounded shell commands with no
+dependency on this repo's Go code.
 
 #### 4.3 Recalibration (project-context.yaml already exists)
 

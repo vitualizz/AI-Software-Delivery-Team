@@ -2,6 +2,7 @@
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
   "compilerOptions": {
+    "jsxImportSource": "preact",
     "baseUrl": ".",
     "paths": {
       "@components/*": ["src/components/*"],

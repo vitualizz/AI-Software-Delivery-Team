@@ -1,0 +1,31 @@
+specialist: asdt-init
+steps:
+  - name: knowledge-gate
+    description: Orchestrator self-checks its OWN tool list for Engram mem_* tools before any delegation — undelegatable presence gate; nothing downstream runs without it
+    execution: inline
+
+  - name: explore
+    skill: steps/explore.md
+    description: Scan stack marker files and run bounded context probes; emit detected stack, per-field confidence, and ambiguities — never guesses
+    execution: subagent
+    model: haiku
+    agent: analyst
+    inputs: []
+    output_topic_key: "{project}/{change}/init/stack-detection"
+    reference_skills: []
+
+  - name: clarify
+    description: Resolve stack-detection.ambiguities[] one question at a time; inject the resulting answers{} into write's prompt; non-interactive harness → per-field default for skippable, open_item otherwise
+    execution: inline
+
+  - name: write
+    skill: steps/write.md
+    description: Write the four .asdt files from stack-detection plus the injected clarify answers; preserve source:manual fields; halt on absent CLARIFY ANSWERS block or blocking open items
+    execution: subagent
+    model: sonnet
+    agent: builder
+    inputs:
+      - "{project}/{change}/init/stack-detection"
+    output_topic_key: "{project}/{change}/init/write-summary"
+    reference_skills:
+      - ../asdt-shared/skills/report.md

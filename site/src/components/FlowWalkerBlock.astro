@@ -1,0 +1,136 @@
+---
+import { FlowWalker } from './FlowWalker'
+import type { PipelineFlow } from '@data/pipeline-flow-steps'
+import type { Locale } from '@i18n/utils'
+import { useTranslations } from '@i18n/utils'
+
+interface Props {
+  flow: PipelineFlow
+  lang: Locale
+}
+const { flow, lang } = Astro.props
+const t = useTranslations(lang)
+---
+
+<div class="fwb-wrap">
+  <FlowWalker
+    client:visible
+    flow={flow}
+    lang={lang}
+    labelNext={t.docs.flowNext}
+    labelPrev={t.docs.flowPrev}
+    labelStep={t.docs.flowStep}
+    labelOf={t.docs.flowOf}
+  />
+</div>
+
+<style>
+.fwb-wrap :global(.fw) {
+  margin: 32px 0;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  overflow: hidden;
+  background: oklch(from var(--sc) l c h / 0.04);
+}
+
+.fwb-wrap :global(.fw-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-soft);
+  background: oklch(from var(--sc) l c h / 0.06);
+}
+
+.fwb-wrap :global(.fw-counter) {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.fwb-wrap :global(.fw-nav) {
+  display: flex;
+  gap: 6px;
+}
+
+.fwb-wrap :global(.fw-btn) {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  border: 1px solid var(--border-soft);
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.fwb-wrap :global(.fw-btn:hover:not(:disabled)) {
+  background: oklch(from var(--sc) l c h / 0.10);
+  border-color: oklch(from var(--sc) l c h / 0.40);
+}
+
+.fwb-wrap :global(.fw-btn:disabled) {
+  opacity: 0.30;
+  cursor: default;
+}
+
+.fwb-wrap :global(.fw-command) {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--sc);
+  background: oklch(from var(--sc) l c h / 0.08);
+  padding: 14px 18px;
+  border-bottom: 1px solid oklch(from var(--border-soft) l c h / 0.5);
+}
+
+.fwb-wrap :global(.fw-desc) {
+  font-size: 13.5px;
+  color: oklch(0.86 0.008 285);
+  line-height: 1.6;
+  padding: 16px 18px;
+  margin: 0;
+  border-bottom: 1px solid oklch(from var(--border-soft) l c h / 0.5);
+}
+
+.fwb-wrap :global(.fw-dots) {
+  display: flex;
+  gap: 6px;
+  padding: 12px 18px;
+  align-items: center;
+}
+
+.fwb-wrap :global(.fw-dot) {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: none;
+  background: oklch(from var(--sc) l c h / 0.20);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.fwb-wrap :global(.fw-dot--active) {
+  background: var(--sc);
+  transform: scale(1.25);
+}
+
+html[data-theme='light'] .fwb-wrap :global(.fw-desc) {
+  color: oklch(0.28 0.012 285);
+}
+
+html[data-theme='light'] .fwb-wrap :global(.fw-command) {
+  background: oklch(from var(--sc) l c h / 0.10);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fwb-wrap :global(.fw-btn),
+  .fwb-wrap :global(.fw-dot) {
+    transition: none;
+  }
+}
+</style>

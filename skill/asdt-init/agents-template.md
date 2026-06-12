@@ -85,8 +85,17 @@ This project uses the ASDT specialist model. For complex, multi-step work, invok
 | QA          | Test strategy, coverage, quality gates       | `/asdt-qa`        |
 | Security    | Vulnerability analysis, threat modeling      | `/asdt-security`  |
 | UX/UI       | User flows, component design, accessibility  | `/asdt-ux-ui`     |
+| Researcher  | Problem discovery, ideation, feasibility briefs | `/asdt-researcher` |
 
 For full-pipeline orchestration: `/asdt <feature description>`
+
+> **Name-invoked skills**: `/asdt-init` (project setup) and `/asdt-researcher` (pre-PM discovery) are invoked directly by name — they are deliberately outside `/asdt` routing by design (ADR-016), not missing from it.
+
+### When NOT to use /asdt
+
+- Trivial, unambiguous change — act directly, no pipeline needed
+- Only one perspective needed — invoke that specialist directly
+- Still exploring or asking questions — stay in conversation, or use `/asdt-researcher` (discovery before requirements)
 
 ## Non-Negotiables
 

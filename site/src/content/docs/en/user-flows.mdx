@@ -5,6 +5,12 @@ order: 10
 locale: en
 ---
 
+import FlowWalkerBlock from '@components/FlowWalkerBlock.astro'
+import { pipelineFlows } from '@data/pipeline-flow-steps'
+
+export const fullFeatureFlow = pipelineFlows[0]
+export const midPipelineFlow = pipelineFlows[1]
+
 # User Flows
 
 ## Getting a pipeline suggestion
@@ -32,6 +38,8 @@ Proceed with this plan? (yes / modify / no)
 
 Confirm the plan. ASDT then gives you the exact commands to run, with tailored workflow steps for each specialist. **You run them — ASDT does not execute specialists automatically.**
 
+<FlowWalkerBlock flow={fullFeatureFlow} lang="en" />
+
 ## Running specialists directly
 
 When you already know what you need, skip `/asdt` and invoke the specialist directly:
@@ -54,9 +62,11 @@ If you ran some specialists and want to continue later, just invoke the next one
 
 The Developer reads the Architect's artifacts from the knowledge base. You don't pass context manually.
 
+<FlowWalkerBlock flow={midPipelineFlow} lang="en" />
+
 ## Memory and continuity
 
-ASDT uses a memory provider to persist artifacts between specialists and across sessions. A memory provider is **required** for the pipeline to function. The default implementation is [Engram](https://github.com/vitualizz/AI-Software-Delivery-Team). More providers are planned.
+ASDT uses a memory provider to persist artifacts between specialists and across sessions. A memory provider is **required** for the pipeline to function. The default implementation is [Engram](https://github.com/Gentleman-Programming/engram). More providers are planned.
 
 ## Supported AI assistants
 
